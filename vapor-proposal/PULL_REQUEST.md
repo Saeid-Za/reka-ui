@@ -127,6 +127,19 @@ renderer is absent from the pure Vapor bundle.
 pure Vapor are the next things to optimise; the Reka-free controls show this overhead is not
 Vue's.
 
+**Performance work:** the per-instance overhead was profiled, then reduced one change at a time,
+with A/B measurement for each. All six attempts are logged in `PERF_LOG.md`, three of them
+reverted. Three changes were kept:
+
+- lazy props in `useForwardExpose`'s Vapor `exposed`;
+- fast paths in the as-child applier;
+- no redundant `$el` injection.
+
+Pure-Vapor memory per instance went down by 4.4 % for Checkbox, 0.9 % for Collapsible and 2.3 %
+for Tabs. Mount time relative to VDOM went from 0.90x to 0.77x for Checkbox and from 1.21x to
+1.11x for Tabs. BENCHMARKS §10 has the caveats: the final run shared the machine with another
+workload. The rest of the bundle gap comes from Vue's runtime-vapor, not from Reka.
+
 ## Not in this PR / follow-ups
 
 - **Remaining work in Reka:**

@@ -313,3 +313,36 @@ this PR).
 - **Amendment (after E1):** sequential benchmark runs drifted by 5-20 % on unchanged code, so
   every attempt is measured A/B in one browser session (baseline HEAD build vs working tree,
   interleaved per scenario, 15 runs). Ops shorter than ~15 ms are treated as noise-only.
+
+## ADR-020 Vapor `exposed` from `useForwardExpose` is a Proxy that reads props lazily (perf E1)
+
+- **Status:** Accepted
+- **Context:** The CPU profile (PERF_LOG P1) showed that one getter per prop, built by
+  enumerating the Vapor props proxy, is a measurable per-instance cost.
+- **Decision:** On the Vapor path, `exposed` is a `Proxy` over the own and forwarded
+  values. It falls back to `instance.props` for reads, `in`, and enumeration. The VDOM path is
+  unchanged.
+- **Consequences:**
+  - Memory per instance: −3.9 % for Checkbox, −1.4 % for Tabs.
+  - Checkbox mount: −10 % in A/B.
+  - The default bundle grows by about 100 B gzip, because the Vapor branch ships in it
+    (OPEN_QUESTIONS Q17 has a way to avoid that).
+
+## ADR-021 Memoised helpers and empty-pass skipping in the as-child applier (perf E4)
+
+- **Status:** Accepted
+- **Decision:**
+  - Skip the class and style passes when there is nothing to apply or remove.
+  - Memoise `hyphenate`, `parseEventName`, and the boolean-DOM-property check (per tag name
+    and key).
+- **Consequences:** Tabs mount −9.9 % in A/B. Applier self time drops from 4.7 % to 3.9 %.
+  Behaviour is unchanged (`asChildAttrs.test.ts`).
+
+## ADR-022 Inject `exposeRootElement()` only where `$el` is not already exposed (perf E6)
+
+- **Status:** Accepted
+- **Decision:** The swap plugin skips the injection for SFCs that call `useForwardExpose(`
+  and for the `*.vapor.vue` twins.
+- **Consequences:** Memory −0.3 to −0.6 %, bundle −43 B gzip. This relies on a source-text
+  check, so a component that calls `useForwardExpose` conditionally would not get an
+  injected fallback. No such component exists today.

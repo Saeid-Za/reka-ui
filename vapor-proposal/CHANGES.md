@@ -176,7 +176,7 @@ Every decision above is recorded ADR-style in `DECISIONS.md`.
 
 ## 8. Prototype status (honest)
 
-Branch `feat/vapor-support`, 12 commits on `a9873a0` (patches in `/workspace/reka-vapor/patches/`).
+Branch `feat/vapor-support`, see `git log a9873a0..HEAD` (patches in `/workspace/reka-vapor/patches/`).
 
 - `pnpm --filter reka-ui exec vitest run`: **130 files, 3548 passed, 35 skipped** (baseline before
   the branch: 128 files, 3533 passed, 35 skipped).
@@ -193,5 +193,11 @@ Branch `feat/vapor-support`, 12 commits on `a9873a0` (patches in `/workspace/rek
   0.26-0.75x of VDOM time (Tabs ≈3.7x faster); mount 0.90-1.66x and unmount 1.35-1.80x of VDOM;
   memory per instance 1.38-1.45x of VDOM; app bundle gzip VDOM 60.0 / interop 98.7 / pure Vapor
   73.9 KiB; the VDOM renderer is absent from the pure-Vapor bundle.
+- **Performance work** (`PERF_LOG.md`, BENCHMARKS §10): 6 profiled attempts with A/B
+  measurement; 3 kept, 3 reverted. The kept ones changed pure-Vapor memory per instance by
+  −4.4 % (Checkbox), −0.9 % (Collapsible) and −2.3 % (Tabs). Checkbox mount went from 0.90x
+  to 0.77x of VDOM and Tabs mount from 1.21x to 1.11x. These ratios come from a run on a loaded
+  machine; Collapsible needs an idle re-run. The bundle gap is set by Vue's runtime-vapor
+  (OPEN_QUESTIONS Q16).
 - Not done: virtualizers; a published compiled `reka-ui/vapor`; Vapor SSR/hydration; tests other than
   the benchmark run in jsdom.
