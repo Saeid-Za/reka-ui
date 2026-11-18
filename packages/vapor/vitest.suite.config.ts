@@ -6,6 +6,7 @@ import { createConfig } from './config.shared.ts'
 import { injectExposeRoot, rekaVaporSwap, SWAPS } from './rekaVapor.ts'
 import { inlineVaporTemplates } from './suite/inlineTemplates.ts'
 import { vaporSsrTwins } from './suite/ssrTwins.ts'
+import { stubbableComponents } from './suite/stubsPlugin.ts'
 import { testFileVue } from './suite/testFileVue.ts'
 
 // Reka's own jsdom suite (packages/core/src/**/*.test.ts), unchanged, in pure
@@ -22,7 +23,7 @@ const vueRequire = createRequire(createRequire(import.meta.url).resolve('vue/pac
 const serverRenderer = join(dirname(vueRequire.resolve('@vue/server-renderer/package.json')), 'dist/server-renderer.esm-bundler.js')
 
 const config = createConfig({
-  plugins: [vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } })],
+  plugins: [vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } }), stubbableComponents()],
   include: [],
 })
 

@@ -1,11 +1,19 @@
 import * as vue from 'vue'
 import { compileTemplate } from 'vue/compiler-sfc'
+import { stubbableCreateComponent, stubbableCreateComponentWithFallback, stubbableCreateDynamicComponent } from './stubs'
 
 const VUE_IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*['"]vue['"];?/g
 const AS_RE = /\s+as\s+/g
 const EXPORT_RENDER_RE = /export function render/
 const cache = new Map<string, any>()
 let counter = 0
+// Runtime templates honour `global.stubs` like compiled SFCs do (stubs.ts).
+const stubbableVue = {
+  ...vue,
+  createComponent: stubbableCreateComponent,
+  createComponentWithFallback: stubbableCreateComponentWithFallback,
+  createDynamicComponent: stubbableCreateDynamicComponent,
+}
 
 /**
  * VTU compiles `template:` strings at runtime with the VDOM compiler. This is
@@ -24,7 +32,7 @@ export function compileRuntimeTemplate(source: string) {
     .replace(VUE_IMPORT_RE, (_, names: string) => `const {${names.replace(AS_RE, ': ')}} = __vue;`)
     .replace(EXPORT_RENDER_RE, 'function render')
   // eslint-disable-next-line no-new-func
-  const render = new Function('__vue', `${body}\nreturn render`)(vue)
+  const render = new Function('__vue', `${body}\nreturn render`)(stubbableVue)
   cache.set(source, render)
   return render
 }

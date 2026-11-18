@@ -11,7 +11,7 @@
  *   and their blocks, because VTU reads VNodes for them.
  *
  * Mounting uses `createVaporApp` without `vaporInteropPlugin`. Anything that
- * needs a VNode (render functions, `h()`, stubs, shallow mount) throws a
+ * needs a VNode (shallow mount, `global.mocks`, ...) throws a
  * `VaporSuiteUnsupported` error so it is classified instead of silently passing.
  */
 import type { Component } from 'vue'
@@ -36,6 +36,7 @@ import {
   toRaw,
 } from 'vue'
 import { blockNodes, VaporSuiteUnsupported } from './shared'
+import { normalizeStubs, STUBS } from './stubs'
 import { h, reactiveBlock, toVaporComponent } from './vaporH'
 
 export { blockNodes, config, createWrapperError, DOMWrapper, flushPromises, VaporSuiteUnsupported }
@@ -66,7 +67,6 @@ const devtoolsHook = {
 setDevtoolsHook(devtoolsHook, globalThis)
 
 const NEEDS_COMPILER_RE = /\{\{|<[A-Z]|\sv-|\s[:@#]/
-const TRANSITION_STUB_RE = /^transition(?:-group)?$|^TransitionGroup$/i
 
 /** Every Vapor component instance inside a block (depth first, document order). */
 function blockInstances(block: any, out: AnyInstance[] = []): AnyInstance[] {
@@ -173,15 +173,9 @@ export function mount(component: any, options: MountOptions = {}): VaporWrapper 
     throw new VaporSuiteUnsupported('shallow mount')
   if (options.data)
     throw new VaporSuiteUnsupported('mount option `data` (Options API)')
-  const stubs = options.global?.stubs
-  if (stubs) {
-    // VTU stubs <transition>/<transition-group> by default; `transition: false`
-    // only turns that off. Reka renders no Vue <Transition>, so ignore those.
-    const names = Array.isArray(stubs) ? stubs : Object.keys(stubs)
-    const real = names.filter(n => !TRANSITION_STUB_RE.test(n))
-    if (real.length)
-      throw new VaporSuiteUnsupported(`global.stubs (${real.join(', ')}): Vapor resolves imported components at compile time`)
-  }
+  // VTU stubs <transition>/<transition-group> by default; `transition: false`
+  // only turns that off. Reka renders no Vue <Transition>, so those are dropped.
+  const stubs = normalizeStubs(options.global?.stubs)
   if (options.global?.mocks && Object.keys(options.global.mocks).length)
     throw new VaporSuiteUnsupported('global.mocks')
   const functional = component
@@ -204,6 +198,8 @@ export function mount(component: any, options: MountOptions = {}): VaporWrapper 
   })
 
   const app = createVaporApp(Root as any)
+  if (stubs)
+    (app._context as any)[STUBS] = stubs
   setDevtoolsHook(devtoolsHook, globalThis)
   const g = options.global ?? {}
   for (const plugin of g.plugins ?? []) {
@@ -324,6 +320,17 @@ export class VaporWrapper extends (BaseWrapper as any) {
     return event ? emitted[event] : emitted
   }
 
+  /** VTU `setData`: merges into the state `data()` created (see `withOptionsApiState` in vaporH.ts). */
+  async setData(data: Record<string, any>) {
+    if (!this.root)
+      throw new Error('wrapper.setData() can only be called on the root wrapper')
+    const state = this.instance.setupState
+    if (!state)
+      throw new VaporSuiteUnsupported('wrapper.setData() on a component without Options-API data()')
+    mergeDeep(state, data)
+    await nextTick()
+  }
+
   async setProps(props: Record<string, any>) {
     if (!this.root)
       throw new VaporSuiteUnsupported('setProps() on a nested component wrapper')
@@ -352,6 +359,8 @@ export class VaporWrapper extends (BaseWrapper as any) {
           return instance.props
         if (key === '$attrs')
           return instance.attrs
+        if (key === '$refs')
+          return instance.refs
         if (key === '$emit')
           return instance.emit
         if (key === '$nextTick')
@@ -395,3 +404,12 @@ export class VaporWrapper extends (BaseWrapper as any) {
 
 /** Type-compatible aliases so `import type { VueWrapper } from '@vue/test-utils'` keeps working. */
 export const VueWrapper = VaporWrapper
+
+function mergeDeep(target: Record<string, any>, source: Record<string, any>) {
+  for (const [key, value] of Object.entries(source)) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key]))
+      mergeDeep(target[key], value)
+    else
+      target[key] = value
+  }
+}

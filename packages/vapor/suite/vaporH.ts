@@ -18,8 +18,11 @@
  * Vapor's public runtime API. Results of tests that need the bridge are
  * reported separately in FULL_SUITE.md (they depend on this file being right).
  *
- * Not supported (throws VaporSuiteUnsupported): Options-API `render()` with
- * `this`, `cloneVNode`, inspecting VNode fields, directives via `withDirectives`.
+ * Options-API `render()` with `this` gets a small stand-in for the public
+ * instance (setup state, props, `$attrs`/`$slots`/`$emit`/`$props`), see
+ * `optionsApiThis` (ADR-S11).
+ *
+ * Not supported (throws VaporSuiteUnsupported): `cloneVNode`, inspecting VNode fields, directives via `withDirectives`.
  */
 import type { EffectScope } from 'vue'
 import {
@@ -35,6 +38,7 @@ import {
   isVaporComponent,
   KeepAlive,
   proxyRefs,
+  reactive,
   remove,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -53,7 +57,6 @@ import {
 import { compileRuntimeTemplate } from './runtimeTemplate'
 import { blockNodes, VaporSuiteUnsupported } from './shared'
 
-const THIS_RE = /\bthis\b/
 const VD = Symbol('vapor-suite-descriptor')
 const SLOT = Symbol('vapor-suite-slot-call')
 
@@ -121,7 +124,14 @@ export function defineComponent(options: any, extra?: any): any {
 }
 
 export function toVaporComponent(options: any): any {
-  if (!options || typeof options !== 'object' || options.__vapor)
+  if (!options || typeof options !== 'object')
+    return options
+  if ((options.data || options.methods) && !converted.has(options)) {
+    const comp = toVaporComponent(withOptionsApiState(options))
+    converted.set(options, comp)
+    return comp
+  }
+  if (options.__vapor)
     return options
   if (BUILTINS.has(options))
     return BUILTINS.get(options)
@@ -148,10 +158,13 @@ export function toVaporComponent(options: any): any {
           renderFn = result
         }
         else if (render) {
-          if (render.length === 0 && THIS_RE.test(render.toString()))
-            throw new VaporSuiteUnsupported('Options-API render() using `this`')
           const state = proxyRefs(result ?? {})
-          renderFn = () => render(state, props)
+          // Options-API `render()` reads `this`: give it the public-instance
+          // view VDOM would (setup state, then props, then a few `$` fields).
+          const self = optionsApiThis(state, props, ctx)
+          if (currentInstance)
+            (currentInstance as any).setupState = state
+          renderFn = () => render.call(self, self, props)
         }
         else {
           return result
@@ -169,6 +182,61 @@ export function toVaporComponent(options: any): any {
   }
   converted.set(options, comp)
   return comp
+}
+
+/**
+ * Options-API `data()` and `methods` on a test component (ADR-S11): folded into
+ * `setup()` as one reactive state object, which is what the component's
+ * template reads and what `this` is inside `data()` and the methods. Vapor
+ * components have no Options API, so this only exists for test scaffolding.
+ */
+function withOptionsApiState(options: any) {
+  const { data, methods, setup, ...rest } = options
+  return {
+    ...rest,
+    setup(props: any, ctx: any) {
+      const base = setup ? setup(props, ctx) : undefined
+      if (base !== undefined && (typeof base !== 'object' || Array.isArray(base) || isFragment(base) || base instanceof Node))
+        throw new VaporSuiteUnsupported('Options-API data()/methods with a setup() that returns a render function or block')
+      const state: Record<string, any> = reactive({ ...base })
+      if (data)
+        Object.assign(state, data.call(state, state))
+      for (const [key, fn] of Object.entries(methods ?? {}))
+        state[key] = (fn as (...args: any[]) => any).bind(state)
+      return state
+    },
+  }
+}
+
+/**
+ * The `this` of an Options-API `render()`: reads go to setup state, then props,
+ * then `$attrs`/`$slots`/`$emit`/`$props`; writes go to setup state (refs are
+ * set through `proxyRefs`). Reads are reactive because `render()` runs inside
+ * the block's effect. Mirrors what VDOM's public instance proxy offers for these
+ * keys; `data()` and `methods` are folded into setup state by
+ * `withOptionsApiState`, `computed`/`watch` options are not emulated.
+ */
+function optionsApiThis(state: any, props: any, ctx: any) {
+  return new Proxy({}, {
+    get(_, key) {
+      if (key in state)
+        return state[key]
+      if (props && key in props)
+        return props[key]
+      switch (key) {
+        case '$props': return props
+        case '$attrs': return ctx.attrs
+        case '$slots': return wrapSlots(ctx.slots)
+        case '$emit': return ctx.emit
+      }
+      return undefined
+    },
+    set(_, key, value) {
+      state[key] = value
+      return true
+    },
+    has: (_, key) => key in state || (props && key in props),
+  })
 }
 
 function wrapSlots(slots: any) {
