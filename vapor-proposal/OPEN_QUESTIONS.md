@@ -372,3 +372,19 @@ element's own listener still runs first, which is the opposite of VDOM.
 **Recommendation:** (a) now, and file (c).
 **⚑ Provisional default:** (a).
 
+### QS9. Forwarding a ref to a Vapor component that exposes nothing
+
+In Vapor, a template ref on a component is its expose proxy. When the component
+`expose()`s nothing, the ref is an empty object, so `useForwardExpose` cannot provide
+`$el` or the instance the way VDOM's public instance does. This is upstream's design:
+`getExposed` in runtime-vapor.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Document it: user components that Reka forwards to must expose `$el` (Reka's own SFCs do) | No magic, but a migration note for users. |
+| (b) Vapor test variants in useForwardExpose.test.ts where the child exposes its root | Tests pass, but they no longer test a non-exposing child. |
+| (c) Ask Vue to put `$el` on the Vapor expose proxy | Closest to VDOM, but needs upstream. |
+
+**Recommendation:** (a) together with (c). Use (b) only if the user wants those tests green.
+**⚑ Provisional default:** (a). The 6 tests stay red.
+

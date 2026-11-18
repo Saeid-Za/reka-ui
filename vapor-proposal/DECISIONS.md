@@ -601,3 +601,16 @@ The VDOM Slot gives `class="parent child"`, and Vapor's `applyAsChildAttrs` appe
 the consumer's classes after the child's. It now rewrites `class` with the consumer's
 tokens first, followed by the child's own tokens. It only writes when the order or the
 set of tokens changed. The unit tests were updated to the VDOM order.
+
+## ADR-S19 `resolveElement` resolves a Vapor instance through its block
+
+When `resolveElement` is handed a Vapor component instance, it now returns the first
+element of that instance's block, the equivalent of VDOM's `$el` lookup. This fixes
+the 3 usePrimitiveElement tests in R5.
+
+What stays open: a *template ref* on a Vapor component is that component's
+`exposeProxy`, and it carries only what the component `expose()`d
+(runtime-vapor `getExposed`, rc.15 dist L4649). A component that exposes nothing
+therefore gives Reka no `$el` to forward. Reka's own SFCs expose `$el`, but test or
+user components do not. That is behind the 6 remaining useForwardExpose failures;
+see QS9.
