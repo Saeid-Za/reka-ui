@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
-import { findBlockElement, getAssignedPropKeys, getInstance, getInstanceRootNode, hasAssignedProp, isVaporInstance, setVaporInstanceResolver } from './instance'
+import { exposeRootElement, findBlockElement, getAssignedPropKeys, getInstance, getInstanceRootNode, hasAssignedProp, isVaporInstance, setVaporInstanceResolver } from './instance'
 
 function fakeVapor(overrides: Record<string, any> = {}) {
   return { vapor: true, type: {}, props: {}, rawProps: {}, exposed: null, block: null, parent: null, ...overrides } as any
@@ -66,5 +66,30 @@ describe('instance helpers', () => {
     expect(findBlockElement(fakeVapor({ block: [comment, { nodes: span }] }))).toBe(span)
     expect(findBlockElement([comment])).toBeUndefined()
     expect(getInstanceRootNode(fakeVapor({ block: { nodes: [a] } }))).toBe(a)
+  })
+
+  it('exposeRootElement adds a $el getter to Vapor instances only', () => {
+    const el = document.createElement('span')
+    const vapor = fakeVapor({ block: [document.createComment(''), el] })
+    setVaporInstanceResolver(() => vapor)
+    try {
+      exposeRootElement()
+      expect(vapor.exposed.$el).toBe(el)
+      // an existing `$el` is kept
+      const own = fakeVapor({ exposed: { $el: 'own' } })
+      setVaporInstanceResolver(() => own)
+      exposeRootElement()
+      expect(own.exposed.$el).toBe('own')
+    }
+    finally {
+      setVaporInstanceResolver(undefined)
+    }
+    let exposed: any
+    mount(defineComponent({ setup() {
+      exposeRootElement()
+      exposed = getInstance()!.exposed
+      return () => h('div')
+    } }))
+    expect(exposed).toBeNull()
   })
 })

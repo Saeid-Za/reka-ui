@@ -86,13 +86,16 @@ export function useForwardExpose<T extends ComponentPublicInstance>() {
     // being replaced. A Vapor child ref is that proxy itself (no `$`).
     const ownKeys = new Set(Object.keys(ret))
     let forwardedKeys: string[] = []
+    // Vapor sets dynamic template refs inside a render effect, so this must
+    // only write reactive state: reading `currentRef` here would make that
+    // effect depend on what it writes and re-run itself forever.
+    let forwarded: Element | T | null = null
     const forwardRef = (ref: Element | T | null) => {
-      currentRef.value = ref && typeof ref === 'object' && '$el' in ref && !ref.$el ? null : ref
+      forwarded = ref && typeof ref === 'object' && '$el' in ref && !ref.$el ? null : ref
+      currentRef.value = forwarded
       for (const key of forwardedKeys)
         delete ret[key]
       forwardedKeys = []
-      void currentElement.value
-      const forwarded = currentRef.value
       if (!forwarded || forwarded instanceof Element)
         return
       for (const key of Object.keys(forwarded)) {

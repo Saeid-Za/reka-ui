@@ -131,3 +131,26 @@ export function getInstanceRootNode(instance: RekaInstance | null): Node | null 
     return findBlockElement(instance.block) ?? null
   return (instance.vnode.el as Node | null) ?? null
 }
+
+/**
+ * Give the current Vapor component a `$el` on its template ref.
+ *
+ * A VDOM component ref always has `$el`; a Vapor component ref is a proxy over
+ * `exposed` only, and reka-ui resolves elements through component refs in
+ * many places. The Vapor build calls this at the end of every reka-ui SFC
+ * setup. Components that already expose `$el` keep theirs. No-op in VDOM.
+ *
+ * @internal
+ */
+export function exposeRootElement() {
+  const instance = getInstance()
+  if (!isVaporInstance(instance))
+    return
+  const exposed = (instance.exposed ??= {})
+  if (!Object.getOwnPropertyDescriptor(exposed, '$el')) {
+    Object.defineProperty(exposed, '$el', {
+      configurable: true,
+      get: () => getInstanceRootNode(instance),
+    })
+  }
+}
