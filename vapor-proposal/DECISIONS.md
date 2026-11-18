@@ -560,3 +560,20 @@ insertion. Under VDOM the value is already right at that point, so nothing is
 re-rendered. Side effect in Vapor: the hidden input appears one flush after mount,
 not synchronously during it. Toggle's synchronous "does not submit while disabled"
 check still fails because of that.
+
+## ADR-S16 Vapor `useTriggerId` follows consumer ids applied after mount
+
+This fixes the R4 group in FULL_SUITE.md (20 tests). It has two parts:
+
+1. **Reading the rendered id one tick later.** When a consumer `id` changes, the Vapor
+   watcher used to read the rendered id straight away. At that point the element still
+   carried the old id, so the context was reset to it. The watcher now reads the rendered
+   id after the re-render that the context change causes (`nextTick`).
+2. **Following ids that ancestors write by hand.** In Vapor, the Presence and an as-child
+   Primitive write fallthrough attrs onto the element themselves, because Vapor cannot
+   fall attrs through a slot. The consumer id therefore arrives after this component has
+   mounted, and without an update here. In Vapor only, a `MutationObserver` now watches
+   the element's `id` attribute. That costs one observer per trigger or content, Vapor
+   only. The alternative is a public "attrs applied" signal from Presence/Primitive,
+   which would be more code paths; revisit it if the perf work flags the observer.
+   The VDOM path is unchanged.
