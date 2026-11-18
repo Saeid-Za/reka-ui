@@ -215,6 +215,7 @@ behaviour or source used by both builds:
 | Treat `as`/`asChild` as static in `Primitive.vapor.vue` (choose the branch once in setup) | one `createIf` + render effect less per `Primitive` (P3: 6 `DynamicFragment`s per Checkbox row) | toggling `as-child` or `as` at runtime would stop working in Vapor; VDOM supports it |
 | Replace `toRefs(props)` in components with per-prop `computed`/getters | P1: `toRefs` costs 25 ms of self time in Vapor, against 9 ms in VDOM | touches many SFCs; this would be churn in the VDOM build too |
 | Replace `inheritAttrs: false` + `v-bind="$attrs"` chains with direct fallthrough | fewer `collectProps`/`resolveDynamicProps` passes (P1: the largest Vue-internal cost) | changes attr precedence in some components; needs a per-component audit |
+| Move the Vapor branch of `useForwardExpose` into a Vapor-only module swapped in by the build | default (VDOM) bundle back to its pre-E1 size (−~100 B gzip, PERF_LOG summary) | one more swap entry; two copies of the composable to keep aligned |
 | Drop the VueUse lifecycle helpers (`useMounted`, `tryOnMounted`) inside components | removes the shim (Q5), a little less work | source changes in both builds |
 
 **Recommendation:** none of these for the first release. Revisit after Vue 3.6 is stable, using

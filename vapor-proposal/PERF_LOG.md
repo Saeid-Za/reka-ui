@@ -378,3 +378,73 @@ The deterministic metrics improved slightly, with no regression:
 
 The change is build-time only. It drops the injected call in 247 of the SFCs, the ones that call
 `useForwardExpose()`, plus the Vapor twins.
+
+## Summary after E1–E6 (full three-mode run, `raw/bench-after-perf.json`, finished 2026-11-18 15:14 Asia/Tehran)
+
+**Kept:**
+- E1: lazy props in `useForwardExpose`'s Vapor `exposed`.
+- E4: fast paths in the as-child applier.
+- E6: no redundant `exposeRootElement` injection.
+
+**Reverted:**
+- E2: dynamic-slot branch flattening.
+- E3: single mount sync.
+- E5: attrs snapshot.
+
+The final full run shared the machine with another worker's test suite. The load average was
+3.3–4.3, and the VDOM column is 0–14 % slower than in B0 on the same code. So the absolute
+milliseconds are not comparable with B0. Below, the **pure Vapor / VDOM ratio within each run** is
+used for timing. Memory and bundle numbers are deterministic, so they are compared directly.
+
+**Pure Vapor / VDOM `script` ratio:**
+
+| Op | B0 (`bench-final.json`) | After (`bench-after-perf.json`) |
+|---|---|---|
+| checkbox mount | 0.90x | 0.77x |
+| checkbox update:on / off | 0.69x / 0.50x | 0.65x / 0.53x |
+| checkbox unmount | 1.35x | 1.34x |
+| collapsible mount | 1.66x | 1.81x (see the note below) |
+| collapsible update:on / off | 0.75x / 0.73x | 0.90x / 0.97x |
+| collapsible unmount | 1.71x | 2.02x |
+| tabs mount | 1.21x | 1.11x |
+| tabs update:on / off | 0.28x / 0.26x | 0.26x / 0.26x |
+| tabs unmount | 1.80x | 1.75x |
+
+The Collapsible ratios got worse in this loaded run. However, none of the kept changes showed a
+Collapsible regression in its own interleaved A/B runs:
+- E1: mount −3.6 %;
+- E4: mount −4.4 %;
+- E6: mount −4.0 %.
+
+All three were within noise. This needs a re-run on an idle machine before it can be
+called either way.
+
+**Pure Vapor memory per instance (deterministic):**
+
+| Scenario | B0 | After | Change | VDOM |
+|---|---|---|---|---|
+| checkbox | 29533 B | 28238 B | −4.4 % | 21400 B |
+| collapsible | 42778 B | 42413 B | −0.9 % | 30393 B |
+| tabs | 206429 B | 201733 B | −2.3 % | 142701 B |
+
+The pure-Vapor residual heap after unmounting 1000 Checkboxes also dropped, from
+807/837/863 KiB (cycles 1/2/3) to 363/388/401 KiB.
+
+**Bundle (bytes, gzip):**
+
+| Build | B0 | After | Change |
+|---|---|---|---|
+| Pure Vapor | 75632 | 75802 | +170 |
+| VDOM | 61411 | 61515 | +104 |
+
+**A cost to note for VDOM users.** `useForwardExpose` ships its Vapor branch in the default
+build, selected by a runtime check. E1 made that branch larger, which explains most of the VDOM
++104 B gzip. The per-attempt A/B runs only measured the Vapor bundle, so this was found
+only in the final run.
+
+A follow-up could move the Vapor branch of `useForwardExpose` into a module that the Vapor
+build swaps in. That would return the VDOM bundle to B0 size. It is not done yet, and it is
+listed under OPEN_QUESTIONS Q17.
+
+**Bundle gap vs VDOM.** The difference is set by Vue's runtime-vapor (P2, OPEN_QUESTIONS Q16).
+Reka-side changes can only move it by tens to hundreds of bytes.
