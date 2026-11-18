@@ -685,3 +685,20 @@ unminified bundle. Totals are in `scratch/perf/heap-r2.txt` and the per-location
   The gate passed: build, 51/118/62 vapor tests (VDOM, interop, pure Vapor), 3548 core
   tests, type-check and lint.
 - **Verdict: kept.**
+
+### E9. Allocate `SELF_CLOSING_TAGS` once per module in `Primitive.vapor.vue`
+
+- **Hypothesis:** `const SELF_CLOSING_TAGS = ['area', 'img', 'input']` sits inside `<script
+  setup>`, so every `Primitive` allocates a new array, about 40 B with its backing store.
+  Moving it to a plain `<script>` block allocates it once per module. That should save
+  roughly 40–80 B per Checkbox row (0.1–0.3%) and more in Tabs, which has many `Primitive`s.
+  Nothing else should change. The VDOM `Primitive.ts` already declares it at module scope.
+- **Change:** `Primitive.vapor.vue` only.
+- **Result** (`scratch/perf/E9.md`, 15 runs, interleaved): memory per instance was
+  27,820 → 27,801 B for Checkbox (−0.1%), 41,955 → 41,921 B for Collapsible (−0.1%) and
+  200,337 → 199,896 B for Tabs (−0.2%). Every timing was noise. The bundle grew by
+  +5 B min, +21 B gzip and +98 B brotli, because of the second `<script>` block and its
+  module wiring.
+- **Verdict: REVERTED.** The memory gain is smaller than estimated: Checkbox saves 18 B, so
+  V8 shares most of what a small literal array costs. The gain also comes with a bundle
+  regression, and round-2 rules keep only changes that regress no metric.
