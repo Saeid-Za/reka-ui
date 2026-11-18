@@ -549,3 +549,14 @@ The instance-helper tests replace the resolver and used to reset it to `undefine
 That silently unregistered the resolver the Vapor entry had installed, for the rest of
 the file. The setter now returns the previous resolver, and the tests put it back.
 Under VDOM the previous resolver is `undefined`, so nothing changes there.
+
+## ADR-S15 `useFormControl` re-reads `closest('form')` once mounted
+
+In Vapor a component's element ref is set while its nodes are still detached; they
+are inserted under the parent's `<form>` only afterwards. The `computed` therefore
+cached `false`, and the hidden native input never rendered (R3). The computed now
+also depends on a flag that `onMounted` sets, so it re-reads `closest('form')` after
+insertion. Under VDOM the value is already right at that point, so nothing is
+re-rendered. Side effect in Vapor: the hidden input appears one flush after mount,
+not synchronously during it. Toggle's synchronous "does not submit while disabled"
+check still fails because of that.
