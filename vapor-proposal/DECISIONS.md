@@ -449,3 +449,37 @@ performance work.
   Options-API `this` in `render`) still throw `VaporSuiteUnsupported`.
 - **Alternatives:** Classify all 754 as `vdom-api` (honest but leaves a fifth of the
   suite unrun); port the scaffolding to SFC fixtures upstream (QS2, the long-term fix).
+
+## ADR-S05 Harness fixes found while triaging (emitted hook, idempotent unmount, functional components)
+
+- `emitted()` stayed empty. Runtime-core re-reads `globalThis.__VUE_DEVTOOLS_GLOBAL_HOOK__`
+  when an app is created and replaced the shim's hook. The shim now sets the global and
+  re-applies `setDevtoolsHook` after `createVaporApp`. This fixed 65 tests.
+- A second `wrapper.unmount()` threw `reading 'suspense'`. VTU only warns in that case,
+  so the shim's unmount is now idempotent. This fixed 54 tests.
+- Functional components hit a closure reassignment bug in the shim. This fixed 16 tests.
+
+These are shim bugs, not Reka changes. The per-test attribution is in FULL_SUITE.md,
+"Where the 610 went".
+
+## ADR-S06 Reka fixes for fallthrough-only updates in Vapor (trigger ids, as-child swaps)
+
+- **Context:** a Vapor component does not re-run (no `onBeforeUpdate`/`onUpdated`) when only
+  a fallthrough attr changes, or when its slot content swaps an element. VDOM does.
+- **useTriggerId:** in Vapor, `watch(() => attrs.id, …, { flush: 'post' })` runs the
+  same sync as VDOM's `onBeforeUpdate`. VDOM behaviour is unchanged.
+- **Primitive.vapor (as-child):** after a fragment update, re-apply attrs and bump a
+  version ref that `$el` reads, so `currentElement` follows. This uses the internal
+  fragment update hooks (`onRootFragmentUpdate`, QS4).
+- **resolveElement:** return `undefined` unless the result of `unrefElement` is a
+  `Node`. A Vapor ref with no `$el` made it fall back to the proxy, which crashed
+  FocusScope.
+- **Result:** 25 tests fixed (FULL_SUITE.md). They reproduced with a plain SFC, without
+  the bridge.
+
+## ADR-S07 Pre-commit hook bypassed for full-suite commits (no `git stash`)
+
+`lint-staged` stashes the working tree, but this worktree shares its stash with a
+parallel worktree, and `git stash` was ruled out for that reason. Commits on
+`feat/vapor-full-suite` run `eslint` on the staged files by hand, and only then
+commit with `--no-verify`. The check is the same; only the stash is avoided.

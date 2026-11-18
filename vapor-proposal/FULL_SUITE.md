@@ -101,3 +101,175 @@ are `it.skip` in the source in both modes.
 | Pure Vapor, first harness (VTU shim only, no bridge) | 2,422 | 1,110 (+1 file failed to load) | 35 |
 | Pure Vapor, harness with render-function bridge | 2,938 | 610 | 35 |
 
+## Triage of the 610 failures (run r1 → r2, 2026-11-18)
+
+Requested before fixing further: every r1 failure sorted into **fail:reka**,
+**fail:harness** or **cannot-run-in-vapor**, by root cause and by component.
+The rules are in `packages/vapor/suite/triage.mjs` (`node suite/triage.mjs <vitest-json> <out.json>`), and each one was set
+by reading the error and the test, not by grepping file names. Where a cause is not yet
+proven, it is marked `undiagnosed` rather than guessed.
+
+Mapping to the buckets above: `cannot-run` = `ssr` (C1) + `vdom-api` (C2–C6).
+`markup-only` is new. It means the DOM is right and the serialised HTML differs only
+by Vapor's anchor comments and attribute order. Whether the harness should normalise
+those is an open question (QS5), so these tests are not yet counted as either pass or fail.
+
+### Where the 610 went
+
+r1 reported 610 failures, which is 603 unique test names: 7 `it.each` names repeat.
+Without changing any test, harness fixes and Reka fixes were then attributed separately.
+To do that, the suite was re-run with the harness fixes only (r2h: 3,080 pass / 468 fail),
+then with the Reka fixes as well (r2: **3,105 pass / 443 fail / 35 skip**). No test
+went from pass to fail in either step.
+
+| Fixed between r1 and r2 | Bucket | Tests | Files |
+|---|---|---:|---|
+| `emitted()` empty: runtime-core re-reads `__VUE_DEVTOOLS_GLOBAL_HOOK__` on app creation and dropped the shim's hook | fail:harness | 65 | ComboboxClearValue 14, Listbox 7, useForwardProps 7, Accordion 6, PinInput 6, Autocomplete 5, DismissableLayer 5, NumberField 3, TagsInput 3, Combobox 2, Drawer 2, Collapsible 1, Menu 1, Rating 1, Select 1, Splitter 1 |
+| Second `unmount()` threw (`reading 'suspense'`). VTU only warns, so the shim's unmount is now idempotent | fail:harness | 54 | NumberField 46, Drawer 4, Popover 2, Combobox 1, ScrollAreaThumb 1 |
+| Functional components: closure reassignment in the shim (`component is not a function`) | fail:harness | 16 | HiddenNativeLabels 12, HoverCard 2, Tooltip 2 |
+| Reka: trigger never saw a consumer `id` change on content, because Vapor does not re-run a component when only a fallthrough attr changes (useTriggerId) | fail:reka | 25 (combined) | useRenderedContentId 10, usePrimitiveElement 6, useForwardExpose 6, useTriggerId 2, useContentId 1 |
+| Reka: as-child Primitive did not follow a slot swapping its element (ref and attrs went stale) | fail:reka | (in the 25) | |
+| Reka: `resolveElement` returned a non-Node for a Vapor ref with no `$el` (FocusScope crash) | fail:reka | (in the 25) | |
+| **Total fixed** | | **160** (135 harness, 25 Reka) | |
+
+### The 443 still failing (r2), by root cause
+
+| Bucket | Tests |
+|---|---:|
+| cannot-run (SSR 127, VDOM-only API 43) | 170 |
+| fail:reka | 116 |
+| undiagnosed | 106 |
+| fail:harness | 32 |
+| markup-only (QS5) | 19 |
+
+| Root cause | Bucket | Tests | Files |
+|---|---|---|---|
+| C1 SSR renderToString (Vapor SSR out of scope, Q11) | cannot-run | 127 | useRenderedContentId 102, useContentId 11, DismissableLayer.ssr 3, Tabs 3, useForwardExpose.ssr 2, useTriggerId 2, Accordion 1, Dialog.ssr 1, Popover.ssr 1, Rating.ssr 1 |
+| C2 Options-API render() using `this` (VDOM-only API) | cannot-run | 20 | Toast 20 |
+| C3 VTU global.stubs (Vapor resolves imported components at compile time) | cannot-run | 18 | Combobox 10, RovingFocus 4, Tooltip 4 |
+| C4 VTU Options-API wrapper.setData | cannot-run | 1 | Form 1 |
+| C5 VNode introspection (vm.$.subTree.el) | cannot-run | 2 | Toast 2 |
+| C6 test asserts VDOM-instance behaviour of a helper | cannot-run | 2 | instance 2 |
+| H1 findComponent(css selector) not implemented | fail:harness | 9 | Slider 6, DismissableLayer 3 |
+| H2 findComponent(Component) finds nothing (empty VueWrapper) | fail:harness | 9 | NavigationMenu 5, ScrollArea 3, PopperRootContext 1 |
+| H3 vm / exposed access through the shim (`vm.field`, `vm.form`, refs, proxy set) | fail:harness | 13 | Field 9, Form 1, RadioGroup 1, Splitter 1, instance 1 |
+| H4 real VNode reached the render-function bridge | fail:harness | 1 | HiddenNativeLabels 1 |
+| M1 html()/snapshot differs only by Vapor anchor comments (<!--slot-->, <!--if-->, <!--dynamic-component-->) and attribute order | markup-only | 19 | ScrollArea 5, Collapsible 4, Label 4, Avatar 2, AspectRatio 1, Popper 1, Presence 1, Tree 1 |
+| R1 virtualizer item refs ($el of undefined) — known gap ADR-017 | fail:reka | 31 | Combobox 9, Listbox 8, ScrollArea 8, Tree 6 |
+| R2 consumer listeners run after the component's own handlers (preventDefault opt-out ignored) | fail:reka | 18 | Select 7, DropdownMenu 4, Menubar 4, Tabs 3 |
+| R3 form-control detection: closest('form') read before the element is inserted into <form> | fail:reka | 20 | Form 7, Toggle 4, Checkbox 3, RadioGroup 3, Switch 2, HiddenNativeLabels 1 |
+| R4 consumer id / trigger id change not propagated (remaining after fix #1) | fail:reka | 20 | useRenderedContentId 9, useTriggerId 6, useContentId 4, Tabs 1 |
+| R5 as-child / element resolution (Primitive, usePrimitiveElement, useForwardExpose) | fail:reka | 19 | useForwardExpose 9, Primitive 7, usePrimitiveElement 3 |
+| R6 scope-id forwarding (useForwardScopeId) | fail:reka | 3 | useForwardScopeId 3 |
+| R7 unmountOnHide=false content not hidden (v-show/display on persistent content) | fail:reka | 5 | Dialog 3, Combobox 2 |
+| U1 useRenderedContentId: KeepAlive deactivation (bridge KeepAlive vs Reka onDeactivated) | undiagnosed | 51 | useRenderedContentId 51 |
+| U2 useRenderedContentId: as-child content with no element | undiagnosed | 25 | useRenderedContentId 25 |
+| U9 other (to investigate one by one) | undiagnosed | 30 | StepperAnnouncement 4, Popover 3, Presence 3, Combobox 2, Dialog 2, Field 2, PopperRootContext 2, Slider 2, useSize 2, AlertDialog 1, Checkbox 1, DateField 1, DropdownMenu 1, FocusScope 1, Menubar 1, RovingFocus 1, TagGroup 1 |
+
+
+What the causes are, and why each is in its bucket:
+
+- **C1 SSR**: `renderToString` and hydration. **Being re-examined:** the user pointed out that Vapor
+  has SSR and hydration support, so these 127 tests are being moved to a Vapor SSR path
+  (see "Vapor SSR" below). Until then they are counted here only as a starting figure.
+- **C2 Options-API `render()` using `this`**: Toast fixtures. Vapor has no component proxy
+  for `this` in `render`, so the test itself would have to change (QS2).
+- **C3 `global.stubs`**: Vapor templates import components at compile time. There is no
+  runtime component resolution to stub.
+- **C4 `wrapper.setData`**, **C5 `vm.$.subTree.el`**, **C6 asserting VDOM
+  `getCurrentInstance`/vnode-props behaviour**: VDOM-only APIs, so these are VDOM-only by
+  definition.
+- **M1 markup-only**: for example, AspectRatio's snapshot has the same elements and
+  attributes plus `<!--slot-->`, `<!--if-->` and `<!--dynamic-component-->`, with `style`
+  and `data-*` in a different order. This was checked for AspectRatio, Label and
+  Collapsible; the other snapshots in M1 have the same shape. See QS5.
+- **H1–H4 harness gaps**:
+  - `findComponent('css')` is not implemented.
+  - `findComponent(Comp)` misses some components (NavigationMenu, the ScrollArea
+    virtualizer, PopperRootContext).
+  - `vm`/exposed access through the shim (`vm.field`, `vm.form`, `exposed`, proxy `set`).
+  - One test passes a real VNode into the bridge.
+- **R1 virtualizers** (known, ADR-017): item component refs are read through `$el` on a
+  VNode ref that Vapor does not provide.
+- **R2 listener order**: consumer listeners (`onKeydown`, `onPointerdown`, …) reach the
+  element *after* the component's own `@keydown`. The component's handler therefore runs
+  first, and a consumer `preventDefault()` cannot opt out. VDOM merges attrs first.
+  Select, DropdownMenu, Menubar and Tabs depend on that order.
+- **R3 form detection**: `useFormControl` computes `el.closest('form')` from the element
+  ref. In Vapor the ref is set before the component's nodes are inserted under the
+  `<form>`, the computed caches `false`, and the hidden native input never renders.
+- **R4**: consumer/trigger id changes still not propagated for some families
+  (Popover/Menu/Menubar/Tabs trigger-id, and content-id for Collapsible/Accordion/Tabs).
+  Fix #1 covered only part of this.
+- **R5**: remaining as-child/element-resolution differences:
+  - class merge order is `child parent` instead of `parent child`;
+  - a comment/text-first fragment does not resolve to its first element;
+  - forwarded refs on components without a single element root.
+- **R6**: the scope id is not forwarded to multi-root components or through the
+  RadioGroup and ToggleGroup items.
+- **R7**: `unmountOnHide=false` content is not given `display: none` when it closes.
+- **U1/U2** (useRenderedContentId, 76): KeepAlive deactivation, and as-child content
+  rendering no element. Both fixtures go through the bridge
+  (`h(KeepAlive, …)`, `h(content.type, {...content.props})`). Until a Vapor SFC repro
+  shows whether the bridge or Reka is at fault, they are not counted as Reka failures.
+- **U9** (30): single cases, printed by test name by `suite/triage.mjs`, to be
+  read one by one.
+
+### By component (r2)
+
+| File | fail:reka | fail:harness | markup-only | cannot-run | undiagnosed | total |
+|---|---|---|---|---|---|---|
+| Accordion/Accordion.test.ts |  |  |  | 1 |  | 1 |
+| AlertDialog/AlertDialog.test.ts |  |  |  |  | 1 | 1 |
+| AspectRatio/AspectRatio.test.ts |  |  | 1 |  |  | 1 |
+| Avatar/Avatar.test.ts |  |  | 2 |  |  | 2 |
+| Checkbox/Checkbox.test.ts | 3 |  |  |  | 1 | 4 |
+| Collapsible/Collapsible.test.ts |  |  | 4 |  |  | 4 |
+| Combobox/Combobox.test.ts | 11 |  |  | 10 | 2 | 23 |
+| DateField/DateField.test.ts |  |  |  |  | 1 | 1 |
+| Dialog/Dialog.ssr.test.ts |  |  |  | 1 |  | 1 |
+| Dialog/Dialog.test.ts | 3 |  |  |  | 2 | 5 |
+| DismissableLayer/DismissableLayer.ssr.test.ts |  |  |  | 3 |  | 3 |
+| DismissableLayer/DismissableLayer.test.ts |  | 3 |  |  |  | 3 |
+| DropdownMenu/DropdownMenu.test.ts | 4 |  |  |  | 1 | 5 |
+| Field/Field.test.ts |  | 9 |  |  | 2 | 11 |
+| FocusScope/FocusScope.test.ts |  |  |  |  | 1 | 1 |
+| Form/Form.test.ts | 7 | 1 |  | 1 |  | 9 |
+| Label/Label.test.ts |  |  | 4 |  |  | 4 |
+| Listbox/Listbox.test.ts | 8 |  |  |  |  | 8 |
+| Menubar/Menubar.test.ts | 4 |  |  |  | 1 | 5 |
+| NavigationMenu/NavigationMenu.test.ts |  | 5 |  |  |  | 5 |
+| Popover/Popover.ssr.test.ts |  |  |  | 1 |  | 1 |
+| Popover/Popover.test.ts |  |  |  |  | 3 | 3 |
+| Popper/Popper.test.ts |  |  | 1 |  |  | 1 |
+| Popper/PopperRootContext.test.ts |  | 1 |  |  | 2 | 3 |
+| Presence/Presence.test.ts |  |  | 1 |  | 3 | 4 |
+| Primitive/Primitive.test.ts | 7 |  |  |  |  | 7 |
+| Primitive/usePrimitiveElement.test.ts | 3 |  |  |  |  | 3 |
+| RadioGroup/RadioGroup.test.ts | 3 | 1 |  |  |  | 4 |
+| Rating/Rating.ssr.test.ts |  |  |  | 1 |  | 1 |
+| RovingFocus/RovingFocus.test.ts |  |  |  | 4 | 1 | 5 |
+| ScrollArea/ScrollArea.test.ts | 8 | 3 | 5 |  |  | 16 |
+| Select/Select.test.ts | 7 |  |  |  |  | 7 |
+| Slider/Slider.test.ts |  | 6 |  |  | 2 | 8 |
+| Splitter/Splitter.test.ts |  | 1 |  |  |  | 1 |
+| Stepper/StepperAnnouncement.test.ts |  |  |  |  | 4 | 4 |
+| Switch/Switch.test.ts | 2 |  |  |  |  | 2 |
+| Tabs/Tabs.test.ts | 4 |  |  | 3 |  | 7 |
+| TagGroup/TagGroup.test.ts |  |  |  |  | 1 | 1 |
+| Toast/Toast.test.ts |  |  |  | 22 |  | 22 |
+| Toggle/Toggle.test.ts | 4 |  |  |  |  | 4 |
+| Tooltip/Tooltip.test.ts |  |  |  | 4 |  | 4 |
+| Tree/Tree.test.ts | 6 |  | 1 |  |  | 7 |
+| VisuallyHidden/HiddenNativeLabels.test.ts | 1 | 1 |  |  |  | 2 |
+| shared/instance.test.ts |  | 1 |  | 2 |  | 3 |
+| shared/useContentId.test.ts | 4 |  |  | 11 |  | 15 |
+| shared/useForwardExpose.ssr.test.ts |  |  |  | 2 |  | 2 |
+| shared/useForwardExpose.test.ts | 9 |  |  |  |  | 9 |
+| shared/useForwardScopeId.test.ts | 3 |  |  |  |  | 3 |
+| shared/useRenderedContentId.test.ts | 9 |  |  | 102 | 76 | 187 |
+| shared/useSize.test.ts |  |  |  |  | 2 | 2 |
+| shared/useTriggerId.test.ts | 6 |  |  | 2 |  | 8 |
+| **total** | 116 | 32 | 19 | 170 | 106 | 443 |
+
+Components that are not listed have no failing tests.

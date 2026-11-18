@@ -279,3 +279,36 @@ It takes about as long as the VDOM run. Options: (a) required, (b) non-blocking 
 with the pass count tracked, (c) manual only.
 **Recommendation:** (b) until the remaining failures are triaged, then (a).
 **⚑ Provisional default:** manual (`pnpm --filter @reka-ui/vapor-tests test:full-suite`).
+
+### QS4. Is it acceptable for as-child Primitive to hook Vapor fragment updates?
+
+When an as-child Primitive's slot swaps its root element, nothing in the component re-runs
+in Vapor. To re-apply attrs and update `$el`, `onRootFragmentUpdate()`
+(`shared/instance.ts`) pushes a callback onto the `u` update-hook arrays of the
+fragments on the path to the first element. Those arrays are internal to
+`@vue/runtime-vapor` (ADR-S06).
+
+| Option | Trade-offs |
+|---|---|
+| (a) Keep the internal hook, pinned to the tested Vue version | Exact and cheap: it runs only when a branch actually changes. It can break on any Vue minor version. |
+| (b) MutationObserver on the parent | Public API, but asynchronous (one microtask late), costs per instance, and misses swaps that happen while detached |
+| (c) Ask Vue for a public "block changed" hook | The right fix long term, but it depends on upstream |
+
+**Recommendation:** (a) now, with a guard test, and file (c) upstream.
+**⚑ Provisional default:** (a).
+
+### QS5. Should the full-suite harness normalise Vapor's anchor comments in `html()`?
+
+19 tests (snapshots and `html()` equality) fail only because Vapor leaves `<!--slot-->`,
+`<!--if-->` and `<!--dynamic-component-->` anchors, and because it orders attributes
+differently. See FULL_SUITE.md, M1.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Normalise in the shim's `html()` (drop anchor comments, sort attributes) | The tests pass unchanged, but the shim then hides any real difference in comments or attribute order |
+| (b) Store separate Vapor snapshots | Honest, but it doubles the snapshot files and still fails the inline `toBe('<label>…')` checks |
+| (c) Keep them as known `markup-only` differences | No masking, but they stay red |
+
+**Recommendation:** (a), limited to Vapor's own anchor comment names, with the raw HTML
+still available.
+**⚑ Provisional default:** (c), until this is decided.
