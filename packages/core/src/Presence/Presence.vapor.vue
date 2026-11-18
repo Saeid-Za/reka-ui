@@ -73,8 +73,16 @@ function syncNode() {
 
 onMounted(syncNode)
 onBeforeUnmount(stopObserving)
-watch(shouldRender, syncNode, { flush: 'post' })
-watch(() => ({ ...attrs }), () => node.value && syncNode(), { flush: 'post' })
+// One watcher for both sources: a render change always syncs; an attrs change
+// only re-applies them while an element is rendered.
+watch(() => {
+  for (const key in attrs)
+    void attrs[key]
+  return [shouldRender.value]
+}, ([render], [wasRendering]) => {
+  if (render !== wasRendering || node.value)
+    syncNode()
+}, { flush: 'post' })
 </script>
 
 <template>
