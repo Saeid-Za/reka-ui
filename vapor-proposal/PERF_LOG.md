@@ -448,3 +448,118 @@ listed under OPEN_QUESTIONS Q17.
 
 **Bundle gap vs VDOM.** The difference is set by Vue's runtime-vapor (P2, OPEN_QUESTIONS Q16).
 Reka-side changes can only move it by tens to hundreds of bytes.
+
+---
+
+# Round 2
+
+The full-suite worker in `wt-suite` keeps the machine loaded, so every measurement in this
+round is an interleaved A/B in a single browser session, with more runs (25 for targeted
+scenarios). `ab.sh` now accepts `BASE=<ref>`, so the baseline can be any commit, and it still
+builds that baseline without `git stash`.
+
+The work goes in this order:
+
+1. **R1:** confirm or refute the Collapsible regression.
+2. **Memory and unmount:** heap retainers per instance and the cost of nested wrappers.
+3. **Q17:** a Vapor-only `useForwardExpose` module, to bring the VDOM bundle back to its
+   baseline size.
+4. Any other levers that come up.
+
+### R1. Is Collapsible slower after round 1?
+
+- **Hypothesis:** The Collapsible ratio in the final round-1 run (mount 1.81x vs 1.66x) came
+  from machine load, not from E1, E4 or E6. None of the three showed a Collapsible regression
+  in its own A/B run.
+- **Test:** an A/B of `6b16742`, the benchmark commit before any perf change, against HEAD.
+  Collapsible only, 25 runs, both builds in one session.
+- **Result** (`scratch/perf/R1.md`, 25 runs, interleaved, pure Vapor):
+
+  | collapsible | 6b16742 | HEAD | delta | verdict |
+  |---|---|---|---|---|
+  | mount (script ms) | 471.3 ±78.1 | 451.1 ±57.9 | -4.3% | noise |
+  | update:on | 171.5 ±20.2 | 140.9 ±9.3 | -17.8% | better |
+  | update:off | 166.5 ±23.4 | 151.4 ±26.2 | -9.1% | noise |
+  | unmount | 84.0 ±16.3 | 54.1 ±13.2 | -35.6% | better |
+  | memory (B/instance) | 42777 | 42413 | -0.9% | same |
+
+- **Verdict: refuted.** Collapsible on HEAD is not slower than before round 1. Update and
+  unmount are faster. The worse ratio against VDOM came from machine load between runs.
+  Absolute times in this session are about 2x those in BENCHMARKS.md because the full-suite
+  worker was running.
+
+### F1. Vue compile-time feature flags in the pure-Vapor build (user request)
+
+- **Question:** Does setting `__VUE_OPTIONS_API__: false` (with `__VUE_PROD_DEVTOOLS__` and
+  `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` both `false`) shrink the pure-Vapor build further,
+  and is it safe for Reka?
+- **Current state, checked before changing anything:** `bench/vite.config.ts` has defined all
+  three flags as `false` in every mode since the benchmark commit (`6b16742`). Every number in
+  BENCHMARKS.md, B0 included, was therefore measured with the Options API already off. This
+  experiment measures what the flag is worth by turning it back on (the Vue default) in an
+  A/B build, and checks that Reka still works with it off.
+- **Hypothesis:** turning the Options API off shrinks the pure-Vapor bundle by only a few KiB.
+  Most of the shared `runtime-core` code that `applyOptions` and the
+  `PublicInstanceProxyHandlers` branches guard is only reached from VDOM components, and the
+  pure-Vapor build tree-shakes much of it already. Timings and memory should not change: the
+  checks are skipped once per component, at setup.
+- **Safety check:** a grep of `packages/core/src` (tests and stories excluded) found no
+  `data()`, `methods:`, `computed:`/`watch:` options, `mixins`, `beforeCreate`/`created`, or
+  `this.$` anywhere. The only `defineComponent({...})` calls are the four VDOM render-function
+  modules (`Primitive.ts`, `Slot.ts`, `Presence.ts`, `Collection.ts`). They use only `name`,
+  `inheritAttrs`, `props` and `setup()`, which Vue supports with the Options API flag off, and
+  the pure-Vapor build swaps all four out.
+- **Other flags:** the esm-bundler build of `@vue/runtime-vapor` 3.6.0-rc.15 reads only
+  `__VUE_PROD_DEVTOOLS__` (11 sites) and `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` (15).
+  `runtime-core` adds `__VUE_OPTIONS_API__` (16). The other `__VUE_*__` names are runtime
+  globals, not compile-time flags. Vue has no flag for hydration, interop, `KeepAlive`,
+  `Teleport` or `Transition` in the Vapor runtime (see Q16), so no other flag is left to try.
+
+### E7. Move the Vapor half of `useForwardExpose` out of the default build (Q17)
+
+- **Hypothesis:** the Vapor branch that E1 added to `useForwardExpose` (about 100 B gzip,
+  per the round-1 summary) is dead code in the default build. Without `reka-ui/vapor`,
+  `getInstance()` never returns a Vapor instance. Moving that branch into
+  `shared/useForwardExpose.vapor.ts`, registered from `shared/instance.vapor.ts` (the module
+  behind `reka-ui/vapor` and imported by every `*.vapor.vue`), should bring the VDOM bundle
+  back to B0 size or smaller. The pure-Vapor bundle should stay within a few bytes, and no
+  timing or memory should change.
+- **Why a registration hook and not a build swap:** `useForwardExpose` is public. An app
+  that uses the default `reka-ui` build with `import 'reka-ui/vapor'` and calls it from its own
+  `<script setup vapor>` components still needs the Vapor half. A swap in `rekaVaporSwap()`
+  would only reach builds that compile Reka from source. Registering the Vapor half in the
+  same module that turns on Vapor instance resolution reaches both kinds of build. No public
+  export changes: `setVaporForwardExpose` is not re-exported from `shared/index.ts`, and the
+  export-names snapshot test checks that.
+- **Change:** `useForwardExpose.ts` keeps the shared prelude (`currentRef`, `currentElement`,
+  `onUpdated`, the SSR early return) and the VDOM body. It returns early with
+  `vaporForwardRef(instance, currentRef, localExpose)` when an implementation is registered
+  and the instance is a Vapor one. `useForwardExpose.vapor.ts` holds the E1 Proxy `exposed`
+  and the write-only `forwardRef` unchanged.
+- **Bundle** (minified app bundles from `bench/vite.config.ts`, gzip level 9, brotli at the Node
+  default; `BENCH_OPTIONS_API=true` restores Vue's default):
+
+  | Build | Options API on: min / gzip / brotli | Off: min / gzip / brotli | Change, min / gzip |
+  |---|---|---|---|
+  | pure Vapor | 225,848 / 75,814 / 66,505 | 225,809 / 75,802 / 66,521 | **−39 B / −12 B** |
+  | VDOM | 186,753 / 63,025 / 55,293 | 182,584 / 61,515 / 54,063 | −4,169 B / −1,510 B |
+  | interop | 297,385 / 102,794 / 89,407 | 293,235 / 101,174 / 88,184 | −4,150 B / −1,620 B |
+
+  The unminified pure-Vapor bundle contains no `applyOptions` or `resolveMergedOptions` with
+  the flag on or off, and the set of named functions is the same in both builds. The pure-Vapor
+  build never reaches the Options API code, so the flag has nothing left to remove there.
+- **Timings and memory** (`scratch/perf/F1.md`: all scenarios, 10 runs; `F1b.md`: Checkbox
+  and Collapsible, 20 runs; one session each). Memory per instance is the same to within
+  0.01%. Timings vary in both directions between the two sessions: Checkbox unmount is
+  −33% in F1b but +34% in F1, and Collapsible unmount is +33% in F1 and +36% in F1b. The two
+  bundles differ by 39 B of minified code, so these swings are machine load. Part of the F1
+  session also overlapped with my own type-check run.
+- **Tests:** the pure-Vapor suite (`vitest.native.config.ts`) now compiles with
+  `__VUE_OPTIONS_API__: false`, and `test-native/feature-flags.test.ts` asserts it. Result:
+  **58 passed, 1 expected fail, 1 todo**. That is the same as before plus the new flag test.
+  Reka needs nothing from the Options API in pure Vapor. The VDOM and interop suites keep the
+  flag on, because `@vue/test-utils` and the interop host app are VDOM.
+- **Verdict: kept** as configuration only. The benchmark already had all three flags off, so
+  no numbers in BENCHMARKS.md change. The pure-Vapor test suite now also runs with the
+  Options API off. The flag saves nothing in pure Vapor, about 1.5 KiB gzip in VDOM and about
+  1.6 KiB gzip in interop. Whether Reka should document the flag is Q18 in OPEN_QUESTIONS.md.

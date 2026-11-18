@@ -220,3 +220,24 @@ behaviour or source used by both builds:
 
 **Recommendation:** none of these for the first release. Revisit after Vue 3.6 is stable, using
 the A/B harness (`PERF_LOG.md`).
+
+### Q18. Should Reka document `__VUE_OPTIONS_API__: false` for consumers? (PERF_LOG F1)
+
+Reka does not use the Options API. No `data`/`methods`/`computed`/`watch` options, mixins,
+`created` or `this.$` appear in `packages/core/src`; the four `defineComponent` render-function
+modules use only `name`, `props`, `inheritAttrs` and `setup`. The pure-Vapor suite passes with
+the flag off.
+
+| Option | Effect | Trade-off |
+|---|---|---|
+| A. Say nothing | none | users who would like the ~1.5 KiB gzip VDOM/interop saving don't learn it is safe with Reka |
+| B. Document "safe to disable" in the installation/Vapor guide (recommended) | VDOM −1.5 KiB gzip, interop −1.6 KiB gzip; pure Vapor ±0 (rc.15 never reaches the Options API code) | one docs paragraph; a regression test is needed so a future Options-API use in Reka is caught (the pure-Vapor suite now runs with the flag off; a VDOM run with the flag off would cover the default build too) |
+| C. Require it | none beyond B | Reka cannot require it: the flag is app-wide, and apps may use the Options API in their own components |
+
+**Recommendation:** B. Also run the VDOM suite once with the flag off in CI, so the
+default build is covered as well.
+
+No other Vue compile-time flag applies. `@vue/runtime-vapor` 3.6.0-rc.15 reads only
+`__VUE_PROD_DEVTOOLS__` and `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`, which are already `false`
+in production by default. The pure-Vapor size floor is the runtime code that no flag
+guards: hydration, interop and the built-ins (Q16). Any flag for those would have to come from Vue.
