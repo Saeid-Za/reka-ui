@@ -39,6 +39,7 @@ export default defineConfig({
     date: './src/date/index.ts',
     constant: './constant/index.ts',
     shared: './src/shared/index.ts',
+    vapor: './src/vapor.ts',
   },
   fromVite: true,
   platform: 'neutral',

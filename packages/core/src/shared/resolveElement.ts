@@ -13,7 +13,8 @@ import { unrefElement } from '@vueuse/core'
  * @returns The element, or `undefined` when the target renders none.
  */
 export function resolveElement(target: Element | ComponentPublicInstance | null | undefined) {
-  if (target && '$el' in target && ['#text', '#comment'].includes(target.$el?.nodeName)) {
+  // `$` is the VDOM internal instance; a Vapor component ref is its exposed proxy and has none.
+  if (target && '$el' in target && '$' in target && ['#text', '#comment'].includes(target.$el?.nodeName)) {
     let vnode = target.$.subTree
     while (vnode.component)
       vnode = vnode.component.subTree

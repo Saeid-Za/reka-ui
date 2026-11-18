@@ -1,7 +1,8 @@
 import type { ComponentPublicInstance } from 'vue'
 // reference: https://github.com/vuejs/rfcs/issues/258#issuecomment-1068697672
 import { isClient } from '@vueuse/shared'
-import { computed, getCurrentInstance, onUpdated, ref, triggerRef } from 'vue'
+import { computed, onUpdated, ref, triggerRef } from 'vue'
+import { getInstance, getInstanceRootNode, isVaporInstance } from './instance'
 import { resolveElement } from './resolveElement'
 
 /**
@@ -13,7 +14,9 @@ import { resolveElement } from './resolveElement'
  * @returns An object with `forwardRef`, `currentRef`, and `currentElement`.
  */
 export function useForwardExpose<T extends ComponentPublicInstance>() {
-  const instance = getCurrentInstance()!
+  // VDOM or Vapor instance; both carry `props` and a writable `exposed`.
+  const instance = getInstance()!
+  const isVapor = isVaporInstance(instance)
 
   const currentRef = ref<Element | T | null>()
   const currentElement = computed(() => resolveCurrentElement())
@@ -72,10 +75,42 @@ export function useForwardExpose<T extends ComponentPublicInstance>() {
     configurable: true,
     get: () => {
       const ref = currentRef.value
-      return ref ? (ref instanceof Element ? ref : ref.$el) : instance.vnode.el
+      return ref ? (ref instanceof Element ? ref : ref.$el) : getInstanceRootNode(instance)
     },
   })
   instance.exposed = ret
+
+  if (isVapor) {
+    // A Vapor template ref resolves to a proxy over the `exposed` object it
+    // first sees and caches it, so the object is updated in place instead of
+    // being replaced. A Vapor child ref is that proxy itself (no `$`).
+    const ownKeys = new Set(Object.keys(ret))
+    let forwardedKeys: string[] = []
+    const forwardRef = (ref: Element | T | null) => {
+      currentRef.value = ref && typeof ref === 'object' && '$el' in ref && !ref.$el ? null : ref
+      for (const key of forwardedKeys)
+        delete ret[key]
+      forwardedKeys = []
+      void currentElement.value
+      const forwarded = currentRef.value
+      if (!forwarded || forwarded instanceof Element)
+        return
+      for (const key of Object.keys(forwarded)) {
+        if (ownKeys.has(key) || key === '$el')
+          continue
+        forwardedKeys.push(key)
+        Object.defineProperty(ret, key, {
+          enumerable: true,
+          configurable: true,
+          get: () => {
+            const current = currentRef.value
+            return current instanceof Element ? undefined : (current as Record<string, any> | null | undefined)?.[key]
+          },
+        })
+      }
+    }
+    return { forwardRef, currentRef, currentElement }
+  }
 
   /**
    * Set the forwarded ref and merge the child's exposed values.

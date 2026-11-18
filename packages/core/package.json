@@ -28,7 +28,12 @@
     "radix",
     "unstyled"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/vapor.js",
+    "./dist/vapor.cjs",
+    "./src/vapor.ts",
+    "./src/shared/instance.vapor.ts"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -41,6 +46,10 @@
     "./constant": {
       "import": "./dist/constant.js",
       "require": "./dist/constant.cjs"
+    },
+    "./vapor": {
+      "import": "./dist/vapor.js",
+      "require": "./dist/vapor.cjs"
     },
     "./date": {
       "import": "./dist/date.js",

@@ -22,6 +22,7 @@
     "prepare": "pnpm simple-git-hooks",
     "test:run": "pnpm --filter reka-ui test:run",
     "test:browser": "pnpm --filter reka-ui test:browser",
+    "test:vapor": "pnpm --filter @reka-ui/vapor-tests test",
     "test": "pnpm --filter reka-ui test",
     "test-update": "pnpm --filter reka-ui test-update",
     "lint": "eslint .",

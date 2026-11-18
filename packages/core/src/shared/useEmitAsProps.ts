@@ -1,5 +1,6 @@
 import type { AnyFn } from '@vueuse/shared'
-import { camelize, getCurrentInstance, toHandlerKey } from 'vue'
+import { camelize, toHandlerKey } from 'vue'
+import { getInstance, getInstanceName } from './instance'
 
 // Vue doesn't have emits forwarding, in order to bind the emits we have to convert events into `onXXX` handlers
 // issue: https://github.com/vuejs/core/issues/5917
@@ -18,14 +19,14 @@ import { camelize, getCurrentInstance, toHandlerKey } from 'vue'
  * call the `emit` function with the corresponding event name and arguments.
  */
 export function useEmitAsProps<Name extends string, Fn extends AnyFn = AnyFn>(emit: Emit<Name, Fn>) {
-  const vm = getCurrentInstance()
+  const vm = getInstance()
 
   const events = vm?.type.emits as Name[]
   const result: Record<string, any> = {}
 
   if (!events?.length) {
     console.warn(
-      `No emitted event found. Please check component: ${vm?.type.__name}`,
+      `No emitted event found. Please check component: ${getInstanceName(vm)}`,
     )
   }
 

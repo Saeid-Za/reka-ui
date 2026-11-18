@@ -1,5 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue'
-import { camelize, computed, getCurrentInstance, toRef } from 'vue'
+import { camelize, computed, toRef } from 'vue'
+import { getAssignedPropKeys, getInstance } from './instance'
 
 interface PropOptions {
   type?: any
@@ -26,7 +27,8 @@ export type WithOptionalBooleans<T> = {
  * @returns computed value that combines the default props, preserved props, and assigned props.
  */
 export function useForwardProps<T extends Record<string, any>>(props: MaybeRefOrGetter<T>) {
-  const vm = getCurrentInstance()
+  // Works for VDOM and Vapor instances (`getCurrentInstance()` is null in Vapor).
+  const vm = getInstance()
   // Default value for declared props
   const defaultProps = Object.keys(vm?.type.props ?? {}).reduce((prev, curr) => {
     const defaultValue = (vm?.type.props[curr] as PropOptions).default
@@ -38,10 +40,8 @@ export function useForwardProps<T extends Record<string, any>>(props: MaybeRefOr
   const refProps = toRef(props)
   return computed(() => {
     const preservedProps = {} as T
-    const assignedProps = vm?.vnode.props ?? {}
-
-    Object.keys(assignedProps).forEach((key) => {
-      preservedProps[camelize(key) as keyof T] = assignedProps[key]
+    getAssignedPropKeys(vm).forEach((key) => {
+      preservedProps[camelize(key) as keyof T] = true as T[keyof T]
     })
 
     // Only return value from the props parameter
