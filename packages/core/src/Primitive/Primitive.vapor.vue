@@ -28,6 +28,9 @@ const SELF_CLOSING_TAGS = ['area', 'img', 'input']
 const attrs = useAttrs()
 const instance = getInstance()
 
+// Like the VDOM `Primitive`: `as="template"` renders as-child too. Read once, as there.
+const renderAsChild = props.asChild || props.as === 'template'
+
 function rootElement() {
   return instance && 'block' in instance ? findBlockElement(instance.block) : undefined
 }
@@ -46,7 +49,7 @@ defineExpose({
   },
 })
 
-if (props.asChild) {
+if (renderAsChild) {
   let mounted = false
   const applyAsChildAttrs = createAsChildApplier()
   const sync = () => {
@@ -77,7 +80,7 @@ if (props.asChild) {
 </script>
 
 <template>
-  <slot v-if="asChild" />
+  <slot v-if="renderAsChild" />
   <component
     :is="as"
     v-else-if="typeof as === 'string' && SELF_CLOSING_TAGS.includes(as)"
