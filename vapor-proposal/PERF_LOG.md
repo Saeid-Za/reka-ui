@@ -222,3 +222,52 @@ divided by N. These are self sizes from the unminified builds.
 - Timings were all within noise: checkbox mount 333.0 → 347.4 ms, tabs mount 851.0 → 870.5 ms.
 - Bundle size was unchanged (−1 B gzip).
 - A heap snapshot of the candidate showed 31398 B per checkbox, against 30616 B before.
+
+### P4. CPU profile: Tabs ×200, unmount + mount ×5, pure Vapor (after E1)
+
+Unlike Collapsible, the `as-child` path **is** hot in Tabs. `TabsTrigger` renders
+`RovingFocusItem` with `as-child`, which renders `CollectionItem`, so several
+`as-child` layers apply to each trigger. Self time, out of 1854.9 ms sampled:
+
+| Function | Self time | Share |
+|---|---|---|
+| `applyAsChildAttrs` | 88.1 ms | 4.7 % (the top self-time function) |
+| the `watchEffect` flush job inside `Primitive.vapor.vue` | 44.0 ms | 2.4 % |
+| `findBlockElement` | 21.8 ms | 1.2 % |
+| `exposeRootElement` | 13.4 ms | 0.7 % |
+
+In `Primitive.vapor.vue`, every `as-child` instance calls `sync()` from `onMounted`
+**and** from the first post-flush run of its `watchEffect`. That `watchEffect` runs
+after mount, with `mounted` already true. So the attrs are applied twice on every
+mount.
+
+### E3. Apply `as-child` attrs once on mount
+
+- **Hypothesis:** Dropping the `onMounted` sync, so that the post-flush
+  `watchEffect` does the first application, halves the applier work on mount. Tabs
+  mount should get faster. Checkbox and Collapsible should not change much, because
+  they have fewer `as-child` layers. Memory should drop slightly: one hook closure
+  fewer per `as-child` instance.
+- **Change:**
+  - In `Primitive.vapor.vue`, remove `onMounted` and the `mounted` flag. The
+    `watchEffect` (`flush: 'post'`) syncs on its first run and on every attrs change.
+  - `onUpdated` stays, for a slot element that gets replaced.
+- **Risk:** The first post-flush run must see the rendered element. The gate tests
+  cover as-child merge, listeners, reactivity, precedence and all 48 families.
+
+**Result: REVERTED.** The gate passed, but the A/B run (`raw/perf/E3ab.json`) showed no timing
+change outside noise:
+
+| Scenario | Before (ms) | After (ms) | Change |
+|---|---|---|---|
+| Tabs mount | 889.1 | 882.0 | −0.8 % |
+| Tabs unmount | 153.9 | 147.4 | −4.2 % (noise) |
+| Checkbox mount | 355.5 | 355.7 | +0.1 % |
+
+Memory per instance improved only for Tabs: 203447 → 201814 B (−0.8 %). Checkbox and Collapsible
+did not change.
+
+So the double application was not where the time goes. The first post-flush `watchEffect`
+run most likely happens before `onMounted`, while `mounted` is still false, so the attrs
+were applied only once. That was not verified separately. A 0.8 % memory gain is not worth
+moving the initial apply to a different lifecycle point.
