@@ -8,19 +8,23 @@ import { createApp, createVaporApp, nextTick, vaporInteropPlugin } from 'vue'
  *   islands inside a VDOM app.
  * - `vapor-only`: `createVaporApp` without the interop plugin. Only valid when
  *   reka-ui itself is compiled in Vapor mode (vitest.native.config.ts).
+ * - `vdom`: classic `createApp`, no interop. Only valid when the fixtures are
+ *   compiled as VDOM (vitest.vdom.config.ts): the baseline.
  */
-export type Mode = 'vapor-app+interop' | 'vdom-app+interop' | 'vapor-only'
+export type Mode = 'vapor-app+interop' | 'vdom-app+interop' | 'vapor-only' | 'vdom'
 
 const mounted: Array<() => void> = []
 
 export function mount(root: Component, mode: Mode) {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const app = mode === 'vdom-app+interop'
-    ? createApp(root).use(vaporInteropPlugin)
-    : mode === 'vapor-app+interop'
-      ? createVaporApp(root as any).use(vaporInteropPlugin)
-      : createVaporApp(root as any)
+  const app = mode === 'vdom'
+    ? createApp(root)
+    : mode === 'vdom-app+interop'
+      ? createApp(root).use(vaporInteropPlugin)
+      : mode === 'vapor-app+interop'
+        ? createVaporApp(root as any).use(vaporInteropPlugin)
+        : createVaporApp(root as any)
   app.mount(host)
   const unmount = () => {
     app.unmount()

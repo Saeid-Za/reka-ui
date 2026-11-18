@@ -13,7 +13,6 @@ it('reka-ui components are compiled as Vapor components', () => {
 
 runCoreScenarios('vapor-only')
 
-// Known gaps of this first step, tracked in CHANGES.md (phase 2):
-it.todo('tabs / RovingFocus / Listbox: `useCollection` builds CollectionSlot/CollectionItem with h() + Slot')
-it.todo('dialog and other overlays: `useContentMounted` reads instance.vnode.el / $forceUpdate; DismissableLayer, FocusScope and Teleport need a Vapor pass')
-it.todo('virtualizers: cloneVNode on slot output (Listbox/Tree/ScrollArea virtualizers)')
+// Per-component coverage (incl. Tabs/Collection and Dialog/overlays) is in
+// families-vapor-only.test.ts. Remaining known gap, tracked in CHANGES.md:
+it.todo('virtualizers (Listbox/Tree/ScrollArea/Combobox): cloneVNode on slot output')
