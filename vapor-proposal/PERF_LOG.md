@@ -175,3 +175,50 @@ A/B (`raw/perf/E1ab.json`), pure Vapor, script median ms (± std):
 All other ops: noise. Memory per instance (deterministic): checkbox 29533 → 28377 B (−3.9 %),
 collapsible 42773 → 42538 (−0.5 %), tabs 206435 → 203625 (−1.4 %), plain unchanged.
 Bundle: +106 B gzip (+447 B min), accepted as negligible against the memory win.
+
+### P3. Heap snapshot per instance: Checkbox ×1000, VDOM vs pure Vapor (after E1)
+
+**Tool:** `bench/heap.mjs`. It takes a heap snapshot with N instances mounted and
+another with the scenario cleared, then reports the difference per constructor,
+divided by N. These are self sizes from the unminified builds.
+
+**Totals:** VDOM 23380 B per instance, pure Vapor 30616 B. Per Checkbox row:
+
+| Kind | VDOM (B / objects) | Pure Vapor (B / objects) |
+|---|---|---|
+| closures | 1652 / 59 | 3220 / 115 |
+| `(array)` backing stores | 3950 / 35 | 5542 / 57 |
+| `Dep` | 448 / 14 | 1280 / 40 |
+| `EffectScope` | 200 / 5 | 480 / 12 |
+| `RenderEffect` | — | 720 / 12 |
+| `DynamicFragment` | — | 312 / 6 |
+| component instances | (`object:Object`, included above) | `VaporComponentInstance` 880 / 5 |
+
+**Reading:**
+- The extra memory is mostly reactive bookkeeping: more closures (Vapor's compiled
+  prop getters), more `Dep`s and more effect scopes.
+- 6 `DynamicFragment`s per row come from `v-if` chains. `Primitive.vapor.vue` alone
+  creates two nested `createIf` per instance: `v-if="asChild"`, then
+  `v-else-if` for self-closing tags, then `v-else`. Each one carries its own render
+  effect, scope and anchor.
+
+### E2. Flatten `Primitive.vapor.vue`'s branch chain
+
+- **Hypothesis:** Selecting the self-closing case with a *dynamic slot* (`<template
+  v-if="!isSelfClosing" #default>`) avoids the inner `createIf`. That removes one
+  `DynamicFragment`, one render effect, one scope and one anchor per non-`as-child`
+  `Primitive`. The result should be less memory per instance and a faster mount,
+  most visibly in Checkbox and Tabs, where many `Primitive`s render elements.
+  Hoisting `SELF_CLOSING_TAGS` out of `setup` also saves one array per instance.
+- **Change:** `Primitive.vapor.vue` only. Vapor build only; VDOM is unaffected.
+- **Measure:** A/B against HEAD (`ab.sh`).
+
+**Result: REVERTED.** The gate passed, but the hypothesis was wrong. A Vapor dynamic slot
+(`{ $: [() => cond ? slot : undefined] }`) allocates more per instance than the nested
+`createIf` it replaced. A/B results (`raw/perf/E2ab.json`):
+
+- Memory per instance got worse: checkbox 28377 → 29159 B (+2.8 %), collapsible 42541 → 44415 B
+  (+4.4 %), tabs 203621 → 208293 B (+2.3 %).
+- Timings were all within noise: checkbox mount 333.0 → 347.4 ms, tabs mount 851.0 → 870.5 ms.
+- Bundle size was unchanged (−1 B gzip).
+- A heap snapshot of the candidate showed 31398 B per checkbox, against 30616 B before.
