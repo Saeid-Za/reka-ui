@@ -2,6 +2,7 @@ import type { VueWrapper } from '@vue/test-utils'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
+import { expectMarkupSnapshot } from '@/test'
 import Popper from './_Popper.vue'
 import PopperAnchor from './PopperAnchor.vue'
 import PopperContent from './PopperContent.vue'
@@ -21,7 +22,7 @@ describe('give default Popper', async () => {
   })
 
   it('should render correctly and match snapshot', async () => {
-    expect(wrapper.element).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.element)
   })
 })
 

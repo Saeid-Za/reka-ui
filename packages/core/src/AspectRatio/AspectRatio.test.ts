@@ -2,6 +2,7 @@ import type { VueWrapper } from '@vue/test-utils'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { axe } from 'vitest-axe'
+import { expectMarkupSnapshot } from '@/test'
 import { AspectRatio } from '.'
 
 describe('given a default AspectRatio', async () => {
@@ -24,6 +25,6 @@ describe('given a default AspectRatio', async () => {
   })
 
   it('should render as snapshot', () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
   })
 })

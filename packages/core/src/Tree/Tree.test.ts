@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { axe } from 'vitest-axe'
 import { defineComponent, h, nextTick } from 'vue'
 import { useKbd } from '@/shared'
+import { expectMarkupSnapshot } from '@/test'
 import { TreeItem, TreeRoot, TreeVirtualizer } from '.'
 import Tree from './story/_Tree.vue'
 
@@ -31,7 +32,7 @@ describe('given default Tree', () => {
   })
 
   it('should render snapshot', () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
   })
 
   it('should select and deselect item', async () => {

@@ -3,6 +3,7 @@ import { findByText } from '@testing-library/vue'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { axe } from 'vitest-axe'
+import { modeMarkup } from '@/test'
 import Collapsible from './story/_Collapsible.vue'
 
 const CONTENT_TEXT = 'Content'
@@ -35,7 +36,7 @@ describe('given a default Collapsible', async () => {
     })
 
     it('should open the content', async () => {
-      expect(wrapper.text()).toContain(content.innerHTML)
+      expect(wrapper.text()).toContain(modeMarkup(content.innerHTML))
     })
 
     describe('and clicking the trigger again', () => {
@@ -79,7 +80,7 @@ describe('given a Collapsible with `unmountOnHide:false` ', async () => {
     })
 
     it('should open the content', async () => {
-      expect(wrapper.text()).toContain(content.innerHTML)
+      expect(wrapper.text()).toContain(modeMarkup(content.innerHTML))
     })
 
     describe('and clicking the trigger again', () => {
@@ -90,7 +91,7 @@ describe('given a Collapsible with `unmountOnHide:false` ', async () => {
       it('should close the content', () => {
         expect(content.getAttribute('data-state')).toBe('closed')
         expect(content.getAttribute('hidden')).toBe('')
-        expect(wrapper.text()).toContain(content.innerHTML)
+        expect(wrapper.text()).toContain(modeMarkup(content.innerHTML))
       })
     })
   })
@@ -110,7 +111,7 @@ describe('given an open uncontrolled Collapsible', () => {
     })
 
     it('should open the content by default', () => {
-      expect(wrapper.text()).toContain(content.innerHTML)
+      expect(wrapper.text()).toContain(modeMarkup(content.innerHTML))
     })
 
     it('should close the content', async () => {

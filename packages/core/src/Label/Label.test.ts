@@ -2,6 +2,7 @@ import { render } from '@testing-library/vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { axe } from 'vitest-axe'
 import { defineComponent, h, nextTick } from 'vue'
+import { modeMarkup } from '@/test'
 import Label from './Label.vue'
 
 describe('test label functionalities', () => {
@@ -26,17 +27,17 @@ describe('test label functionalities', () => {
 
   it('should render without crashing', async () => {
     const label = render(Label)
-    expect(label.html()).toBe('<label></label>')
+    expect(modeMarkup(label.html())).toBe('<label></label>')
   })
 
   it('should render with a default slot', async () => {
     const label = render(Label, { slots: { default: 'Label' } })
-    expect(label.html()).toBe('<label>Label</label>')
+    expect(modeMarkup(label.html())).toBe('<label>Label</label>')
   })
 
   it('should render with a `for` attribute', async () => {
     const label = render(Label, { props: { for: 'input' } })
-    expect(label.html()).toBe('<label for="input"></label>')
+    expect(modeMarkup(label.html())).toBe('<label for="input"></label>')
   })
 
   it('should render with a `for` attribute and a default slot', async () => {
@@ -44,7 +45,7 @@ describe('test label functionalities', () => {
       props: { for: 'input' },
       slots: { default: 'Label' },
     })
-    expect(label.html()).toBe('<label for="input">Label</label>')
+    expect(modeMarkup(label.html())).toBe('<label for="input">Label</label>')
   })
 
   it('should not focus the input when click on the label without a `for` attribute', async () => {

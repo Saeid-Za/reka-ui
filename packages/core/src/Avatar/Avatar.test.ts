@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { axe } from 'vitest-axe'
 import { nextTick } from 'vue'
+import { expectMarkupSnapshot } from '@/test'
 import Avatar from './story/_Avatar.vue'
 
 const FALLBACK = 'CT'
@@ -68,12 +69,12 @@ describe('given an Avatar with fallback and a working image', async () => {
   })
 
   it('should match before image loaded snapshot', () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
   })
 
   it('should match after image loaded snapshot', async () => {
     await waitForElementToBeRemoved(() => queryByText(wrapper.element as HTMLElement, 'CT'))
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
   })
 })
 

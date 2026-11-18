@@ -7,6 +7,7 @@ import { axe } from 'vitest-axe'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import { DialogContent, DialogRoot, DialogTitle } from '@/Dialog'
 import { PopoverContent, PopoverRoot, PopoverTrigger } from '@/Popover'
+import { isVapor, normalizeMarkup } from '@/test'
 import { ToastAction, ToastClose, ToastDescription, ToastProvider, ToastRoot, ToastTitle, ToastViewport } from '.'
 import Toast from './story/_Toast.vue'
 import { VIEWPORT_PAUSE, VIEWPORT_RESUME } from './utils'
@@ -784,6 +785,19 @@ describe('given a Toast with an action', () => {
   })
 })
 
+/** The DOM nodes a Vapor block renders, resolved through fragments and components. */
+function vaporRootNodes(block: any): Node[] {
+  if (block instanceof Node)
+    return [block]
+  if (Array.isArray(block))
+    return block.flatMap(vaporRootNodes)
+  if (block && 'nodes' in block)
+    return vaporRootNodes(block.nodes)
+  if (block && 'block' in block)
+    return vaporRootNodes(block.block)
+  return []
+}
+
 describe('given a ToastTitle and ToastDescription outside a managed toast', () => {
   // Vue only falls attrs through a fragment root in development, so a root that
   // is not a single element loses `class` / `id` in a production build.
@@ -796,8 +810,18 @@ describe('given a ToastTitle and ToastDescription outside a managed toast', () =
       slots: { default: 'Content' },
     })
 
-    expect(wrapper.vm.$.subTree.el).toBeInstanceOf(HTMLElement)
-    expect(wrapper.element.outerHTML).toBe('<div class="custom" id="custom-id">Content</div>')
+    if (isVapor) {
+      // A Vapor instance has no VNode subtree; its root block (resolved through
+      // fragments) must be that one element.
+      expect(vaporRootNodes(wrapper.vm.$.block)).toEqual([wrapper.element])
+      expect(wrapper.element).toBeInstanceOf(HTMLElement)
+    }
+    else {
+      expect(wrapper.vm.$.subTree.el).toBeInstanceOf(HTMLElement)
+    }
+    // Vapor leaves `<!--slot-->` anchors in the markup (QS5).
+    const html = wrapper.element.outerHTML
+    expect(isVapor ? normalizeMarkup(html) : html).toBe('<div class="custom" id="custom-id">Content</div>')
     wrapper.unmount()
   })
 })

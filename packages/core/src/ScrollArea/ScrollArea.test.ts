@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { defineComponent, h } from 'vue'
-import { sleep } from '@/test'
+import { expectMarkupSnapshot, sleep } from '@/test'
 import ScrollAreaCorner from './ScrollAreaCorner.vue'
 import ScrollAreaRoot from './ScrollAreaRoot.vue'
 import ScrollAreaScrollbar from './ScrollAreaScrollbar.vue'
@@ -252,7 +252,7 @@ describe('given default ScrollArea', () => {
   })
 
   it('should render content, but not scrollbar', () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
     expect(wrapper.html()).not.toContain('data-orientation="vertical"')
   })
 
@@ -263,7 +263,7 @@ describe('given default ScrollArea', () => {
     })
 
     it('should render scrollbar', () => {
-      expect(wrapper.html()).toMatchSnapshot()
+      expectMarkupSnapshot(wrapper.html())
     })
   })
 })
@@ -284,7 +284,7 @@ describe('given prop:type="always" ScrollArea', () => {
   })
 
   it('should render content and scrollbar', () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
     expect(wrapper.html()).toContain('data-orientation="vertical"')
   })
 })
@@ -306,7 +306,7 @@ describe('given prop:type="scroll" ScrollArea', () => {
   })
 
   it('should render content and scrollbar', () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    expectMarkupSnapshot(wrapper.html())
     expect(wrapper.html()).not.toContain('data-orientation="vertical"')
   })
 
@@ -319,7 +319,7 @@ describe('given prop:type="scroll" ScrollArea', () => {
 
     it('should render scrollbar', () => {
       expect(wrapper.html()).toContain('data-orientation="vertical"')
-      expect(wrapper.html()).toMatchSnapshot()
+      expectMarkupSnapshot(wrapper.html())
     })
   })
 })
