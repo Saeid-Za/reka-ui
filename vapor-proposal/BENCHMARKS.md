@@ -511,3 +511,163 @@ Full tables of the final run (same format as §4):
 | popover/vdom | 1 | 1 |
 | popover/interop | 1 | 1 |
 | popover/vapor | 1 | 1 |
+
+## 11. After round 2 (vs B0 and vs the end of round 1)
+
+The kept changes are in `PERF_LOG.md`, each with its A/B against the commit before it:
+
+- **E7b:** the Vapor half of `useForwardExpose` moved out of the default build, registered by
+  `reka-ui/vapor` (ADR-023).
+- **E8:** one watcher instead of two in `Presence.vapor.vue`.
+- **E10b:** one shared Proxy handler for the Vapor `exposed` objects.
+
+Reverted: E9, the `SELF_CLOSING_TAGS` hoist.
+
+Not code changes:
+
+- **R1** refuted the Collapsible regression. Its A/B against `6b16742` showed no slowdown.
+- **F1:** the Options API flag was already off in every mode and saves 0 B in pure Vapor. The
+  pure-Vapor tests now run with it off.
+
+The full three-mode run is `raw/bench-round2.json`. It finished 2026-11-18 16:25
+(Asia/Tehran), and the full-suite worker was still running: load average 2.2–3.6. As in §10,
+compare timings through the per-run ratio to VDOM. Memory and bundle numbers do not depend on
+load.
+
+| Metric (pure Vapor) | B0 | End of round 1 | Round 2 |
+|---|---|---|---|
+| Memory per instance, ratio to VDOM: Checkbox / Collapsible / Tabs | 1.38 / 1.41 / 1.45x | 1.32 / 1.40 / 1.41x | **1.29 / 1.37 / 1.39x** |
+| Memory per instance, Checkbox | 29,533 B | 28,238 B | **27,508 B** (−6.9% vs B0) |
+| Memory per instance, Collapsible | 42,778 B | 42,413 B | **41,519 B** (−2.9%) |
+| Memory per instance, Tabs | 206,429 B | 201,733 B | **198,590 B** (−3.8%) |
+| Unmount, ratio to VDOM: Checkbox / Collapsible / Tabs | 1.35 / 1.71 / 1.80x | 1.34 / 2.02 / 1.75x | 1.09 / 1.97 / 1.49x (loaded run; no single A/B showed an unmount change outside noise) |
+| Mount, ratio to VDOM: Checkbox / Collapsible / Tabs | 0.90 / 1.66 / 1.21x | 0.77 / 1.81 / 1.11x | 0.86 / 1.70 / 1.28x (same caveat) |
+| Residual heap after unmounting 1000 Checkboxes, cycles 1/2/3 | 807 / 836 / 863 KiB | 363 / 388 / 401 KiB | 396 / 421 / 435 KiB |
+| Pure-Vapor bundle, min / gzip / brotli (B) | 225,347 / 75,632 / 66,278 | 225,809 / 75,802 / 66,521 | 226,390 / 75,914 / 66,572 |
+| **VDOM bundle**, min / gzip / brotli (B) | 182,137 / 61,411 / 54,034 | 182,584 / 61,515 / 54,063 | **181,770 / 61,313 / 53,778** (below B0) |
+| Interop bundle, min / gzip / brotli (B) | 292,788 / 101,074 / 88,115 | 293,235 / 101,174 / 88,184 | 292,421 / 100,993 / 87,848 |
+
+Mount and unmount ratios moved in both directions between full runs, by more than any kept
+change moved them in its own interleaved A/B. Treat them as unchanged by round 2. Unmount
+stays the largest gap: 1.1–2.0x. The residual-heap figures come from the first page of the
+run, so their small round-to-round changes are not a measured effect.
+
+Full tables of this run (same format as §4):
+
+### Bundle (whole benchmark app, one JS chunk, production build)
+
+| Mode | min (KiB) | gzip -9 (KiB) | brotli q11 (KiB) |
+|---|---|---|---|
+| VDOM | 177.5 | 59.9 | 52.5 |
+| Vapor app + interop | 285.6 | 98.6 | 85.8 |
+| Pure Vapor | 221.1 | 74.1 | 65.0 |
+
+### Timings, `script` (ms, median of 10 runs after 3 warmup, 4x CPU throttling)
+
+| Scenario | Op | VDOM | Vapor app + interop | Pure Vapor | Pure Vapor vs VDOM |
+|---|---|---|---|---|---|
+| plain | mount | 16.3 (±2.32) | 56.1 (±18.81) | 15.9 (±2.16) | 0.98x |
+| plain | update:on | 11.1 (±2.37) | 33.9 (±7.58) | 6 (±1.5) | 0.54x |
+| plain | update:off | 8.6 (±2.93) | 34.8 (±7.11) | 4.3 (±1) | 0.50x |
+| plain | unmount | 5.7 (±1.56) | 12.9 (±3.05) | 5.4 (±0.69) | 0.95x |
+| plain-slot | mount | 24.5 (±3.59) | 73.1 (±21.17) | 25.6 (±4.49) | 1.04x |
+| plain-slot | update:on | 18.5 (±4.41) | 41 (±6.22) | 6.6 (±1.35) | 0.36x |
+| plain-slot | update:off | 15.7 (±4.95) | 42.6 (±5.13) | 4.5 (±1.02) | 0.29x |
+| plain-slot | unmount | 7 (±1.47) | 21.5 (±3.42) | 7.2 (±1.33) | 1.03x |
+| checkbox | mount | 501.9 (±42.63) | 851 (±37.15) | 430.9 (±44.59) | 0.86x |
+| checkbox | update:on | 561.1 (±94.44) | 833.8 (±110.75) | 417.7 (±80.37) | 0.74x |
+| checkbox | update:off | 567.1 (±40.69) | 881.7 (±91.36) | 286.7 (±43.53) | 0.51x |
+| checkbox | unmount | 67.6 (±8.13) | 92.4 (±19.15) | 73.7 (±32.16) | 1.09x |
+| collapsible | mount | 254.2 (±50.05) | 566.8 (±43.85) | 432.2 (±25.7) | 1.70x |
+| collapsible | update:on | 206.1 (±25.11) | 334.6 (±28.04) | 182.7 (±19.9) | 0.89x |
+| collapsible | update:off | 203.2 (±15.11) | 390.9 (±67.48) | 176.3 (±13.07) | 0.87x |
+| collapsible | unmount | 41.8 (±5.61) | 95.8 (±31.38) | 82.2 (±20.76) | 1.97x |
+| tabs | mount | 777.1 (±38.53) | 1008.8 (±45.95) | 995.2 (±67.2) | 1.28x |
+| tabs | update:on | 612.8 (±73.5) | 376.6 (±31.62) | 133.5 (±49.02) | 0.22x |
+| tabs | update:off | 618.9 (±31.17) | 376.4 (±29.85) | 130.9 (±48.59) | 0.21x |
+| tabs | unmount | 106.7 (±6.08) | 136 (±16.72) | 158.9 (±42.64) | 1.49x |
+| dialog | mount | 2.5 (±0.5) | 5.2 (±0.76) | 4.4 (±0.91) | 1.76x |
+| dialog | update:on | 7.1 (±1.55) | 9.9 (±1.76) | 10.9 (±1.56) | 1.54x |
+| dialog | update:off | 2.4 (±0.43) | 3.4 (±0.66) | 3.1 (±0.56) | 1.29x |
+| dialog | unmount | 0.8 (±0.29) | 1.1 (±0.34) | 1.2 (±0.61) | 1.50x |
+| popover | mount | 2.9 (±0.45) | 5.3 (±0.87) | 4.2 (±0.81) | 1.45x |
+| popover | update:on | 9.6 (±0.63) | 11.4 (±1.92) | 10.9 (±1.29) | 1.14x |
+| popover | update:off | 2.1 (±0.28) | 2.4 (±0.51) | 1.1 (±0.37) | 0.52x |
+| popover | unmount | 0.8 (±0.38) | 1 (±0.34) | 1.1 (±0.27) | 1.38x |
+
+### Timings, `frame` (ms, median of 10 runs after 3 warmup, 4x CPU throttling)
+
+| Scenario | Op | VDOM | Vapor app + interop | Pure Vapor | Pure Vapor vs VDOM |
+|---|---|---|---|---|---|
+| plain | mount | 54.1 (±5.75) | 97 (±33.7) | 59.9 (±3.74) | 1.11x |
+| plain | update:on | 15.3 (±9) | 48.8 (±8.39) | 16.4 (±3.98) | 1.07x |
+| plain | update:off | 17 (±0.73) | 49.2 (±10.96) | 17 (±0.42) | 1.00x |
+| plain | unmount | 17.4 (±1.58) | 17.4 (±1.64) | 17.5 (±0.32) | 1.01x |
+| plain-slot | mount | 71 (±8.06) | 119.1 (±64.55) | 68 (±9.59) | 0.96x |
+| plain-slot | update:on | 19.3 (±4) | 50 (±3.93) | 16.6 (±4.46) | 0.86x |
+| plain-slot | update:off | 16.5 (±4.11) | 50.4 (±2.31) | 16.5 (±1.03) | 1.00x |
+| plain-slot | unmount | 18 (±1.05) | 23.5 (±3.58) | 17.8 (±1.47) | 0.99x |
+| checkbox | mount | 529.6 (±46.59) | 882.8 (±37.61) | 459.9 (±45.76) | 0.87x |
+| checkbox | update:on | 759.5 (±96.14) | 1109.2 (±118.96) | 491.6 (±84.07) | 0.65x |
+| checkbox | update:off | 668.4 (±41.86) | 1005.2 (±101.43) | 424.9 (±40.45) | 0.64x |
+| checkbox | unmount | 69.7 (±7.04) | 94.5 (±19.82) | 75.7 (±32.74) | 1.09x |
+| collapsible | mount | 337.5 (±54.74) | 664.2 (±49.31) | 551.2 (±29.21) | 1.63x |
+| collapsible | update:on | 481.7 (±32.56) | 759.2 (±34.57) | 531.2 (±28.94) | 1.10x |
+| collapsible | update:off | 433.6 (±27.69) | 701.9 (±82.73) | 449.8 (±22.37) | 1.04x |
+| collapsible | unmount | 50.6 (±6.13) | 101.7 (±31.56) | 83.8 (±20.94) | 1.66x |
+| tabs | mount | 848.6 (±37.92) | 1105 (±46.28) | 1079.3 (±69.92) | 1.27x |
+| tabs | update:on | 763.2 (±73.51) | 500.1 (±30.92) | 231.6 (±52.98) | 0.30x |
+| tabs | update:off | 705.8 (±33.32) | 475.4 (±38.18) | 212.9 (±52.91) | 0.30x |
+| tabs | unmount | 110.6 (±6) | 138.2 (±16.73) | 160.5 (±43.09) | 1.45x |
+| dialog | mount | 17.8 (±0.56) | 17.7 (±0.42) | 18.1 (±0.43) | 1.02x |
+| dialog | update:on | 17.7 (±0.32) | 17.7 (±1.42) | 17.4 (±0.63) | 0.98x |
+| dialog | update:off | 17.6 (±0.31) | 17.8 (±0.62) | 17.9 (±0.39) | 1.02x |
+| dialog | unmount | 17.3 (±0.46) | 17.3 (±0.45) | 17.4 (±0.71) | 1.01x |
+| popover | mount | 17.8 (±0.29) | 18 (±0.43) | 18.1 (±0.83) | 1.02x |
+| popover | update:on | 19.6 (±0.83) | 19.8 (±1.78) | 19.3 (±0.67) | 0.98x |
+| popover | update:off | 15.8 (±0.71) | 15.7 (±0.45) | 16.8 (±0.39) | 1.06x |
+| popover | unmount | 17.3 (±0.64) | 17.5 (±0.69) | 16.9 (±0.65) | 0.98x |
+
+### Memory (JS heap after 2 forced GCs, median of 3 fresh pages, no throttling)
+
+| Scenario (N) | VDOM bytes/instance | Vapor app + interop bytes/instance | Pure Vapor bytes/instance | VDOM residual after unmount, cycles 1/2/3 (KiB, first page) | Vapor app + interop residual after unmount, cycles 1/2/3 (KiB, first page) | Pure Vapor residual after unmount, cycles 1/2/3 (KiB, first page) |
+|---|---|---|---|---|---|---|
+| plain (1000) | 1672 | 4406 | 1689 | 223.3 / 244.2 / 266.9 | 229.5 / 260.5 / 275.5 | 166.6 / 194.6 / 213.7 |
+| plain-slot (1000) | 2367 | 7178 | 2130 | 264.8 / 290.9 / 305.9 | 332.5 / 373.7 / 390.2 | 220.9 / 249.5 / 255.7 |
+| checkbox (1000) | 21402 | 29702 | 27508 | 547.6 / 541.2 / 576.8 | 23044.7 / 45124.7 / 67200.8 | 396.4 / 421.5 / 434.8 |
+| collapsible (500) | 30380 | 42102 | 41519 | 582.1 / 614.6 / 633.1 | 15823.9 / 30902.3 / 45697.7 | 493.2 / 534.9 / 547.9 |
+| tabs (200) | 142699 | 173464 | 198590 | 707.5 / 722.8 / 750.6 | 26495.7 / 52102.0 / 77972.8 | 1078.9 / 1190.1 / 1286.7 |
+
+### Startup (4x CPU, 10 fresh pages each)
+
+| Mode | navigation start → app mounted, median ms (min-max) | ready JS heap (KiB) |
+|---|---|---|
+| VDOM | 65 (50.6-85.8) | 1585.3 |
+| Vapor app + interop | 65.8 (56-91.5) | 1681.1 |
+| Pure Vapor | 56.6 (48.5-75.9) | 1616.4 |
+
+### Sanity checks (elements rendered on first mount / content present after open)
+
+| Scenario/mode | rendered | opened |
+|---|---|---|
+| plain/vdom | 1000 | - |
+| plain/interop | 1000 | - |
+| plain/vapor | 1000 | - |
+| plain-slot/interop | 1000 | - |
+| plain-slot/vapor | 1000 | - |
+| plain-slot/vdom | 1000 | - |
+| checkbox/vapor | 1000 | - |
+| checkbox/vdom | 1000 | - |
+| checkbox/interop | 1000 | - |
+| collapsible/vdom | 500 | - |
+| collapsible/interop | 500 | - |
+| collapsible/vapor | 500 | - |
+| tabs/interop | 600 | - |
+| tabs/vapor | 600 | - |
+| tabs/vdom | 600 | - |
+| dialog/vapor | 1 | 1 |
+| dialog/vdom | 1 | 1 |
+| dialog/interop | 1 | 1 |
+| popover/vdom | 1 | 1 |
+| popover/interop | 1 | 1 |
+| popover/vapor | 1 | 1 |
