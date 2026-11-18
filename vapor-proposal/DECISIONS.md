@@ -389,3 +389,63 @@ memory. It is one commit and reverts cleanly.
 
 **Rejected:** E9, hoisting `SELF_CLOSING_TAGS`. It saved 18 B per Checkbox row and cost
 21 B gzip.
+---
+
+## Full-suite run under pure Vapor (`ADR-S*`)
+
+These come from the full-suite work (`FULL_SUITE.md`, branch `feat/vapor-full-suite`).
+They are numbered `ADR-S01`... so they cannot collide with ADRs added by the parallel
+performance work.
+
+## ADR-S01 Run Reka's existing test files unchanged, swap the test libraries instead
+
+- **Status:** Accepted (harness only; no effect on Reka's published code)
+- **Context:** The 130 jsdom test files talk to Vue through `@vue/test-utils` (122
+  files) and `@testing-library/vue` (45). Both mount through the VDOM. Editing 130 files
+  to be mode-agnostic would be a huge, unreviewable diff in someone else's suite.
+- **Decision:** A separate vitest config (`packages/vapor/vitest.suite.config.ts`) runs
+  `packages/core/src/**/*.test.ts` with aliases for `@vue/test-utils` and
+  `@testing-library/vue` pointing at Vapor implementations of the same API. DOM-level
+  wrapper methods are VTU's own `BaseWrapper`/`DOMWrapper` classes, reused, because
+  they only touch the DOM.
+- **Consequences:** Zero diff in the test files; the VDOM suite is unaffected. The
+  shim has to emulate VTU closely enough, so a failure has to be read before it is
+  blamed on Reka (bucket `fail:harness` vs `fail:reka`).
+- **Alternatives:** Port tests to a mode-agnostic helper upstream (QS2); run only
+  the family scenarios (already done, too thin).
+
+## ADR-S02 Snapshots are compared against the stored VDOM snapshots and never written
+
+- **Status:** Accepted
+- **Decision:** `update: false`, `snapshotOptions.updateSnapshot: 'none'`. A Vapor
+  snapshot mismatch is read and classified; the VDOM files stay the reference.
+- **Consequences:** Snapshot tests whose only difference is Vapor's anchor comments
+  (`<!--if-->`, `<!--slot-->` where VDOM has `<!--v-if-->` or nothing) fail and are listed
+  as such, rather than being re-recorded.
+
+## ADR-S03 `@iconify/vue` is replaced by a Vapor placeholder in the full-suite run
+
+- **Status:** Accepted (harness only)
+- **Context:** 93 story fixtures render `<Icon>` from `@iconify/vue` for decoration.
+  It is an Options-API VDOM component and cannot render in pure Vapor. In jsdom it never
+  has icon data, so it renders an empty 16x16 `<svg>`.
+- **Decision:** Alias it to `suite/IconStub.vue`, which renders that placeholder.
+- **Consequences:** Same DOM as the VDOM run for these fixtures. Shows a real-world
+  point for users: third-party VDOM components need the interop plugin (CHANGES.md).
+
+## ADR-S04 A render-function bridge for test scaffolding written with `h()`
+
+- **Status:** Provisional, pending QS1
+- **Context:** 754 tests in 41 files failed only because the test's wrapper component
+  is a render function (`setup: () => () => h(DialogRoot, ...)`). Pure Vapor has no
+  VNode renderer, so these tests could not exercise Reka at all.
+- **Decision:** Test files (only) get a `vue` whose `h()`/`defineComponent()` produce
+  descriptors mounted with Vapor's public runtime API, diffed by position and `key` on
+  re-render (`suite/vaporH.ts`). Reka source and SFCs keep the real `vue`. Results that
+  pass through the bridge are counted separately.
+- **Consequences:** 516 more tests run against pure-Vapor Reka components. The bridge
+  is ~500 lines of test infrastructure that must be right; a failure in a bridged test
+  is first checked against the bridge. VNode-only APIs (`cloneVNode`, `vm.$.subTree`,
+  Options-API `this` in `render`) still throw `VaporSuiteUnsupported`.
+- **Alternatives:** Classify all 754 as `vdom-api` (honest but leaves a fifth of the
+  suite unrun); port the scaffolding to SFC fixtures upstream (QS2, the long-term fix).

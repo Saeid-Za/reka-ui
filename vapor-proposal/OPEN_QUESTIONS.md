@@ -247,3 +247,35 @@ No other Vue compile-time flag applies. `@vue/runtime-vapor` 3.6.0-rc.15 reads o
 `__VUE_PROD_DEVTOOLS__` and `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`, which are already `false`
 in production by default. The pure-Vapor size floor is the runtime code that no flag
 guards: hydration, interop and the built-ins (Q16). Any flag for those would have to come from Vue.
+## Running Reka's full test suite under pure Vapor (`QS*`)
+
+From the full-suite work (`FULL_SUITE.md`). Numbered `QS1`... to stay apart from
+questions added by the parallel performance work.
+
+### QS1. Is a test-only render-function bridge acceptable?
+
+About a fifth of the suite (754 tests, 41 files) builds its scaffolding with `h()`.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Keep the bridge (`suite/vaporH.ts`) | No test-file changes; those tests run against pure-Vapor Reka today. ~500 lines of test infrastructure emulating a VDOM subset; it can hide or cause failures of its own. |
+| (b) Port the scaffolding to SFC fixtures (QS2) | Mode-agnostic, no emulation. A large diff to the suite that the maintainers would have to review. |
+| (c) Run those tests in VDOM only | Simple and honest; Vapor coverage of Toast, NumberField, the id composables etc. drops to the story-fixture tests. |
+
+**Recommendation:** (a) while Vapor is experimental, moving to (b) file by file as
+tests are touched anyway.
+**⚑ Provisional default:** (a); bridged results are reported separately.
+
+### QS2. Should new tests be written mode-agnostic?
+
+A small rule for contributors ("mount SFC fixtures, not `h()` trees; do not read
+`vm.$`/`subTree`") would make every new test run in both modes without a bridge.
+**Recommendation:** yes, in `CONTRIBUTING.md`, once Vapor support is accepted.
+**⚑ Provisional default:** not done (it is the maintainers' contributor guide).
+
+### QS3. Should the full-suite Vapor run be in CI?
+
+It takes about as long as the VDOM run. Options: (a) required, (b) non-blocking job
+with the pass count tracked, (c) manual only.
+**Recommendation:** (b) until the remaining failures are triaged, then (a).
+**⚑ Provisional default:** manual (`pnpm --filter @reka-ui/vapor-tests test:full-suite`).
