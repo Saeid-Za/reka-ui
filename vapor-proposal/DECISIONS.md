@@ -594,3 +594,10 @@ listeners. Events that bubble up from a descendant still use a bubble listener, 
 runs after the element's own. That one case still differs from VDOM (QS8). Each
 consumer listener now costs two native listeners. A unit test pins both behaviours.
 This is a `Primitive/asChildAttrs.ts` change, a file the perf work also touches.
+
+## ADR-S18 As-child consumer classes come first, as with the VDOM Slot
+
+The VDOM Slot gives `class="parent child"`, and Vapor's `applyAsChildAttrs` appended
+the consumer's classes after the child's. It now rewrites `class` with the consumer's
+tokens first, followed by the child's own tokens. It only writes when the order or the
+set of tokens changed. The unit tests were updated to the VDOM order.

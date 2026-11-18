@@ -12,7 +12,8 @@ describe('applyAsChildAttrs', () => {
   it('merges classes and styles, keeps child-owned attributes', () => {
     const el = button()
     applyAsChildAttrs(el, { 'class': ['a', { b: true, c: false }], 'style': { color: 'red' }, 'title': 'parent', 'data-state': 'open', 'aria-expanded': false })
-    expect(el.className).toBe('own a b')
+    // consumer classes first, as the VDOM Slot merges them (ADR-S18)
+    expect(el.className).toBe('a b own')
     expect(el.style.color).toBe('red')
     expect(el.getAttribute('title')).toBe('child')
     expect(el.getAttribute('data-state')).toBe('open')
@@ -23,7 +24,7 @@ describe('applyAsChildAttrs', () => {
     const el = button()
     applyAsChildAttrs(el, { 'class': 'a', 'style': 'color: red', 'data-x': '1' })
     applyAsChildAttrs(el, { class: 'b' })
-    expect(el.className).toBe('own b')
+    expect(el.className).toBe('b own')
     expect(el.style.color).toBe('')
     expect(el.hasAttribute('data-x')).toBe(false)
   })

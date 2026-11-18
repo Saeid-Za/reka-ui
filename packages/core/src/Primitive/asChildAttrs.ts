@@ -122,13 +122,18 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
   // nothing to apply and nothing applied before.
   if (attrs.class != null || state.classes.size) {
     const nextClasses = new Set(normalizeClass(attrs.class).split(WHITESPACE_RE).filter(Boolean))
-    for (const token of state.classes) {
-      if (!nextClasses.has(token))
-        el.classList.remove(token)
-    }
-    for (const token of nextClasses) {
-      if (!state.classes.has(token))
-        el.classList.add(token)
+    const previous = state.classes
+    // The VDOM Slot puts the consumer's classes first (`mergeProps(attrs, child.props)`):
+    // keep them in front of the child's own, in the consumer's order.
+    const current = Array.from(el.classList)
+    const leading = current.slice(0, nextClasses.size)
+    if (nextClasses.size !== previous.size || leading.some((token, i) => token !== [...nextClasses][i]) || current.some(token => previous.has(token) && !nextClasses.has(token))) {
+      const own = current.filter(token => !previous.has(token) && !nextClasses.has(token))
+      const value = [...nextClasses, ...own].join(' ')
+      if (value)
+        el.setAttribute('class', value)
+      else
+        el.removeAttribute('class')
     }
     state.classes = nextClasses
   }

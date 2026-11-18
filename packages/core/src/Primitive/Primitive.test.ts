@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, markRaw, nextTick, ref } from 'vue'
+import { modeMarkup } from '@/test'
 import { Primitive } from '.'
 
 describe('test Primitive functionalities', () => {
@@ -172,8 +173,9 @@ describe('test Primitive functionalities', () => {
         },
       })
 
-      expect(wrapper.html()).toBe(
-        '<button id="custom-button" class="parent-class"></button>',
+      // Vapor leaves its anchor comments around the dynamic component (QS5/ADR-S13).
+      expect(modeMarkup(wrapper.html())).toBe(
+        modeMarkup('<button id="custom-button" class="parent-class"></button>'),
       )
     })
 
