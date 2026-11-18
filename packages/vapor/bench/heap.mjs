@@ -14,6 +14,8 @@ const { values: args } = parseArgs({
     scenario: { type: 'string', default: 'checkbox' },
     count: { type: 'string', default: '1000' },
     top: { type: 'string', default: '25' },
+    // Aggregate closures by source location (script:line:col) instead of constructor name.
+    locations: { type: 'boolean', default: false },
     chrome: { type: 'string', default: process.env.CHROME_PATH ?? '/usr/bin/google-chrome' },
   },
 })
@@ -35,9 +37,19 @@ async function snapshot(cdp) {
   const iName = fields.indexOf('name')
   const iSize = fields.indexOf('self_size')
   const agg = new Map()
+  const loc = new Map()
+  if (args.locations) {
+    const L = snap.snapshot.meta.location_fields.length
+    for (let i = 0; i < snap.locations.length; i += L)
+      loc.set(snap.locations[i], `${snap.locations[i + 2] + 1}:${snap.locations[i + 3] + 1}`)
+  }
   for (let i = 0; i < snap.nodes.length; i += F) {
     const type = types[snap.nodes[i + iType]]
-    const name = type === 'object' || type === 'closure' ? `${type}:${snap.strings[snap.nodes[i + iName]]}` : `(${type})`
+    if (args.locations && type !== 'closure')
+      continue
+    const name = args.locations
+      ? `${snap.strings[snap.nodes[i + iName]] || '(anon)'} @${loc.get(i) ?? '?'}`
+      : type === 'object' || type === 'closure' ? `${type}:${snap.strings[snap.nodes[i + iName]]}` : `(${type})`
     const e = agg.get(name) ?? [0, 0]
     e[0] += snap.nodes[i + iSize]
     e[1]++
