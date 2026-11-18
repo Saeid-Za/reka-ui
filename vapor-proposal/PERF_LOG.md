@@ -317,3 +317,64 @@ run, so the noise was higher than before.
 **Memory per instance:** Tabs 203626 → 202874 B (−0.4 %). The others did not change.
 
 **Bundle:** +107 B gzip, accepted for the Tabs mount gain.
+
+### E5. Read the attrs proxy once per as-child sync
+
+- **Hypothesis:** In P4, `watchEffect.flush` inside `Primitive.vapor.vue` spends 40.7 ms of self
+  time. Its effect walks the Vapor `attrs` proxy (`for…in` plus a read of every key) only to
+  track dependencies. `applyAsChildAttrs` then walks the same proxy again: `ownKeys` and the
+  getters, which resolve the dynamic sources. If the effect copies the attrs into a plain
+  object in that first walk and passes the copy to the applier, the proxy is enumerated and
+  read only once per run. Tabs mount and update should get faster. Behaviour stays the same,
+  because the copy is taken in the same tracked run.
+- **Change:** In `Primitive.vapor.vue`, the `watchEffect` builds the copy and syncs with it.
+  `onUpdated` keeps passing the live proxy.
+
+**Result: REVERTED.** The gate passed, with all checks green, including the consumer
+`sideEffects` check (50/50). The A/B run (`raw/perf/E5ab.json`) shows no gain on the Tabs
+scenario it targeted:
+
+| Op | Before (ms) | After (ms) | Change | Verdict |
+|---|---|---|---|---|
+| Tabs mount | 902.0 (±101) | 908.1 (±102) | +0.7 % | noise |
+| Tabs update:on | 121.7 | 114.6 | −5.8 % | noise |
+| Collapsible mount | 414.6 | 463.3 | +11.7 % | noise; the code is untouched for Collapsible |
+| Checkbox unmount | 99.5 | 76.0 | −23.6 % | flagged by the rule, but that path is also unaffected |
+
+Memory and bundle are unchanged.
+
+During this run another worker was running Reka's full test suite on the same machine, and the
+standard deviations roughly doubled. The A/B design keeps both builds under the same load, but
+gains of 5 % or less cannot be resolved under these conditions.
+
+### E6. Inject `exposeRootElement()` only where nothing else exposes `$el`
+
+- **Hypothesis:** The swap plugin injects an `exposeRootElement()` import and call into every
+  Reka SFC. That is a call per instance (13.4 ms self in the Tabs profile, P4) plus about 60 bytes
+  of code per component in the bundle. Components that call `useForwardExpose()` already define
+  `$el` on their Vapor `exposed`, and `Primitive.vapor.vue` defines it with `defineExpose`. Skipping
+  the injection for those SFCs should give a slightly smaller bundle and slightly less mount work,
+  without changing behaviour.
+- **Change:** In `rekaVapor.ts`, skip the injection when the SFC source contains
+  `useForwardExpose(` or is a `*.vapor.vue` twin.
+
+**Result: KEPT.** The gate passed: all checks green, and the consumer `sideEffects` check
+passed (50/50). Raw data for the A/B run is in `raw/perf/E6ab.json`.
+
+The machine was heavily loaded during this run: startup median was 112.7 → 107.8 ms, against
+about 50 ms when the machine was idle. All timing deltas were noise. Checkbox mount
+439.4 → 376.1 ms (−14.4 %) is within its ±92 ms spread.
+
+The deterministic metrics improved slightly, with no regression:
+
+| Metric | Before | After | Change |
+|---|---|---|---|
+| Memory per instance, checkbox | 28377 B | 28238 B | −0.5 % |
+| Memory per instance, collapsible | 42541 B | 42416 B | −0.3 % |
+| Memory per instance, tabs | 202713 B | 201567 B | −0.6 % |
+| Bundle, min | | | −294 B |
+| Bundle, gzip | | | −43 B |
+| Bundle, brotli | | | +30 B |
+
+The change is build-time only. It drops the injected call in 247 of the SFCs, the ones that call
+`useForwardExpose()`, plus the Vapor twins.

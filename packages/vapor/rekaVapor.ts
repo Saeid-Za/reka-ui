@@ -77,7 +77,8 @@ export function rekaVaporSwap(): Plugin {
     transform(code, id) {
       if (!id.startsWith(rekaSrc) || !id.endsWith('.vue'))
         return null
-      let out = injectExposeRoot(code)
+      // `useForwardExpose()` and the `*.vapor.vue` twins define `$el` themselves.
+      let out = code.includes('useForwardExpose(') || id.endsWith('.vapor.vue') ? code : injectExposeRoot(code)
       if (out.includes('defineAsyncComponent'))
         out = out.replace(ASYNC_IMPORT_RE, ASYNC_IMPORT_VAPOR)
       return out
