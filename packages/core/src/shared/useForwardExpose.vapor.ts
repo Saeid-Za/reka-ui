@@ -6,6 +6,26 @@ import { computed, onUpdated, ref, triggerRef } from 'vue'
 import { getInstanceRootNode } from './instance'
 import { resolveElement } from './resolveElement'
 
+// One Proxy handler for every instance; the instance's props are looked up by
+// the proxy target, so no per-instance handler closures are allocated.
+const propsOf = new WeakMap<object, Record<string, any>>()
+/** The prop key of the instance behind `target`, if `key` is one. */
+function propKey(target: object, key: string | symbol) {
+  return typeof key === 'string' && key in propsOf.get(target)! ? key : undefined
+}
+const exposeHandler: ProxyHandler<Record<string, any>> = {
+  get: (target, key, receiver) => {
+    if (key in target)
+      return Reflect.get(target, key, receiver)
+    const prop = propKey(target, key)
+    return prop && propsOf.get(target)![prop]
+  },
+  has: (target, key) => key in target || !!propKey(target, key),
+  ownKeys: target => [...new Set([...Object.keys(propsOf.get(target)!), ...Reflect.ownKeys(target)])],
+  getOwnPropertyDescriptor: (target, key) => Reflect.getOwnPropertyDescriptor(target, key)
+    ?? (propKey(target, key) ? { enumerable: true, configurable: true, writable: false, value: propsOf.get(target)![key as string] } : undefined),
+}
+
 /**
  * `useForwardExpose` for a Vapor component instance.
  *
@@ -59,17 +79,11 @@ export function useVaporForwardExpose(instance: VaporInstanceLike) {
     },
   })
   const props = instance.props as Record<string, any>
-  const isProp = (key: string | symbol): key is string => typeof key === 'string' && key in props
+  propsOf.set(ret, props)
   // A Vapor template ref resolves to a proxy over the `exposed` object it
   // first sees and caches it, so `ret` is updated in place instead of being
   // replaced. A Vapor child ref is that proxy itself (no `$`).
-  instance.exposed = new Proxy(ret, {
-    get: (target, key, receiver) => key in target ? Reflect.get(target, key, receiver) : isProp(key) ? props[key] : undefined,
-    has: (target, key) => key in target || isProp(key),
-    ownKeys: target => [...new Set([...Object.keys(props), ...Reflect.ownKeys(target)])],
-    getOwnPropertyDescriptor: (target, key) => Reflect.getOwnPropertyDescriptor(target, key)
-      ?? (isProp(key) ? { enumerable: true, configurable: true, writable: false, value: props[key] } : undefined),
-  })
+  instance.exposed = new Proxy(ret, exposeHandler)
 
   let forwardedKeys: string[] = []
   // Vapor sets dynamic template refs inside a render effect, so this must
@@ -84,7 +98,7 @@ export function useVaporForwardExpose(instance: VaporInstanceLike) {
     if (!forwarded || forwarded instanceof Element)
       return
     for (const key of Object.keys(forwarded)) {
-      if (key === '$el' || key in localExpose || isProp(key))
+      if (key === '$el' || key in localExpose || key in props)
         continue
       forwardedKeys.push(key)
       Object.defineProperty(ret, key, {
