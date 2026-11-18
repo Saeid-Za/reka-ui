@@ -45,7 +45,7 @@ type AnyInstance = any
 // Like VTU: component emits are recorded through Vue's devtools hook, which
 // Vapor's `emit` reports to as well, so `emitted()` works for any instance.
 const emittedByInstance = new WeakMap<object, Record<string, unknown[][]>>()
-setDevtoolsHook({
+const devtoolsHook = {
   enabled: true,
   emit(event: string, ...args: any[]) {
     if (event !== 'component:emit')
@@ -59,7 +59,11 @@ setDevtoolsHook({
   once() {},
   off() {},
   appRecords: [],
-} as any, {})
+} as any
+// Vue re-reads `__VUE_DEVTOOLS_GLOBAL_HOOK__` when a renderer is created, so it is
+// installed globally (jsdom has no devtools) and re-applied after each app is created.
+;(globalThis as any).__VUE_DEVTOOLS_GLOBAL_HOOK__ = devtoolsHook
+setDevtoolsHook(devtoolsHook, globalThis)
 
 const NEEDS_COMPILER_RE = /\{\{|<[A-Z]|\sv-|\s[:@#]/
 const TRANSITION_STUB_RE = /^transition(?:-group)?$|^TransitionGroup$/i
@@ -180,8 +184,9 @@ export function mount(component: any, options: MountOptions = {}): VaporWrapper 
   }
   if (options.global?.mocks && Object.keys(options.global.mocks).length)
     throw new VaporSuiteUnsupported('global.mocks')
-  component = toVaporComponent(typeof component === 'function' && !component.__vapor
-    ? { name: component.name, props: component.props, emits: component.emits, setup: (p: any, ctx: any) => () => component(p, ctx) }
+  const functional = component
+  component = toVaporComponent(typeof functional === 'function' && !functional.__vapor
+    ? { name: functional.name, props: functional.props, emits: functional.emits, setup: (p: any, ctx: any) => () => functional(p, ctx) }
     : component)
   assertVaporComponent(component, 'mounted component')
 
@@ -199,6 +204,7 @@ export function mount(component: any, options: MountOptions = {}): VaporWrapper 
   })
 
   const app = createVaporApp(Root as any)
+  setDevtoolsHook(devtoolsHook, globalThis)
   const g = options.global ?? {}
   for (const plugin of g.plugins ?? []) {
     if (Array.isArray(plugin))
@@ -239,6 +245,7 @@ interface RootContext {
   container: HTMLElement
   state: Record<string, any>
   attached: boolean
+  unmounted?: boolean
 }
 
 export class VaporWrapper extends (BaseWrapper as any) {
@@ -375,8 +382,10 @@ export class VaporWrapper extends (BaseWrapper as any) {
   unmount() {
     if (!this.root)
       throw new Error('wrapper.unmount() can only be called on the root wrapper')
-    if (this.instance.isUnmounted && !this.root.app._container)
+    // A second unmount is only a Vue warning with VTU ("not mounted"); same here.
+    if (this.root.unmounted)
       return
+    this.root.unmounted = true
     this.root.app.unmount()
     if (this.root.attached)
       this.root.container.remove()
