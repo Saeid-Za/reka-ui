@@ -293,3 +293,20 @@ this PR).
     `/workspace/reka-vapor/`.
   - `git format-patch a9873a0..HEAD` goes to `/workspace/reka-vapor/patches/`.
   - Nothing is pushed or posted.
+
+## ADR-019 Performance work is profile-first, one change at a time, logged in PERF_LOG.md
+
+- **Status:** Accepted
+- **Context:** Pure Vapor is faster than VDOM on updates but slower on mount and
+  unmount. It also uses more memory and has a larger bundle (BENCHMARKS §6).
+- **Decision:**
+  - Profile first: a CPU profile and the per-module bundle composition.
+  - Then change one thing at a time. Each change must pass the full test gate and be
+    re-benchmarked.
+  - Keep a change only if it beats the noise rule in `PERF_LOG.md` and regresses no
+    other metric. Each kept change is its own commit.
+  - Changes that alter the API or drop features go to `OPEN_QUESTIONS.md`.
+  - Hypotheses are written into `PERF_LOG.md` before the code changes.
+- **Consequences:**
+  - The log records every attempt, including the reverted ones.
+  - `BENCHMARKS.md` compares the final numbers against baseline B0.
