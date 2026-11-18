@@ -101,11 +101,12 @@ are `it.skip` in the source in both modes.
 | Pure Vapor, first harness (VTU shim only, no bridge) | 2,422 | 1,110 (+1 file failed to load) | 35 |
 | Pure Vapor, harness with render-function bridge | 2,938 | 610 | 35 |
 
-## Current status (run r5, 2026-11-18 16:10 Asia/Tehran)
+## Current status (runs r5/r6, 2026-11-18, Asia/Tehran)
 
-**3304 pass / 244 fail / 35 skip** (3583 tests, 130 files), up from 2938 / 610 at the
-baseline (r1), 3105 / 443 at the triage (r2), 3230 / 318 after Vapor SSR (r3/r4).
-r4 → r5 fixed 72 tests and broke none (`diff.mjs`). VDOM suite unchanged: 3548 pass /
+**r6: 3316 pass / 232 fail / 35 skip** (3583 tests, 130 files), up from 2938 / 610 at
+the baseline (r1), 3105 / 443 at the triage (r2), 3230 / 318 after Vapor SSR (r3/r4),
+and 3304 / 244 after the harness and test variants (r5). r4 → r5 fixed 72 tests and r5 → r6
+(`useFormControl`, ADR-S15) fixed 12; neither broke any (`diff.mjs`). VDOM suite unchanged: 3548 pass /
 35 skip. **Nothing is in `cannot-run` any more**: the 170 tests that were there are
 now run in Vapor, either through harness support or through a Vapor variant in the
 test file (`isVapor`, QS6). No test uses `skipIf(isVapor)` yet: every inherently
@@ -168,12 +169,12 @@ different test so far had a Vapor equivalent.
   fallback branch, so `cloneVNode` could work), but the markup was unchanged, so the
   attrs are also lost before Primitive. Not solved; see QS7.
 
-### Triage of the 244 (r5)
+### Triage of the 232 (r6)
 
 | File | fail:reka | fail:harness | markup-only | cannot-run | undiagnosed | total |
 |---|---|---|---|---|---|---|
 | AlertDialog/AlertDialog.test.ts |  |  |  |  | 1 | 1 |
-| Checkbox/Checkbox.test.ts | 3 |  |  |  | 1 | 4 |
+| Checkbox/Checkbox.test.ts | 1 |  |  |  |  | 1 |
 | Combobox/Combobox.test.ts | 13 |  |  |  | 10 | 23 |
 | DateField/DateField.test.ts |  |  |  |  | 1 | 1 |
 | Dialog/Dialog.ssr.test.ts |  | 1 |  |  |  | 1 |
@@ -190,26 +191,25 @@ different test so far had a Vapor equivalent.
 | Presence/Presence.test.ts |  |  | 1 |  | 3 | 4 |
 | Primitive/Primitive.test.ts | 4 |  |  |  |  | 4 |
 | Primitive/usePrimitiveElement.test.ts | 3 |  |  |  |  | 3 |
-| RadioGroup/RadioGroup.test.ts | 3 | 1 |  |  |  | 4 |
+| RadioGroup/RadioGroup.test.ts |  | 1 |  |  |  | 1 |
 | RovingFocus/RovingFocus.test.ts |  |  |  |  | 1 | 1 |
 | ScrollArea/ScrollArea.test.ts | 8 | 3 |  |  |  | 11 |
 | Select/Select.test.ts | 7 |  |  |  |  | 7 |
 | Slider/Slider.test.ts |  | 6 |  |  | 2 | 8 |
 | Stepper/StepperAnnouncement.test.ts |  |  |  |  | 4 | 4 |
-| Switch/Switch.test.ts | 2 |  |  |  |  | 2 |
 | Tabs/Tabs.test.ts | 5 |  |  |  |  | 5 |
 | TagGroup/TagGroup.test.ts |  |  |  |  | 1 | 1 |
 | Toast/Toast.test.ts |  |  |  |  | 1 | 1 |
-| Toggle/Toggle.test.ts | 4 |  |  |  |  | 4 |
+| Toggle/Toggle.test.ts | 1 |  |  |  |  | 1 |
 | Tooltip/Tooltip.test.ts |  |  |  |  | 3 | 3 |
 | Tree/Tree.test.ts | 6 |  |  |  |  | 6 |
-| VisuallyHidden/HiddenNativeLabels.test.ts | 1 | 1 |  |  |  | 2 |
+| VisuallyHidden/HiddenNativeLabels.test.ts |  | 1 |  |  |  | 1 |
 | shared/useContentId.test.ts | 4 |  |  |  |  | 4 |
 | shared/useForwardExpose.test.ts | 9 |  |  |  |  | 9 |
 | shared/useForwardScopeId.test.ts | 3 |  |  |  |  | 3 |
 | shared/useRenderedContentId.test.ts | 9 |  |  |  | 76 | 85 |
 | shared/useTriggerId.test.ts | 6 |  |  |  |  | 6 |
-| **total** | 109 | 22 | 1 | 0 | 112 | 244 |
+| **total** | 98 | 22 | 1 | 0 | 111 | 232 |
 
 | Root cause | Bucket | Tests | Files |
 |---|---|---|---|
@@ -220,7 +220,7 @@ different test so far had a Vapor equivalent.
 | M1 html()/snapshot differs only by Vapor anchor comments (<!--slot-->, <!--if-->, <!--dynamic-component-->) and attribute order | markup-only | 1 | Presence 1 |
 | R1 virtualizer item refs ($el of undefined) — known gap ADR-017 | fail:reka | 33 | Combobox 11, Listbox 8, ScrollArea 8, Tree 6 |
 | R2 consumer listeners run after the component's own handlers (preventDefault opt-out ignored) | fail:reka | 18 | Select 7, DropdownMenu 4, Menubar 4, Tabs 3 |
-| R3 form-control detection: closest('form') read before the element is inserted into <form> | fail:reka | 13 | Toggle 4, Checkbox 3, RadioGroup 3, Switch 2, HiddenNativeLabels 1 |
+| R3 form-control detection: closest('form') read before the element is inserted into <form> | fail:reka | 2 | Checkbox 1, Toggle 1 |
 | R4 consumer id / trigger id change not propagated (remaining after fix #1) | fail:reka | 20 | useRenderedContentId 9, useTriggerId 6, useContentId 4, Tabs 1 |
 | R5 as-child / element resolution (Primitive, usePrimitiveElement, useForwardExpose) | fail:reka | 16 | useForwardExpose 9, Primitive 4, usePrimitiveElement 3 |
 | R6 scope-id forwarding (useForwardScopeId) | fail:reka | 3 | useForwardScopeId 3 |
@@ -230,7 +230,7 @@ different test so far had a Vapor equivalent.
 | S3 Vapor SSR: as-child attrs are applied on the client only, missing from server markup (QS7) | fail:reka | 1 | Tabs 1 |
 | U1 useRenderedContentId: KeepAlive deactivation (bridge KeepAlive vs Reka onDeactivated) | undiagnosed | 51 | useRenderedContentId 51 |
 | U2 useRenderedContentId: as-child content with no element | undiagnosed | 25 | useRenderedContentId 25 |
-| U9 other (to investigate one by one) | undiagnosed | 36 | Combobox 10, StepperAnnouncement 4, Popover 3, Presence 3, Tooltip 3, Dialog 2, Slider 2, AlertDialog 1, Checkbox 1, DateField 1, DropdownMenu 1, FocusScope 1, Menubar 1, RovingFocus 1, TagGroup 1, Toast 1 |
+| U9 other (to investigate one by one) | undiagnosed | 35 | Combobox 10, StepperAnnouncement 4, Popover 3, Presence 3, Tooltip 3, Dialog 2, Slider 2, AlertDialog 1, DateField 1, DropdownMenu 1, FocusScope 1, Menubar 1, RovingFocus 1, TagGroup 1, Toast 1 |
 
 ## Triage of the 610 failures (run r1 → r2, 2026-11-18)
 
