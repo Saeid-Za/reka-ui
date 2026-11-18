@@ -1,57 +1,9 @@
-import type { Ref } from 'vue'
-import { computed, defineComponent, h, inject, markRaw, onBeforeUnmount, provide, ref, watch, watchEffect } from 'vue'
+import { defineComponent, h, markRaw, onBeforeUnmount, watch, watchEffect } from 'vue'
 import { Slot, usePrimitiveElement } from '@/Primitive'
-
-interface CollectionContext<ItemData = {}> {
-  collectionRef: Ref<HTMLElement | undefined>
-  itemMap: Ref<Map<HTMLElement, { ref: HTMLElement, value?: any } & ItemData>>
-}
-
-const ITEM_DATA_ATTR = 'data-reka-collection-item'
+import { ITEM_DATA_ATTR, useCollectionContext } from './collectionCore'
 
 export function useCollection<ItemData = {}>(options: { key?: string, isProvider?: boolean } = {}) {
-  const { key = '', isProvider = false } = options
-  const injectionKey = `${key}CollectionProvider`
-  let context: CollectionContext<ItemData>
-
-  if (isProvider) {
-    const itemMap = ref<Map<HTMLElement, { ref: HTMLElement } & ItemData>>(new Map())
-    const collectionRef = ref<HTMLElement>()
-
-    context = {
-      collectionRef,
-      itemMap,
-    } as CollectionContext<ItemData>
-    provide(injectionKey, context)
-  }
-  else {
-    context = inject(injectionKey) as CollectionContext<ItemData>
-  }
-
-  const getItem = (element: HTMLElement, includeDisabledItem = false) => {
-    if (!context.collectionRef.value)
-      return undefined
-
-    const item = context.itemMap.value.get(element)
-    return item && (includeDisabledItem || item.ref.dataset.disabled !== '') ? item : undefined
-  }
-
-  const getItems = (includeDisabledItem = false) => {
-    const collectionNode = context.collectionRef.value
-    if (!collectionNode)
-      return []
-    const orderedNodes = Array.from(collectionNode.querySelectorAll(`[${ITEM_DATA_ATTR}]`))
-    const orderMap = new Map(orderedNodes.map((node, index) => [node, index]))
-    const items = Array.from(context.itemMap.value.values())
-    const orderedItems = items.sort(
-      (a, b) => (orderMap.get(a.ref) ?? -1) - (orderMap.get(b.ref) ?? -1),
-    )
-
-    if (includeDisabledItem)
-      return orderedItems
-    else
-      return orderedItems.filter(i => i.ref.dataset.disabled !== '')
-  }
+  const { context, getItems, getItem, reactiveItems, itemMapSize } = useCollectionContext<ItemData>(options)
 
   const CollectionSlot = defineComponent({
     name: 'CollectionSlot',
@@ -95,9 +47,6 @@ export function useCollection<ItemData = {}>(options: { key?: string, isProvider
       return () => h(Slot, { ...attrs, [ITEM_DATA_ATTR]: '', ref: primitiveElement }, slots)
     },
   })
-
-  const reactiveItems = computed(() => Array.from(context.itemMap.value.values()))
-  const itemMapSize = computed(() => context.itemMap.value.size)
 
   return { getItems, getItem, reactiveItems, itemMapSize, CollectionSlot, CollectionItem }
 }
