@@ -33,7 +33,10 @@ let resolveVaporInstance: (() => unknown) | undefined
  * @internal
  */
 export function setVaporInstanceResolver(resolver: (() => unknown) | undefined) {
+  const previous = resolveVaporInstance
   resolveVaporInstance = resolver
+  // Returned so a caller (tests) can put the previous resolver back.
+  return previous
 }
 
 export function isVaporInstance(instance: unknown): instance is VaporInstanceLike {

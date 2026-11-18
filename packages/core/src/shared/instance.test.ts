@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
+import { isVapor } from '@/test'
 import { exposeRootElement, findBlockElement, getAssignedPropKeys, getInstance, getInstanceRootNode, hasAssignedProp, isVaporInstance, setVaporInstanceResolver } from './instance'
 
 function fakeVapor(overrides: Record<string, any> = {}) {
@@ -15,27 +16,31 @@ describe('instance helpers', () => {
       return () => h('div')
     } }))
     expect(seen).toBeTruthy()
-    expect(isVaporInstance(seen)).toBe(false)
+    // Under the pure-Vapor suite the same component is a Vapor one, so the
+    // helper must return its Vapor instance instead.
+    expect(isVaporInstance(seen)).toBe(isVapor)
   })
 
   it('getInstance prefers a registered Vapor instance', () => {
     const vapor = fakeVapor()
-    setVaporInstanceResolver(() => vapor)
+    const previous = setVaporInstanceResolver(() => vapor)
     try {
       expect(getInstance()).toBe(vapor)
     }
     finally {
-      setVaporInstanceResolver(undefined)
+      // Put back the resolver the Vapor entry registered (none under VDOM).
+      setVaporInstanceResolver(previous)
     }
   })
 
   it('getInstance ignores a non-Vapor value from the resolver', () => {
-    setVaporInstanceResolver(() => ({ vapor: false }))
+    const previous = setVaporInstanceResolver(() => ({ vapor: false }))
     try {
       expect(getInstance()).toBeNull()
     }
     finally {
-      setVaporInstanceResolver(undefined)
+      // Put back the resolver the Vapor entry registered (none under VDOM).
+      setVaporInstanceResolver(previous)
     }
   })
 
@@ -46,6 +51,7 @@ describe('instance helpers', () => {
       return () => h('div')
     } })
     mount(defineComponent({ render: () => h(Child, { 'a': true, 'data-x': '1' }) }))
+    // Pure-Vapor suite: the same keys, read from the Vapor instance's raw props.
     expect(keys).toEqual(['a', 'data-x'])
   })
 
@@ -71,7 +77,7 @@ describe('instance helpers', () => {
   it('exposeRootElement adds a $el getter to Vapor instances only', () => {
     const el = document.createElement('span')
     const vapor = fakeVapor({ block: [document.createComment(''), el] })
-    setVaporInstanceResolver(() => vapor)
+    const previous = setVaporInstanceResolver(() => vapor)
     try {
       exposeRootElement()
       expect(vapor.exposed.$el).toBe(el)
@@ -82,7 +88,8 @@ describe('instance helpers', () => {
       expect(own.exposed.$el).toBe('own')
     }
     finally {
-      setVaporInstanceResolver(undefined)
+      // Put back the resolver the Vapor entry registered (none under VDOM).
+      setVaporInstanceResolver(previous)
     }
     let exposed: any
     mount(defineComponent({ setup() {
@@ -90,6 +97,10 @@ describe('instance helpers', () => {
       exposed = getInstance()!.exposed
       return () => h('div')
     } }))
-    expect(exposed).toBeNull()
+    // Pure-Vapor suite: the component is a Vapor one, so it gets the getter.
+    if (isVapor)
+      expect(exposed.$el).toBeInstanceOf(HTMLDivElement)
+    else
+      expect(exposed).toBeNull()
   })
 })
