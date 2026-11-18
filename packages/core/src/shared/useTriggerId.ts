@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
-import { computed, getCurrentInstance, onActivated, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onDeactivated, onMounted, onUpdated, ref, useAttrs, watch } from 'vue'
+import { computed, onActivated, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onDeactivated, onMounted, onUpdated, ref, useAttrs, watch } from 'vue'
+import { getInstance, getInstanceRootNode, isVaporInstance } from './instance'
 
 // How many content elements are rendered for a context. Kept beside the context rather
 // than on it, so the context types stay as they are.
@@ -123,7 +124,7 @@ export function useContentElement(
  */
 export function useContentMounted(key: object, element: Readonly<Ref<HTMLElement | undefined>>) {
   const count = useMountedContents(key)
-  const instance = getCurrentInstance()!
+  const instance = getInstance()!
   let isCounted = false
   const setCounted = (value: boolean) => {
     if (value === isCounted)
@@ -157,7 +158,9 @@ export function useContentMounted(key: object, element: Readonly<Ref<HTMLElement
         if (isDeactivated)
           observer!.disconnect()
         else
-          instance.proxy?.$forceUpdate()
+          // Vapor has no re-render to force: its template refs update `element` themselves.
+          if (!isVaporInstance(instance))
+            instance.proxy?.$forceUpdate()
       }
       // Moved, as a teleported content is when its target changes.
       else if (!isDeactivated && element.value!.parentNode !== parent) {
@@ -172,7 +175,7 @@ export function useContentMounted(key: object, element: Readonly<Ref<HTMLElement
     }
     parent = element.value?.parentNode
     // Without an element, it would be added in place of the node the caller rendered, or inside it.
-    const root = instance.vnode.el as Node | null
+    const root = getInstanceRootNode(instance)
     for (const node of parent ? [parent] : [root, root?.parentNode]) {
       if (node)
         observer.observe(node, { childList: true })
@@ -185,7 +188,7 @@ export function useContentMounted(key: object, element: Readonly<Ref<HTMLElement
 
   onBeforeMount(() => {
     // A content can mount while an ancestor is deactivated, which no hook reports.
-    for (let parent = instance.parent; parent && !isDeactivated; parent = parent.parent)
+    for (let parent = instance.parent as { isDeactivated?: boolean, parent?: unknown } | null; parent && !isDeactivated; parent = parent.parent as typeof parent)
       isDeactivated = !!(parent as { isDeactivated?: boolean }).isDeactivated
     setCounted(!isDeactivated)
   })

@@ -4,6 +4,7 @@ import type { PrimitiveProps } from '@/Primitive'
 import type { AcceptableValue, Direction } from '@/shared/types'
 import { useVModel } from '@vueuse/core'
 import { createContext, getActiveElement, useDirection, useForwardExpose, useTypeahead } from '@/shared'
+import { getInstance, hasAssignedProp } from '@/shared/instance'
 
 export type TagGroupSelectionMode = 'none' | 'single' | 'multiple'
 
@@ -73,7 +74,7 @@ export const [injectTagGroupRootContext, provideTagGroupRootContext]
 </script>
 
 <script setup lang="ts" generic="T extends AcceptableValue = AcceptableValue">
-import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, shallowReactive, toRefs } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowReactive, toRefs } from 'vue'
 import { injectFieldRootContext } from '@/Field'
 import { compare, valueComparator } from '@/Listbox/utils'
 import { Primitive } from '@/Primitive'
@@ -97,7 +98,7 @@ defineSlots<{
 const { selectionMode, loop, dir: propDir } = toRefs(props)
 const dir = useDirection(propDir)
 const { forwardRef, currentElement } = useForwardExpose()
-const instance = getCurrentInstance()
+const instance = getInstance()
 
 // Optional Field participation: `injectFieldRootContext(null)` returns `null`
 // outside a `FieldRoot`, so every binding below is inert without a Field.
@@ -142,7 +143,7 @@ function toggleSelection(value: AcceptableValue) {
 // Tags are removable only when the consumer listens to `remove`, as there is
 // nothing to remove them from otherwise.
 function allowsRemoving() {
-  return Boolean(instance?.vnode.props?.onRemove)
+  return hasAssignedProp(instance, 'onRemove')
 }
 
 function removeTags(value: AcceptableValue, withSelection: boolean) {

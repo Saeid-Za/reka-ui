@@ -3,6 +3,7 @@ import type { ComputedRef, Ref } from 'vue'
 import type { FieldValidationMode } from '@/Field/useFieldValidation'
 import type { PrimitiveProps } from '@/Primitive'
 import { createContext, useForwardExpose } from '@/shared'
+import { getInstance, hasAssignedProp } from '@/shared/instance'
 
 export interface FormRootProps extends PrimitiveProps {
   /**
@@ -62,7 +63,7 @@ export const [injectFormRootContext, provideFormRootContext]
 </script>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Primitive } from '@/Primitive'
 
 const props = withDefaults(defineProps<FormRootProps>(), {
@@ -71,7 +72,7 @@ const props = withDefaults(defineProps<FormRootProps>(), {
 })
 const emit = defineEmits<FormRootEmits>()
 
-const instance = getCurrentInstance()
+const instance = getInstance()
 
 function validate(fieldName?: string) {
   const targets = fieldName
@@ -161,7 +162,7 @@ function handleSubmit(event: Event) {
   awaitingServerErrors = true
   emit('submit', event as SubmitEvent)
 
-  if (instance?.vnode.props?.onFormSubmit) {
+  if (hasAssignedProp(instance, 'onFormSubmit')) {
     event.preventDefault()
     emit('formSubmit', getValues(), event as SubmitEvent)
   }

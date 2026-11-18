@@ -6,6 +6,7 @@ import { provideComboboxRootContext } from '@/Combobox/ComboboxRoot.vue'
 import { useComboboxContentPositioning } from '@/Combobox/useComboboxContentPositioning'
 import { usePrimitiveElement } from '@/Primitive'
 import { createContext, defineReactiveIds, useDirection, useFilter } from '@/shared'
+import { getInstance } from '@/shared/instance'
 
 export interface AutocompleteRootProps extends PrimitiveProps {
   /** The controlled value of the Autocomplete (the input text). Can be bound with `v-model`. */
@@ -68,7 +69,7 @@ export const [injectAutocompleteRootContext, provideAutocompleteRootContext]
 
 <script setup lang="ts">
 import { createEventHook, useVModel } from '@vueuse/core'
-import { computed, getCurrentInstance, nextTick, onMounted, ref, toRefs } from 'vue'
+import { computed, nextTick, onMounted, ref, toRefs } from 'vue'
 import { ListboxRoot } from '@/Listbox'
 import { PopperRoot } from '@/Popper'
 
@@ -198,7 +199,7 @@ const filterState = computed<{
   }
 })
 
-const inst = getCurrentInstance()
+const inst = getInstance()
 onMounted(() => {
   if (inst?.exposed) {
     inst.exposed.highlightItem = primitiveElement.value?.highlightItem

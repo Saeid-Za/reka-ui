@@ -4,6 +4,7 @@ import type { ListboxRootProps } from '@/Listbox'
 import type { AcceptableValue, GenericComponentInstance } from '@/shared/types'
 import { usePrimitiveElement } from '@/Primitive'
 import { createContext, defineReactiveIds, useDirection, useFilter } from '@/shared'
+import { getInstance } from '@/shared/instance'
 
 type ComboboxRootContext<T> = {
   modelValue: Ref<T | Array<T> | undefined>
@@ -106,7 +107,7 @@ export interface ComboboxRootProps<T = AcceptableValue, ClearValue = any> extend
 <script setup lang="ts" generic="T extends AcceptableValue = AcceptableValue, ClearValue extends T | Array<T> | null | undefined = never">
 import type { EventHookOn } from '@vueuse/core'
 import { createEventHook, useVModel } from '@vueuse/core'
-import { computed, getCurrentInstance, nextTick, onMounted, ref, toRefs, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, toRefs, watch } from 'vue'
 import { ListboxRoot } from '@/Listbox'
 import { PopperRoot } from '@/Popper'
 import { useComboboxContentPositioning } from './useComboboxContentPositioning'
@@ -257,7 +258,7 @@ function getClearValue() {
   return clearValue
 }
 
-const inst = getCurrentInstance()
+const inst = getInstance()
 onMounted(() => {
   if (inst?.exposed) {
     inst.exposed.highlightItem = primitiveElement.value?.highlightItem
