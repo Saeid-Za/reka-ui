@@ -10,6 +10,7 @@ const SSR = /SSR renderToString/
 const OPTIONS_RENDER = /Options-API render/
 const STUBS = /global\.stubs/
 const SET_DATA = /setData/
+const SSR_HYDRATION = /ssr hydration/
 const READ_EL = /reading 'el'/
 const VDOM_NAME = /VDOM/
 const SNAPSHOT = /Snapshot `/
@@ -31,6 +32,11 @@ const DISPLAY_NONE = /to be 'none'/
 
 // [bucket, cause, (file, testName, firstMessageLine) => boolean], first match wins
 const RULES = [
+  // Vapor SSR (FULL_SUITE.md, "The 3 SSR failures left")
+  ['fail:harness', 'S1 Vapor SSR: vi.mock() does not reach the server-compiled copy of a module (Dialog.ssr, useBodyScrollLock)', f => f === 'Dialog/Dialog.ssr.test.ts'],
+  ['fail:harness', 'S2 Vapor SSR: vi.resetModules() reloads the inlined vue, stack overflow (Popover.ssr, suspected)', f => f === 'Popover/Popover.ssr.test.ts'],
+  ['fail:reka', 'S3 Vapor SSR: as-child attrs are applied on the client only, missing from server markup (QS7)', (f, n) => f === 'Tabs/Tabs.test.ts' && SSR_HYDRATION.test(n)],
+  // C1–C6 no longer occur since r5 (harness support / isVapor variants); kept to classify old reports
   ['cannot-run', 'C1 SSR renderToString (Vapor SSR out of scope, Q11)', (f, n, m) => SSR.test(m)],
   ['cannot-run', 'C2 Options-API render() using `this` (VDOM-only API)', (f, n, m) => OPTIONS_RENDER.test(m)],
   ['cannot-run', 'C3 VTU global.stubs (Vapor resolves imported components at compile time)', (f, n, m) => STUBS.test(m)],
