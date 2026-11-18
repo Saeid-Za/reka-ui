@@ -9,7 +9,7 @@
 import type { PrimitiveProps } from './Primitive'
 import { onMounted, onUpdated, useAttrs, watchEffect } from 'vue'
 import { findBlockElement, getInstance } from '@/shared/instance'
-import { applyAsChildAttrs } from './asChildAttrs'
+import { createAsChildApplier, resolveAsChildTarget } from './asChildAttrs'
 import '@/shared/instance.vapor'
 
 defineOptions({
@@ -42,10 +42,11 @@ defineExpose({
 
 if (props.asChild) {
   let mounted = false
+  const applyAsChildAttrs = createAsChildApplier()
   const sync = () => {
     const el = rootElement()
     if (el)
-      applyAsChildAttrs(el, attrs)
+      applyAsChildAttrs(resolveAsChildTarget(el), attrs)
   }
   onMounted(() => {
     mounted = true

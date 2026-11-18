@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { applyAsChildAttrs } from './asChildAttrs'
+import { applyAsChildAttrs, createAsChildApplier, resolveAsChildTarget } from './asChildAttrs'
 
 function button() {
   const el = document.createElement('button')
@@ -59,5 +59,45 @@ describe('applyAsChildAttrs', () => {
     const spy = vi.spyOn(el, 'addEventListener')
     applyAsChildAttrs(el, { onPointerDownOnce: () => {} })
     expect(spy).toHaveBeenCalledWith('pointer-down', expect.any(Function), { once: true })
+  })
+})
+
+describe('createAsChildApplier', () => {
+  it('keeps nested appliers on the same element independent', () => {
+    const el = document.createElement('button')
+    const inner = createAsChildApplier()
+    const outer = createAsChildApplier()
+    inner(el, { role: 'tab', class: 'inner' })
+    outer(el, { 'data-reka-collection-item': '', 'class': 'outer', 'role': 'option' })
+    inner(el, { 'role': 'tab', 'class': 'inner', 'aria-selected': 'true' })
+    expect(el.getAttribute('data-reka-collection-item')).toBe('')
+    // the inner (child) layer applied first, so it owns `role`
+    expect(el.getAttribute('role')).toBe('tab')
+    expect(el.className).toBe('inner outer')
+    expect(el.getAttribute('aria-selected')).toBe('true')
+  })
+})
+
+describe('createAsChildApplier({ override: true })', () => {
+  it('lets applied attrs win and restores the element\'s own value afterwards', () => {
+    const el = document.createElement('div')
+    el.id = 'generated'
+    const apply = createAsChildApplier({ override: true })
+    apply(el, { id: 'mine' })
+    expect(el.id).toBe('mine')
+    apply(el, {})
+    expect(el.id).toBe('generated')
+  })
+})
+
+describe('resolveAsChildTarget', () => {
+  it('targets the content inside a PopperContent wrapper', () => {
+    const wrapper = document.createElement('div')
+    wrapper.setAttribute('data-reka-popper-content-wrapper', '')
+    const content = document.createElement('div')
+    wrapper.appendChild(content)
+    expect(resolveAsChildTarget(wrapper)).toBe(content)
+    const plain = document.createElement('div')
+    expect(resolveAsChildTarget(plain)).toBe(plain)
   })
 })

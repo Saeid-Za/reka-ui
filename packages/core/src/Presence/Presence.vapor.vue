@@ -6,8 +6,8 @@
 // behind `v-if` and reads the element the slot rendered from its own block.
 // It is swapped in for `Presence.ts` by the Vapor build (see packages/vapor).
 import type { PresenceProps } from './Presence'
-import { computed, onMounted, ref, toRefs, useAttrs, watch } from 'vue'
-import { applyAsChildAttrs } from '@/Primitive/asChildAttrs'
+import { computed, onBeforeUnmount, onMounted, ref, toRefs, useAttrs, watch } from 'vue'
+import { createAsChildApplier, resolveAsChildTarget } from '@/Primitive/asChildAttrs'
 import { findBlockElement, getInstance } from '@/shared/instance'
 import { usePresence } from './usePresence'
 import '@/shared/instance.vapor'
@@ -35,23 +35,44 @@ defineExpose({ present: isPresent })
 
 const instance = getInstance()
 const attrs = useAttrs()
+const applyAsChildAttrs = createAsChildApplier({ override: true })
 const shouldRender = computed(() => forceMount.value || present.value || isPresent.value)
+
+// The slot may render its element later than Presence updates (an async
+// component, e.g. Popover/Tooltip/HoverCard content). Until the element shows
+// up, watch the DOM around Presence's block for it.
+let observer: MutationObserver | undefined
+function stopObserving() {
+  observer?.disconnect()
+  observer = undefined
+}
+function observeUntilRendered() {
+  if (observer || typeof MutationObserver === 'undefined')
+    return
+  observer = new MutationObserver(() => {
+    if (findBlockElement((instance as { block?: unknown } | null)?.block))
+      syncNode()
+  })
+  observer.observe(document.body, { childList: true, subtree: true })
+}
 
 function syncNode() {
   const el = instance && 'block' in instance ? findBlockElement(instance.block) : undefined
   if (!el || typeof el.hasAttribute === 'undefined') {
     node.value = undefined
+    if (shouldRender.value)
+      observeUntilRendered()
     return
   }
-  // special case to handle animation for PopperContent
-  node.value = el.hasAttribute('data-reka-popper-content-wrapper')
-    ? el.firstElementChild as HTMLElement
-    : el
+  stopObserving()
+  // special case to handle animation for PopperContent; attrs go there too
+  node.value = resolveAsChildTarget(el)
   if (Object.keys(attrs).length)
-    applyAsChildAttrs(el, attrs)
+    applyAsChildAttrs(node.value, attrs)
 }
 
 onMounted(syncNode)
+onBeforeUnmount(stopObserving)
 watch(shouldRender, syncNode, { flush: 'post' })
 watch(() => ({ ...attrs }), () => node.value && syncNode(), { flush: 'post' })
 </script>

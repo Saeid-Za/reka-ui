@@ -8,6 +8,8 @@ type Attrs = Record<string, unknown>
 interface AppliedState {
   /** Attribute / DOM property names the child rendered itself; the child wins for those. */
   childOwned: Set<string>
+  /** Own attribute values replaced in `override` mode, restored on removal. */
+  originals: Map<string, string>
   classes: Set<string>
   styles: Set<string>
   attrs: Set<string>
@@ -15,7 +17,10 @@ interface AppliedState {
   listeners: Map<string, { invoker: EventListener, value: unknown, options: AddEventListenerOptions }>
 }
 
-const states = new WeakMap<Element, AppliedState>()
+// State per (applier, element): nested as-child layers (e.g. CollectionItem >
+// RovingFocusItem > TabsTrigger) all apply to the same element and must not
+// undo each other's attrs.
+const defaultStates = new WeakMap<Element, AppliedState>()
 
 const WHITESPACE_RE = /\s+/
 const EVENT_OPTION_RE = /(?:Once|Passive|Capture)$/
@@ -63,11 +68,13 @@ function shouldSetAsProp(el: Element, key: string, value: unknown) {
  * slot's root, so this works on the DOM element; a child that rewrites its own
  * `class` attribute wholesale can drop the merged classes until the next run.
  */
-export function applyAsChildAttrs(el: Element, attrs: Attrs) {
+export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Element, AppliedState> = defaultStates, override = false) {
   let state = states.get(el)
   if (!state) {
+    const own = Array.from(el.attributes, attr => attr.name).filter(name => name !== 'class' && name !== 'style')
     state = {
-      childOwned: new Set(Array.from(el.attributes, attr => attr.name).filter(name => name !== 'class' && name !== 'style')),
+      childOwned: new Set(override ? [] : own),
+      originals: new Map(override ? own.map(name => [name, el.getAttribute(name)!]) : []),
       classes: new Set(),
       styles: new Set(),
       attrs: new Set(),
@@ -146,8 +153,13 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs) {
     }
   }
   for (const name of state.attrs) {
-    if (!seenAttrs.has(name))
+    if (seenAttrs.has(name))
+      continue
+    const original = state.originals.get(name)
+    if (original == null)
       el.removeAttribute(name)
+    else
+      el.setAttribute(name, original)
   }
   for (const name of state.props) {
     if (!seenProps.has(name))
@@ -155,6 +167,20 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs) {
   }
   state.attrs = seenAttrs
   state.props = seenProps
+}
+
+/**
+ * An `applyAsChildAttrs` bound to its own state, for one `Primitive` / `Presence`.
+ *
+ * @param options - Applier options.
+ * @param options.override - Let the applied attrs win over the element's own
+ * attributes (restored when the attr goes away). `Presence` uses this: in the
+ * VDOM build its attrs reach the content through component fallthrough, where
+ * the consumer's attrs win.
+ */
+export function createAsChildApplier(options: { override?: boolean } = {}) {
+  const states = new WeakMap<Element, AppliedState>()
+  return (el: Element, attrs: Attrs) => applyAsChildAttrs(el, attrs, states, options.override)
 }
 
 function parseStyleString(css: string) {
@@ -165,4 +191,17 @@ function parseStyleString(css: string) {
       result[decl.slice(0, index).trim()] = decl.slice(index + 1).trim()
   }
   return result
+}
+
+/**
+ * The element `as-child` attrs belong on.
+ *
+ * In the VDOM build attrs reach a child *component*, and `PopperContent`
+ * (`inheritAttrs: false`) moves them from its positioning wrapper to the
+ * content element inside. Vapor only sees the DOM, so mirror that here.
+ */
+export function resolveAsChildTarget(el: HTMLElement): HTMLElement {
+  return el.hasAttribute('data-reka-popper-content-wrapper') && el.firstElementChild
+    ? el.firstElementChild as HTMLElement
+    : el
 }
