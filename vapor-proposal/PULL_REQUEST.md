@@ -92,9 +92,9 @@ Closes #TBD (Vapor RFC issue).
 | `pnpm --filter reka-ui type-check` | pass |
 | `pnpm --filter reka-ui build-only` | pass. Only `dist/shared/instance.vapor.*` reference `currentInstance`. |
 | `eslint` on changed files | clean |
-| `pnpm test:vapor`, VDOM baseline | 50 passed |
-| `pnpm test:vapor`, interop (both app modes) | 114 passed, 2 expected fail |
-| `pnpm test:vapor`, pure Vapor | 57 passed, 1 expected fail (known gap), 1 todo |
+| `pnpm test:vapor`, VDOM baseline | 51 passed |
+| `pnpm test:vapor`, interop (both app modes) | 116 passed, 2 expected fail |
+| `pnpm test:vapor`, pure Vapor (Options API compiled out) | 60 passed, 1 expected fail (known gap), 1 todo |
 
 **Per-component pure-Vapor coverage: 47/48.** The full table is in `COVERAGE.table.md`. All
 families pass in the VDOM baseline and in both interop modes.
@@ -139,6 +139,17 @@ Pure-Vapor memory per instance went down by 4.4 % for Checkbox, 0.9 % for Collap
 for Tabs. Mount time relative to VDOM went from 0.90x to 0.77x for Checkbox and from 1.21x to
 1.11x for Tabs. BENCHMARKS §10 has the caveats: the final run shared the machine with another
 workload. The rest of the bundle gap comes from Vue's runtime-vapor, not from Reka.
+
+**Round 2** (`PERF_LOG.md`, BENCHMARKS §11) kept three more changes:
+
+- The Vapor half of `useForwardExpose` is registered by `reka-ui/vapor`, so the default
+  build no longer carries it.
+- `Presence.vapor.vue` uses one watcher instead of two.
+- All Vapor `exposed` objects share one Proxy handler.
+
+Pure-Vapor memory per instance is now 6.9% (Checkbox), 2.9% (Collapsible) and 3.8% (Tabs)
+below B0, or 1.29–1.39x of VDOM. The default VDOM build is 98 B gzip smaller than before this
+branch. Unmount, at 1.1–2.0x of VDOM, is still the largest gap.
 
 ## Not in this PR / follow-ups
 

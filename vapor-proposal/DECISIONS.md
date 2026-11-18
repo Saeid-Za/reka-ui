@@ -368,3 +368,24 @@ change; the export-names snapshot test covers this.
 gzip, and memory and timings are unchanged. Bundlers drop the registration when the app never
 calls `useForwardExpose`. That is correct, and `test-vdom/package-side-effects.test.ts`
 accounts for it. The prelude exists in both files and has to be kept in sync.
+
+## ADR-024: Round-2 Vapor-only memory changes (PERF_LOG E8, E10)
+
+**Status:** accepted (round 2)
+
+**Decision:**
+- `Presence.vapor.vue` watches render state and attrs with one post-flush watcher. A render
+  change always syncs; an attrs change syncs only while an element is rendered.
+- The Vapor `exposed` Proxy uses one module-level handler and finds each instance's props in
+  a `WeakMap` keyed by the proxy target.
+
+Both changes live in Vapor-only files, and neither changes behaviour.
+`test-native/vapor-only.test.ts` ("re-applies changed attrs") guards the merged watcher.
+
+**Consequences:** memory per instance drops by about 1% each (E8: −1.3%, −0.9% and −0.6%; E10:
+−1.1%, −1.1% and −0.9%, for Checkbox, Collapsible and Tabs). The pure-Vapor bundle grows by
+15 B and 58 B gzip respectively. E10 is the one kept change that trades bundle size for
+memory. It is one commit and reverts cleanly.
+
+**Rejected:** E9, hoisting `SELF_CLOSING_TAGS`. It saved 18 B per Checkbox row and cost
+21 B gzip.

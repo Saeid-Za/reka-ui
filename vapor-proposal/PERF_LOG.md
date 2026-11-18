@@ -736,3 +736,28 @@ unminified bundle. Totals are in `scratch/perf/heap-r2.txt` and the per-location
   58 B gzip, which is 0.08% of the pure-Vapor bundle. E9 was reverted under the same rule
   because its gain was a tenth as large (−18 B per Checkbox row) for a third of the cost.
   If maintainers weigh bytes over memory, reverting this one commit restores the E8 numbers.
+
+
+## Summary of round 2 (full run `raw/bench-round2.json`, BENCHMARKS §11)
+
+| # | What | Verdict | Main effect, measured A/B |
+|---|---|---|---|
+| R1 | Re-check of Collapsible against `6b16742` | regression refuted | update −18%, unmount −36%, mount within noise |
+| F1 | `__VUE_OPTIONS_API__: false` (already set in the bench) | kept as test configuration | pure Vapor ±0 B (−12 B gzip); VDOM −1.5 KiB gzip; Q18 |
+| E7a | Vapor `forwardRef` registered separately | superseded by E7b | memory +0.3% |
+| E7b | Whole Vapor `useForwardExpose` registered by `reka-ui/vapor` | **kept** | VDOM −202 B gzip (below B0), pure Vapor +39 B gzip, memory −0.1% |
+| E8 | One watcher in `Presence.vapor.vue` | **kept** | memory −1.3% / −0.9% / −0.6% |
+| E9 | Hoist `SELF_CLOSING_TAGS` | reverted | memory −0.1%, bundle +21 B gzip |
+| E10b | Shared Proxy handler in the Vapor `exposed` | **kept** (trade-off) | memory −1.1% / −1.1% / −0.9%, bundle +58 B gzip |
+
+Memory per instance is now 1.29x (Checkbox), 1.37x (Collapsible) and 1.39x (Tabs) of VDOM.
+At the end of round 1 it was 1.32x, 1.40x and 1.41x.
+
+What remains, from P5, is mostly Vapor-runtime bookkeeping:
+
+- compiler-generated prop getters;
+- one `RenderEffect` per binding;
+- `createIf` fragments.
+
+Reka can only remove these with the behaviour-changing levers in Q17. No A/B run in this round
+moved unmount outside noise.

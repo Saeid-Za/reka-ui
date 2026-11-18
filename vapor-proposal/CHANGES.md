@@ -183,10 +183,11 @@ Branch `feat/vapor-support`, see `git log a9873a0..HEAD` (patches in `/workspace
 - `type-check`, `build-only`, `eslint` on all changed files: pass / clean. In `dist/`, only
   `shared/instance.vapor.{js,cjs}` reference `currentInstance`.
 - `pnpm test:vapor` (Vue 3.6.0-rc.15, jsdom):
-  - `vdom` baseline: **50 passed** (48 families + fixture check + consumer `sideEffects` build check).
-  - interop (both app modes): **114 passed, 2 expected fail** (the precedence divergence).
-  - pure Vapor: **57 passed, 1 expected fail** (ListboxVirtualizer, known gap), **1 todo**
-    (other virtualizers); includes the compile check: all 414 exported components are Vapor.
+  - `vdom` baseline: **51 passed** (48 families, the fixture check, and 2 consumer builds of `dist/`: `sideEffects` keeps the `reka-ui/vapor` registrations, and a default-only build has no Vapor half of `useForwardExpose`).
+  - interop (both app modes): **116 passed, 2 expected fail** (the precedence divergence).
+  - pure Vapor, compiled with `__VUE_OPTIONS_API__: false`: **60 passed, 1 expected fail**
+    (ListboxVirtualizer, a known gap) and **1 todo** (the other virtualizers). This includes the
+    compile check that all 414 exported components are Vapor.
 - **Pure-Vapor coverage per component: 47/48** (table in `COVERAGE.table.md`; everything but
   ListboxVirtualizer).
 - **Benchmark** (Chrome 156, 4x CPU, medians; full report in `BENCHMARKS.md`): pure Vapor updates take
@@ -199,5 +200,19 @@ Branch `feat/vapor-support`, see `git log a9873a0..HEAD` (patches in `/workspace
   to 0.77x of VDOM and Tabs mount from 1.21x to 1.11x. These ratios come from a run on a loaded
   machine; Collapsible needs an idle re-run. The bundle gap is set by Vue's runtime-vapor
   (OPEN_QUESTIONS Q16).
+- **Performance work, round 2** (`PERF_LOG.md` R1, F1, E7–E10; BENCHMARKS §11). Three changes
+  were kept:
+  - E7b: the Vapor half of `useForwardExpose` is registered by `reka-ui/vapor`.
+  - E8: one watcher instead of two in the Vapor `Presence`.
+  - E10b: one shared Proxy handler for the Vapor `exposed` objects.
+
+  E9 was reverted. R1 refuted the Collapsible regression. In F1, the Options API flag saved
+  0 B in pure Vapor, where it was already off. Results compared with B0:
+  - Pure-Vapor memory per instance: −6.9% for Checkbox, −2.9% for Collapsible and −3.8% for
+    Tabs. That is 1.29–1.39x of VDOM, down from 1.38–1.45x.
+  - The **VDOM bundle is 98 B gzip below B0**, so the branch no longer grows the default build.
+  - The pure-Vapor bundle is +282 B gzip.
+  - Mount and unmount ratios are unchanged within noise. Unmount, at 1.1–2.0x of VDOM, is the
+    largest remaining gap.
 - Not done: virtualizers; a published compiled `reka-ui/vapor`; Vapor SSR/hydration; tests other than
   the benchmark run in jsdom.
