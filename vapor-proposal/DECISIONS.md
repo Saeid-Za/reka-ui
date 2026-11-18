@@ -346,3 +346,25 @@ this PR).
 - **Consequences:** Memory −0.3 to −0.6 %, bundle −43 B gzip. This relies on a source-text
   check, so a component that calls `useForwardExpose` conditionally would not get an
   injected fallback. No such component exists today.
+
+## ADR-023: The Vapor half of `useForwardExpose` is registered, not swapped (PERF_LOG E7)
+
+**Status:** accepted (round 2)
+
+**Context:** after E1, the default build carried `useForwardExpose`'s Vapor branch, about 200 B
+gzip. That code only runs once `reka-ui/vapor` is loaded. `useForwardExpose` is public, so
+apps that use the default dist with `import 'reka-ui/vapor'` call it from their own Vapor
+components. A `rekaVaporSwap()` swap would only reach builds that compile Reka from source.
+
+**Decision:** `shared/useForwardExpose.vapor.ts` exports `useVaporForwardExpose(instance)`,
+the whole composable for a Vapor instance. `shared/instance.vapor.ts` registers it through
+`setVaporForwardExpose()`; that module is already the side-effect module behind
+`reka-ui/vapor` and imported by every `*.vapor.vue`. `useForwardExpose()` delegates to the
+registered function before it allocates anything, when the instance is a Vapor one.
+`setVaporForwardExpose` is not re-exported from `shared/index.ts`, so the public API does not
+change; the export-names snapshot test covers this.
+
+**Consequences:** the VDOM build drops 202 B gzip, to 98 B below B0. Pure Vapor grows by 39 B
+gzip, and memory and timings are unchanged. Bundlers drop the registration when the app never
+calls `useForwardExpose`. That is correct, and `test-vdom/package-side-effects.test.ts`
+accounts for it. The prelude exists in both files and has to be kept in sync.

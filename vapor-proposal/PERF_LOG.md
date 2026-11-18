@@ -563,3 +563,49 @@ The work goes in this order:
   no numbers in BENCHMARKS.md change. The pure-Vapor test suite now also runs with the
   Options API off. The flag saves nothing in pure Vapor, about 1.5 KiB gzip in VDOM and about
   1.6 KiB gzip in interop. Whether Reka should document the flag is Q18 in OPEN_QUESTIONS.md.
+- **E7a measured** (`scratch/perf/E7.md`, 15 runs, interleaved, pure Vapor; VDOM sizes from
+  builds of HEAD and the working tree):
+
+  | Metric | HEAD | E7a | Change |
+  |---|---|---|---|
+  | VDOM bundle, min / gzip / brotli | 182,584 / 61,515 / 54,063 | 181,812 / 61,321 / 53,757 | −772 / −194 / −306 B |
+  | interop bundle, min / gzip / brotli | 293,235 / 101,174 / 88,184 | 292,463 / 101,003 / 87,869 | −772 / −171 / −315 B |
+  | pure-Vapor bundle, min / gzip / brotli | 225,809 / 75,802 / 66,521 | 226,035 / 75,848 / 66,558 | +226 / +46 / +37 B |
+  | Checkbox memory (B/instance) | 28,238 | 28,318 | +0.3% |
+  | Collapsible / Tabs memory | 42,422 / 201,735 | 42,537 / 202,180 | +0.3% / +0.2% |
+  | timings | | | all noise except Collapsible unmount (−18%, "better") |
+
+  The VDOM bundle is now below B0 (182,137 / 61,411). The pure-Vapor build costs +80 B per
+  Checkbox, a consistent +0.2–0.3% in every scenario: two closure scopes per call instead of
+  one. The prelude (`currentRef`, `currentElement`, `onUpdated`) keeps its scope in
+  `useForwardExpose.ts`, and the Vapor half gets a second scope for `ret`, `props` and
+  `forwardedKeys`. `ret` is also allocated before the branch and then thrown away.
+- **E7b hypothesis:** register the whole composable for Vapor (`useVaporForwardExpose`, with
+  the prelude repeated) and return from it before any VDOM state is allocated. That gives one
+  closure scope per instance again, so memory goes back to HEAD. The pure-Vapor bundle carries
+  the prelude twice, about +100 B gzip, while the VDOM saving stays the same. The declared
+  return type of `useForwardExpose` must not change; the VDOM-inferred type is the public one.
+- **E7b measured** (`scratch/perf/E7b.md`, 15 runs; `E7b-2.md`, Checkbox and Collapsible, 25
+  runs; both interleaved against HEAD):
+
+  | Metric | HEAD | E7b | Change |
+  |---|---|---|---|
+  | VDOM bundle, min / gzip / brotli | 182,584 / 61,515 / 54,063 | 181,770 / 61,313 / 53,778 | **−814 / −202 / −285 B** (B0: 182,137 / 61,411 / 54,034) |
+  | pure-Vapor bundle, min / gzip / brotli | 225,809 / 75,802 / 66,521 | 226,232 / 75,841 / 66,525 | +423 / +39 / +4 B |
+  | memory (B/instance), Checkbox / Collapsible / Tabs | 28,238 / 42,413 / 201,735 | 28,199 / 42,355 / 201,517 | −0.1% each |
+  | timings, E7b-2 (25 runs) | | | all noise (−7.4% to +3.9%) |
+
+  The 15-run session flagged Checkbox and Collapsible unmount as "WORSE" (+34%, +42%). The
+  25-run re-check measured the same ops at −0.4% and −7.4%, and E7a measured Collapsible
+  unmount at −18%. Unmount on this loaded machine swings ±35% on its own; F1 showed that
+  with identical code. Both builds run the same unmount code: the only change is where the
+  closures are created.
+- **Verdict: E7b kept** (E7a superseded). The VDOM build drops 202 B gzip and is now 98 B gzip
+  below B0. The pure-Vapor bundle grows by +39 B gzip, and memory and timings are unchanged.
+  The declared type of `useForwardExpose` is the same type, but the `.d.ts` now spells it
+  `Ref<X>` and `ComputedRef<HTMLElement>` instead of `Ref<X, X>` and
+  `vue0.ComputedRef<HTMLElement>`. New tests: a pure-Vapor family (Tooltip) fails when the
+  registration is removed, so the registered path is covered. The app-level
+  `useForwardExpose` scenario (`ForwardExposeDemo.vue`) runs in all three app modes. The
+  consumer-build test now checks that `reka-ui/vapor` keeps the registration and that a
+  default-only build contains no Vapor half (`new Proxy(ret`).
