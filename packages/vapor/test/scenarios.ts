@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import AsChildButton from '../src/AsChildButton.vue'
 import CheckboxDemo from '../src/CheckboxDemo.vue'
 import CollapsibleDemo from '../src/CollapsibleDemo.vue'
+import ForwardExposeDemo from '../src/ForwardExposeDemo.vue'
 import RefDemo from '../src/RefDemo.vue'
 import WrappedCollapsibleHost from '../src/WrappedCollapsibleHost.vue'
 import { cleanup, flush, mount } from './mount'
@@ -137,6 +138,17 @@ export function runCoreScenarios(mode: Mode) {
       // useForwardExpose exposes the component's props
       expect(root.defaultOpen).toBe(true)
       expect(root.open).toBe(true)
+    })
+
+    it('work for an app component that calls useForwardExpose', async () => {
+      const { exposed } = mount(ForwardExposeDemo, mode)
+      await flush()
+      const wrapper = exposed().wrapper.value
+      expect(wrapper.$el).toBeInstanceOf(HTMLElement)
+      expect(wrapper.$el.id).toBe('fwd')
+      expect(wrapper.$el.tagName).toBe('ARTICLE')
+      expect(wrapper.label).toBe('forwarded')
+      expect(wrapper.$el.getAttribute('aria-label')).toBe('forwarded')
     })
   })
 }

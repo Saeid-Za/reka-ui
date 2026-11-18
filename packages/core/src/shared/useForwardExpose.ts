@@ -1,9 +1,18 @@
-import type { ComponentPublicInstance } from 'vue'
+import type { ComponentPublicInstance, ComputedRef, Ref } from 'vue'
+import type { VaporInstanceLike } from './instance'
 // reference: https://github.com/vuejs/rfcs/issues/258#issuecomment-1068697672
 import { isClient } from '@vueuse/shared'
 import { computed, onUpdated, ref, triggerRef } from 'vue'
 import { getInstance, getInstanceRootNode, isVaporInstance } from './instance'
 import { resolveElement } from './resolveElement'
+
+type VaporForwardExpose = (instance: VaporInstanceLike) => { forwardRef: (ref: any) => void, currentRef: Ref<any>, currentElement: ComputedRef<any> }
+let vaporForwardExpose: VaporForwardExpose | undefined
+
+/** Called by `instance.vapor.ts` to register the Vapor half; not re-exported publicly. */
+export function setVaporForwardExpose(impl: VaporForwardExpose) {
+  vaporForwardExpose = impl
+}
 
 /**
  * Expose this component's props and a forwarded child's public values and root node.
@@ -16,7 +25,11 @@ import { resolveElement } from './resolveElement'
 export function useForwardExpose<T extends ComponentPublicInstance>() {
   // VDOM or Vapor instance; both carry `props` and a writable `exposed`.
   const instance = getInstance()!
-  const isVapor = isVaporInstance(instance)
+  // Vapor instances only exist once `reka-ui/vapor` registered its resolver,
+  // which also registers the Vapor implementation (useForwardExpose.vapor.ts),
+  // so the default build carries no Vapor code here.
+  if (vaporForwardExpose && isVaporInstance(instance))
+    return vaporForwardExpose(instance) as { forwardRef: (ref: Element | T | null) => void, currentRef: Ref<Element | T | null | undefined>, currentElement: ComputedRef<HTMLElement> }
 
   const currentRef = ref<Element | T | null>()
   const currentElement = computed(() => resolveCurrentElement())
@@ -48,61 +61,6 @@ export function useForwardExpose<T extends ComponentPublicInstance>() {
   // localExpose should only be assigned once else will create infinite loop
   const localExpose: Record<string, any> | null = Object.assign({}, instance.exposed)
   const ret: Record<string, any> = {}
-
-  if (isVapor) {
-    // Vapor: props are read on demand through a Proxy instead of one getter per
-    // prop. Enumerating a Vapor props proxy resolves every prop, and the getters
-    // cost a closure each, on every instance.
-    for (const key in localExpose) {
-      Object.defineProperty(ret, key, {
-        enumerable: true,
-        configurable: true,
-        get: () => localExpose![key],
-      })
-    }
-    defineRootElement(ret)
-    const props = instance.props as Record<string, any>
-    const isProp = (key: string | symbol): key is string => typeof key === 'string' && key in props
-    // A Vapor template ref resolves to a proxy over the `exposed` object it
-    // first sees and caches it, so `ret` is updated in place instead of being
-    // replaced. A Vapor child ref is that proxy itself (no `$`).
-    instance.exposed = new Proxy(ret, {
-      get: (target, key, receiver) => key in target ? Reflect.get(target, key, receiver) : isProp(key) ? props[key] : undefined,
-      has: (target, key) => key in target || isProp(key),
-      ownKeys: target => [...new Set([...Object.keys(props), ...Reflect.ownKeys(target)])],
-      getOwnPropertyDescriptor: (target, key) => Reflect.getOwnPropertyDescriptor(target, key)
-        ?? (isProp(key) ? { enumerable: true, configurable: true, writable: false, value: props[key] } : undefined),
-    })
-
-    let forwardedKeys: string[] = []
-    // Vapor sets dynamic template refs inside a render effect, so this must
-    // only write reactive state: reading `currentRef` here would make that
-    // effect depend on what it writes and re-run itself forever.
-    let forwarded: Element | T | null = null
-    const forwardRef = (ref: Element | T | null) => {
-      forwarded = ref && typeof ref === 'object' && '$el' in ref && !ref.$el ? null : ref
-      currentRef.value = forwarded
-      for (const key of forwardedKeys)
-        delete ret[key]
-      forwardedKeys = []
-      if (!forwarded || forwarded instanceof Element)
-        return
-      for (const key of Object.keys(forwarded)) {
-        if (key === '$el' || key in localExpose! || isProp(key))
-          continue
-        forwardedKeys.push(key)
-        Object.defineProperty(ret, key, {
-          enumerable: true,
-          configurable: true,
-          get: () => {
-            const current = currentRef.value
-            return current instanceof Element ? undefined : (current as Record<string, any> | null | undefined)?.[key]
-          },
-        })
-      }
-    }
-    return { forwardRef, currentRef, currentElement }
-  }
 
   // retrieve props for current instance
   for (const key in instance.props) {

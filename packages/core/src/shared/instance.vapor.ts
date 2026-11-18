@@ -6,3 +6,7 @@ import { currentInstance } from 'vue'
 import { setVaporInstanceResolver } from './instance'
 
 setVaporInstanceResolver(() => currentInstance)
+import { setVaporForwardExpose } from './useForwardExpose'
+import { useVaporForwardExpose } from './useForwardExpose.vapor'
+
+setVaporForwardExpose(useVaporForwardExpose)

@@ -14,35 +14,50 @@ const coreDist = fileURLToPath(new URL('../../core/dist', import.meta.url))
 const vue36 = fileURLToPath(new URL('../node_modules/vue/dist/vue.runtime.esm-bundler.js', import.meta.url))
 const hasDist = existsSync(join(coreDist, 'vapor.js'))
 
+async function buildConsumer(source: string) {
+  const dir = mkdtempSync(join(tmpdir(), 'reka-vapor-consumer-'))
+  try {
+    const entry = join(dir, 'main.js')
+    writeFileSync(entry, source)
+    const output = await build({
+      configFile: false,
+      logLevel: 'silent',
+      root: dir,
+      resolve: {
+        alias: [
+          { find: /^reka-ui\/vapor$/, replacement: join(coreDist, 'vapor.js') },
+          { find: /^reka-ui$/, replacement: join(coreDist, 'index.js') },
+          { find: /^vue$/, replacement: vue36 },
+        ],
+      },
+      build: {
+        write: false,
+        minify: false,
+        lib: { entry, formats: ['es'], fileName: 'out' },
+      },
+    })
+    const chunks = (Array.isArray(output) ? output : [output]).flatMap(o => 'output' in o ? o.output : [])
+    return chunks.map(c => ('code' in c ? c.code : '')).join('\n')
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
 describe.skipIf(!hasDist)('reka-ui/vapor in a consumer production build', () => {
-  it('keeps the Vapor instance resolver registration', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'reka-vapor-consumer-'))
-    try {
-      const entry = join(dir, 'main.js')
-      writeFileSync(entry, `import 'reka-ui/vapor'\nimport { ComboboxRoot } from 'reka-ui'\nconsole.log(ComboboxRoot)\n`)
-      const output = await build({
-        configFile: false,
-        logLevel: 'silent',
-        root: dir,
-        resolve: {
-          alias: [
-            { find: /^reka-ui\/vapor$/, replacement: join(coreDist, 'vapor.js') },
-            { find: /^reka-ui$/, replacement: join(coreDist, 'index.js') },
-            { find: /^vue$/, replacement: vue36 },
-          ],
-        },
-        build: {
-          write: false,
-          minify: false,
-          lib: { entry, formats: ['es'], fileName: 'out' },
-        },
-      })
-      const chunks = (Array.isArray(output) ? output : [output]).flatMap(o => 'output' in o ? o.output : [])
-      const code = chunks.map(c => ('code' in c ? c.code : '')).join('\n')
-      expect(code).toContain('setVaporInstanceResolver(() => currentInstance)')
-    }
-    finally {
-      rmSync(dir, { recursive: true, force: true })
-    }
+  it('keeps the Vapor instance resolver and useForwardExpose registrations', async () => {
+    const code = await buildConsumer(`import 'reka-ui/vapor'\nimport { ComboboxRoot, useForwardExpose } from 'reka-ui'\nconsole.log(ComboboxRoot, useForwardExpose)\n`)
+    expect(code).toContain('setVaporInstanceResolver(() => currentInstance)')
+    // Bundlers drop the registration when nothing calls useForwardExpose, so
+    // the consumer imports it.
+    expect(code).toMatch(/setVaporForwardExpose\(useVaporForwardExpose\)/)
+    expect(code).toContain('new Proxy(ret')
+  }, 60_000)
+
+  it('leaves the Vapor half of useForwardExpose out without reka-ui/vapor', async () => {
+    const code = await buildConsumer(`import { useForwardExpose } from 'reka-ui'\nconsole.log(useForwardExpose)\n`)
+    expect(code).toContain('function useForwardExpose')
+    expect(code).not.toContain('useVaporForwardExpose')
+    expect(code).not.toContain('new Proxy(ret')
   }, 60_000)
 })
