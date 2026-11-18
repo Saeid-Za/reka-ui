@@ -32,7 +32,9 @@
     "./dist/vapor.js",
     "./dist/vapor.cjs",
     "./src/vapor.ts",
-    "./src/shared/instance.vapor.ts"
+    "./src/shared/instance.vapor.ts",
+    "./dist/shared/instance.vapor.js",
+    "./dist/shared/instance.vapor.cjs"
   ],
   "exports": {
     ".": {
