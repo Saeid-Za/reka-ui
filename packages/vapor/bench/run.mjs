@@ -1,7 +1,7 @@
 // reka-ui VDOM vs Vapor benchmark: builds the bench app three ways and drives
 // it in real Chrome (playwright-core). See vapor-proposal/BENCHMARKS.md.
 //
-//   node bench/run.mjs [--skip-build] [--runs 10] [--warmup 3] [--cpu 4] [--out file.json]
+//   node bench/run.mjs [--skip-build] [--runs 10] [--warmup 3] [--cpu 4] [--out file.json] [--only a,b] [--modes vapor]
 import { execFileSync } from 'node:child_process'
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
@@ -23,12 +23,14 @@ const { values: args } = parseArgs({
     // comma-separated subset, e.g. --only plain,checkbox
     'only': { type: 'string', default: '' },
     'skip-timing': { type: 'boolean', default: false },
+    // comma-separated subset of vdom,interop,vapor (for quick perf iterations)
+    'modes': { type: 'string', default: 'vdom,interop,vapor' },
   },
 })
 const RUNS = +args.runs
 const WARMUP = +args.warmup
 const CPU = +args.cpu
-const MODES = ['vdom', 'interop', 'vapor']
+const MODES = args.modes.split(',')
 const pkg = new URL('..', import.meta.url).pathname
 const dist = join(pkg, 'bench/dist')
 
