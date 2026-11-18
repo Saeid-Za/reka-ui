@@ -38,10 +38,30 @@ describe('applyAsChildAttrs', () => {
     el.click()
     expect(first).not.toHaveBeenCalled()
     expect(second).toHaveBeenCalledTimes(1)
-    expect(spy).toHaveBeenCalledTimes(1)
+    // added once: one capture listener for events at the element (so the consumer
+    // runs before the element's own listeners) and one bubble listener (ADR-S17)
+    expect(spy).toHaveBeenCalledTimes(2)
     applyAsChildAttrs(el, {})
     el.click()
     expect(second).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs consumer listeners before the element\'s own, as the VDOM Slot merges them', () => {
+    const el = button()
+    const calls: string[] = []
+    el.addEventListener('keydown', (event) => {
+      if (!event.defaultPrevented)
+        calls.push('own')
+    })
+    applyAsChildAttrs(el, { onKeydown: (event: Event) => {
+      calls.push('consumer')
+      event.preventDefault()
+    } })
+    el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }))
+    expect(calls).toEqual(['consumer'])
+    const child = el.appendChild(document.createElement('span'))
+    child.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }))
+    expect(calls).toEqual(['consumer', 'own', 'consumer'])
   })
 
   it('sets boolean DOM properties as properties', () => {

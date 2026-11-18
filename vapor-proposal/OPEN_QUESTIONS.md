@@ -357,3 +357,18 @@ the RovingFocus chain. This has not been confirmed.
 **Recommendation:** (a), after locating where the attrs are lost; file (c) upstream.
 **⚑ Provisional default:** (b), documented as a known difference.
 
+### QS8. Listener order for events bubbling from a descendant of an as-child element
+
+Since ADR-S17, Vapor runs a consumer's as-child listener before the element's own for
+events dispatched at the element. For events that bubble up from a descendant, the
+element's own listener still runs first, which is the opposite of VDOM.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Accept the divergence (current) | Simple. Only matters when a consumer `preventDefault()`s an event that started in a descendant. |
+| (b) Re-order through Vapor's internal `$vei` invokers (own/attrs layers) | Exact, but relies on internals. |
+| (c) Ask Vue for a public way to prepend fallthrough handlers | Right long term. |
+
+**Recommendation:** (a) now, and file (c).
+**⚑ Provisional default:** (a).
+

@@ -22,7 +22,15 @@ interface AppliedState {
   styles: Set<string>
   attrs: Set<string>
   props: Set<string>
-  listeners: Map<string, { invoker: EventListener, value: unknown, options: AddEventListenerOptions }>
+  listeners: Map<string, ListenerEntry>
+}
+
+interface ListenerEntry {
+  invoker: EventListener
+  /** Capture-phase listener for events dispatched at the element itself. */
+  atTarget?: EventListener
+  value: unknown
+  options: AddEventListenerOptions
 }
 
 // State per (applier, element): nested as-child layers (e.g. CollectionItem >
@@ -157,8 +165,29 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
         continue
       }
       const [name, options] = parseEventName(key)
-      const entry = { value, options, invoker: ((event: Event) => callHandlers(entry.value, event)) as EventListener }
-      el.addEventListener(name, entry.invoker, options)
+      const entry: ListenerEntry = { value, options, invoker: ((event: Event) => callHandlers(entry.value, event)) as EventListener }
+      if (options.capture) {
+        el.addEventListener(name, entry.invoker, options)
+      }
+      else {
+        // The VDOM as-child Slot merges the consumer's listeners *before* the child's
+        // own (`mergeProps(attrs, child.props)`), so a consumer `preventDefault()` can
+        // opt out of the child's handler. Here the child's listener was added first.
+        // For events dispatched at the element, a capture listener runs before the
+        // element's own (non-capture) ones; events from descendants keep the bubble
+        // listener, which then runs after the element's own (see ADR-S17).
+        entry.atTarget = ((event: Event) => {
+          if (event.target === el)
+            callHandlers(entry.value, event)
+        }) as EventListener
+        const bubble = entry.invoker
+        entry.invoker = ((event: Event) => {
+          if (event.target !== el)
+            bubble(event)
+        }) as EventListener
+        el.addEventListener(name, entry.atTarget, { ...options, capture: true })
+        el.addEventListener(name, entry.invoker, options)
+      }
       state.listeners.set(key, entry)
       continue
     }
@@ -181,6 +210,8 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
     if (!seenListeners.has(key)) {
       const [name] = parseEventName(key)
       el.removeEventListener(name, entry.invoker, entry.options)
+      if (entry.atTarget)
+        el.removeEventListener(name, entry.atTarget, { ...entry.options, capture: true })
       state.listeners.delete(key)
     }
   }

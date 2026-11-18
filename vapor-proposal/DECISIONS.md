@@ -577,3 +577,20 @@ This fixes the R4 group in FULL_SUITE.md (20 tests). It has two parts:
    only. The alternative is a public "attrs applied" signal from Presence/Primitive,
    which would be more code paths; revisit it if the perf work flags the observer.
    The VDOM path is unchanged.
+
+## ADR-S17 As-child consumer listeners run before the element's own, for events at the element
+
+This fixes the R2 group in FULL_SUITE.md (18 tests: Select, DropdownMenu, Menubar,
+Tabs).
+
+The VDOM as-child Slot uses `mergeProps(attrs, child.props)`, so a consumer's
+`onKeydown` runs before the child's own `@keydown`. A consumer `preventDefault()` can
+therefore opt out of the child's handler.
+
+In Vapor, `applyAsChildAttrs` adds the consumer listener after the child's own
+listener, so it ran second. For events dispatched at the element itself, it now
+registers a capture listener, which the DOM runs before the element's non-capture
+listeners. Events that bubble up from a descendant still use a bubble listener, which
+runs after the element's own. That one case still differs from VDOM (QS8). Each
+consumer listener now costs two native listeners. A unit test pins both behaviours.
+This is a `Primitive/asChildAttrs.ts` change, a file the perf work also touches.
