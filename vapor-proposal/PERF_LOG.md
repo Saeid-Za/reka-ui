@@ -151,3 +151,27 @@ templates.
   - The VDOM path is untouched.
 - **Measure:** vapor mode, 15 runs. Compare with B1, a vapor-only re-baseline taken
   with the same settings just before.
+
+**Result: KEPT** (tests: gate passed — vapor 50 / 114+2xfail / 57+1xfail+1todo, core 3548 passed, type-check, build, lint ok).
+
+First measurement, sequential (B1 run, then E1 run; `raw/perf/B1.json`, `raw/perf/E1.json`):
+checkbox mount −18.6 %, tabs mount −15.9 %, collapsible mount −10.1 %, but the **unchanged `plain`
+controls were also 5-20 % faster** in the second run, i.e. machine drift. Sequential runs are
+therefore not trusted; from here on every attempt is measured **A/B in one session**
+(`/workspace/reka-vapor/ab.sh`: baseline = committed HEAD built to `dist/vapor-base`, candidate =
+working tree, both run interleaved per scenario, 15 runs, mode order rotated).
+
+A/B (`raw/perf/E1ab.json`), pure Vapor, script median ms (± std):
+
+| Op | HEAD | E1 | Δ | verdict |
+|---|---|---|---|---|
+| checkbox mount | 352.8 (±16.86) | 317.0 (±14.71) | −10.1 % | better |
+| checkbox update:on | 349.3 (±38.19) | 342.8 (±43.36) | −1.9 % | noise |
+| collapsible mount | 376.7 (±45.54) | 363.3 (±14.7) | −3.6 % | noise |
+| collapsible unmount | 56.2 (±10.82) | 64.5 (±7.67) | +14.8 % | noise |
+| tabs mount | 800.8 (±49.94) | 782.7 (±45.92) | −2.3 % | noise |
+| plain mount (control, same code) | 12.2 (±1.49) | 14.2 (±1.9) | +16.4 % | flagged by the rule, but identical code: noise floor for ~10 ms ops |
+
+All other ops: noise. Memory per instance (deterministic): checkbox 29533 → 28377 B (−3.9 %),
+collapsible 42773 → 42538 (−0.5 %), tabs 206435 → 203625 (−1.4 %), plain unchanged.
+Bundle: +106 B gzip (+447 B min), accepted as negligible against the memory win.

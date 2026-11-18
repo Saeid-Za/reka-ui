@@ -310,3 +310,6 @@ this PR).
 - **Consequences:**
   - The log records every attempt, including the reverted ones.
   - `BENCHMARKS.md` compares the final numbers against baseline B0.
+- **Amendment (after E1):** sequential benchmark runs drifted by 5-20 % on unchanged code, so
+  every attempt is measured A/B in one browser session (baseline HEAD build vs working tree,
+  interleaved per scenario, 15 runs). Ops shorter than ~15 ms are treated as noise-only.
