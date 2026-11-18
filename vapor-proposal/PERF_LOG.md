@@ -702,3 +702,37 @@ unminified bundle. Totals are in `scratch/perf/heap-r2.txt` and the per-location
 - **Verdict: REVERTED.** The memory gain is smaller than estimated: Checkbox saves 18 B, so
   V8 shares most of what a small literal array costs. The gain also comes with a bundle
   regression, and round-2 rules keep only changes that regress no metric.
+
+### E10. Share one Proxy handler across all Vapor `useForwardExpose` calls
+
+- **Hypothesis:** every Vapor `useForwardExpose` call builds a Proxy handler object with
+  four closures (`get`, `has`, `ownKeys`, `getOwnPropertyDescriptor`) plus an `isProp`
+  closure, which P5 shows as 2 of each per Checkbox row. A module-level handler that finds
+  the instance's props through a `WeakMap` keyed by the Proxy target replaces about 5 closures
+  and a handler object with one `WeakMap` entry. That should save about 150 B per call: about
+  300 B per Checkbox row (~1%), proportionally more in Tabs, and the same in Collapsible,
+  which has 3 calls per row. Property reads through the exposed proxy get one `WeakMap` lookup,
+  which only template-ref reads use, not render paths. Timings should not change.
+- **Change:** `useForwardExpose.vapor.ts` only. `exposeHandler` and a
+  `WeakMap<object, props>` at module scope; `forwardRef` uses the module-level `isProp(props,
+  key)`.
+- **First cut (E10a, `scratch/perf/E10.md`):** memory −1.1% (Checkbox), −1.1% (Collapsible)
+  and −0.9% (Tabs); bundle +163 B min / +65 B gzip / +163 B brotli. The handler was written
+  out longhand, so it was rewritten more compactly around one `propKey()` helper and measured
+  again.
+- **E10b** (`scratch/perf/E10b.md`, 15 runs, interleaved against HEAD = E8):
+
+  | Metric | HEAD | E10b | Change |
+  |---|---|---|---|
+  | Checkbox memory (B/instance) | 27,819 | 27,510 | **−1.1%** (−309 B) |
+  | Collapsible memory | 41,971 | 41,519 | **−1.1%** (−453 B) |
+  | Tabs memory | 200,375 | 198,613 | **−0.9%** (−1,762 B) |
+  | pure-Vapor bundle, min / gzip / brotli | 226,257 / 75,856 / 66,406 | 226,390 / 75,914 / 66,572 | +133 / +58 / +166 B |
+  | timings | | | all noise (−12% to +15%; Tabs mount ±284 ms) |
+
+  The gate passed: build, 51/118/62 vapor tests, 3548 core tests, type-check and lint.
+- **Verdict: kept, with a stated trade-off.** Memory per instance is a round-2 priority. This
+  is the second-largest memory win in the round, and it saves as much as E8 does. It costs
+  58 B gzip, which is 0.08% of the pure-Vapor bundle. E9 was reverted under the same rule
+  because its gain was a tenth as large (−18 B per Checkbox row) for a third of the cost.
+  If maintainers weigh bytes over memory, reverting this one commit restores the E8 numbers.
