@@ -50,7 +50,8 @@ export default defineConfig({
   },
   define: {
     '__BENCH_MODE__': JSON.stringify(mode),
-    '__VUE_OPTIONS_API__': 'false',
+    // `BENCH_OPTIONS_API=true` restores Vue's default, for the PERF_LOG F1 A/B only.
+    '__VUE_OPTIONS_API__': process.env.BENCH_OPTIONS_API === 'true' ? 'true' : 'false',
     '__VUE_PROD_DEVTOOLS__': 'false',
     '__VUE_PROD_HYDRATION_MISMATCH_DETAILS__': 'false',
     'process.env.NODE_ENV': '"production"',

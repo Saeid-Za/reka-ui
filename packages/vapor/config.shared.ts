@@ -28,7 +28,7 @@ const rekaAlias = [
 // imports `vue` runs through Vite and gets the aliases above.
 const inlineDeps = [/^vue$/, /vue\/dist\//, /@vue\//, /@vueuse\//, /@tanstack\/vue-virtual/, /@floating-ui\/vue/]
 
-export function createConfig(options: { plugins: PluginOption[], include: string[] }) {
+export function createConfig(options: { plugins: PluginOption[], include: string[], optionsApi?: boolean }) {
   return defineConfig({
     plugins: options.plugins,
     resolve: {
@@ -36,7 +36,8 @@ export function createConfig(options: { plugins: PluginOption[], include: string
       dedupe: ['vue', '@vue/runtime-core', '@vue/runtime-dom', '@vue/runtime-vapor', '@vue/reactivity', '@vue/shared'],
     },
     define: {
-      __VUE_OPTIONS_API__: 'true',
+      // Pure Vapor runs with the Options API compiled out, as a Vapor-only app would ship.
+      __VUE_OPTIONS_API__: String(options.optionsApi ?? true),
       __VUE_PROD_DEVTOOLS__: 'false',
       __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
     },

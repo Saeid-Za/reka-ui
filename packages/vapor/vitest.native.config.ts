@@ -7,4 +7,5 @@ import { rekaVaporSwap } from './rekaVapor.ts'
 export default createConfig({
   plugins: [rekaVaporSwap(), vue({ features: { vapor: true } })],
   include: ['test-native/**/*.test.ts'],
+  optionsApi: false,
 })
