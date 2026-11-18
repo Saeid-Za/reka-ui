@@ -7,8 +7,8 @@
 // to the element the slot rendered. It is swapped in for `Primitive.ts` by the
 // Vapor build (see packages/vapor) and is never imported by the VDOM build.
 import type { PrimitiveProps } from './Primitive'
-import { onMounted, onUpdated, useAttrs, watchEffect } from 'vue'
-import { findBlockElement, getInstance } from '@/shared/instance'
+import { onMounted, onUpdated, shallowRef, useAttrs, watchEffect } from 'vue'
+import { findBlockElement, getInstance, onRootFragmentUpdate } from '@/shared/instance'
 import { createAsChildApplier, resolveAsChildTarget } from './asChildAttrs'
 import '@/shared/instance.vapor'
 
@@ -32,10 +32,16 @@ function rootElement() {
   return instance && 'block' in instance ? findBlockElement(instance.block) : undefined
 }
 
+// Bumped when the slot swaps the element an `as-child` Primitive renders. A slot's
+// `v-if`/`v-for` updates in the slot owner's render effects, so `onUpdated` here does
+// not run for it, and refs that resolve `$el` would keep the old element.
+const rootVersion = shallowRef(0)
+
 // Match the VDOM component: a template ref on `Primitive` resolves to the
 // element it rendered (for `as-child`, the slot's element) through `$el`.
 defineExpose({
   get $el() {
+    void rootVersion.value
     return rootElement()
   },
 })
@@ -48,9 +54,15 @@ if (props.asChild) {
     if (el)
       applyAsChildAttrs(resolveAsChildTarget(el), attrs)
   }
+  const onRootUpdate = () => {
+    sync()
+    rootVersion.value++
+    onRootFragmentUpdate(instance, onRootUpdate)
+  }
   onMounted(() => {
     mounted = true
     sync()
+    onRootFragmentUpdate(instance, onRootUpdate)
   })
   onUpdated(sync)
   // attrs is reactive in Vapor: re-apply when the parent changes them.

@@ -120,6 +120,52 @@ export function findBlockElement(block: unknown): HTMLElement | undefined {
   return undefined
 }
 
+const hookedFragments = new WeakMap<object, Set<() => void>>()
+
+/**
+ * Calls `callback` after any Vapor fragment on the path to `instance`'s first
+ * element renders a different branch (a `v-if`/`v-for`/slot swap), including
+ * fragments that render nothing yet. Call it again from `callback`: the path may
+ * now run through new fragments. Each (fragment, callback) pair is hooked once.
+ *
+ * Uses the fragments' update hook list (`u`), which Vue's own Transition and
+ * interop code use for the same purpose; it is not public API (OPEN_QUESTIONS QS4).
+ *
+ * @internal
+ */
+export function onRootFragmentUpdate(instance: RekaInstance | null, callback: () => void) {
+  if (!isVaporInstance(instance))
+    return
+  const hook = (fragment: { u?: Array<() => void> }) => {
+    let callbacks = hookedFragments.get(fragment)
+    if (!callbacks)
+      hookedFragments.set(fragment, callbacks = new Set())
+    if (callbacks.has(callback))
+      return
+    callbacks.add(callback)
+    ;(fragment.u ??= []).push(callback)
+  }
+  // Same walk as `findBlockElement`, hooking every fragment before the first element.
+  const walk = (block: unknown): boolean => {
+    if (!block)
+      return false
+    if (typeof Element !== 'undefined' && block instanceof Element)
+      return true
+    if (Array.isArray(block))
+      return block.some(walk)
+    if (typeof block === 'object') {
+      if (isVaporInstance(block))
+        return walk(block.block)
+      if ('nodes' in block) {
+        hook(block as { u?: Array<() => void> })
+        return walk((block as { nodes: unknown }).nodes)
+      }
+    }
+    return false
+  }
+  walk(instance.block)
+}
+
 /**
  * The node a component renders first: `vnode.el` for VDOM, the first element of
  * the block for Vapor (Vapor blocks have no single root node to point at).

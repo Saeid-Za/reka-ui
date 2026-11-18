@@ -22,5 +22,9 @@ export function resolveElement(target: Element | ComponentPublicInstance | null 
     // 4: Node.DOCUMENT_POSITION_FOLLOWING
     return (vnode.anchor && next && next.compareDocumentPosition(vnode.anchor as Node) & 4 ? next : undefined) as HTMLElement
   }
-  return unrefElement(target as MaybeElement) as HTMLElement
+  const el = unrefElement(target as MaybeElement)
+  // A Vapor component ref whose `$el` is `undefined` (an `as-child` Primitive whose slot
+  // renders no element) makes `unrefElement` fall back to the ref itself.
+  // The return type stays `HTMLElement` as before; callers already treat it as optional.
+  return (el && typeof Node !== 'undefined' && !(el instanceof Node) ? undefined : el) as HTMLElement
 }

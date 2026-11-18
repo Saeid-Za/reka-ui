@@ -54,20 +54,30 @@ export function useTriggerId(
   else if (!context.triggerId && generate)
     context.triggerId = generate()
 
-  onBeforeUpdate(() => {
+  const syncConsumerId = () => {
     if (attrs.id === consumerId)
       return
     consumerId = attrs.id
     if (typeof consumerId === 'string' && consumerId)
       context.triggerId = consumerId
-  })
+  }
   const syncRendered = () => {
     const renderedId = element.value?.id
     if (renderedId && renderedId !== context.triggerId)
       context.triggerId = renderedId
   }
+  onBeforeUpdate(syncConsumerId)
   onMounted(syncRendered)
   onUpdated(syncRendered)
+  // A Vapor component has no update of its own when only a fallthrough attribute
+  // changes: the attribute is patched onto the element by the child that renders it,
+  // so `onBeforeUpdate`/`onUpdated` above never run for it. Vapor attrs are reactive.
+  if (isVaporInstance(getInstance())) {
+    watch(() => attrs.id, () => {
+      syncConsumerId()
+      syncRendered()
+    }, { flush: 'post' })
+  }
 }
 
 /**
@@ -158,7 +168,8 @@ export function useContentMounted(key: object, element: Readonly<Ref<HTMLElement
         if (isDeactivated)
           observer!.disconnect()
         else
-          // Vapor has no re-render to force: its template refs update `element` themselves.
+          // Vapor has no re-render to force: an `as-child` Primitive updates its `$el`
+          // itself when the slot swaps the element, which updates `element`.
           if (!isVaporInstance(instance))
             instance.proxy?.$forceUpdate()
       }
