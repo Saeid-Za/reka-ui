@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { createSSRApp, defineComponent, h, nextTick } from 'vue'
 import { ConfigProvider } from '@/ConfigProvider'
+import { isVapor } from '@/test'
 import {
   AccordionContent,
   AccordionHeader,
@@ -15,7 +16,7 @@ import {
 } from '.'
 import Accordion from './story/_Accordion.vue'
 
-const AccordionHydrationFixture = defineComponent({
+const VdomAccordionHydrationFixture = defineComponent({
   setup() {
     const items = ['One', 'Two']
     let count = 0
@@ -36,6 +37,21 @@ const AccordionHydrationFixture = defineComponent({
         ))
   },
 })
+
+/**
+ * Vapor variant of the hydration fixture: Vapor SSR renders and hydrates compiled
+ * templates, not render functions. Same tree as the render function above.
+ */
+const VaporAccordionHydrationFixture = defineComponent({
+  components: { AccordionContent, AccordionHeader, AccordionItem, AccordionRoot, AccordionTrigger, ConfigProvider },
+  setup() {
+    let count = 0
+    return { items: ['One', 'Two'], useId: () => `nuxt-${++count}` }
+  },
+  template: '<ConfigProvider :use-id="useId"><AccordionRoot type="single" collapsible><AccordionItem v-for="item in items" :key="item" :value="item"><AccordionHeader><AccordionTrigger>Trigger {{ item }}</AccordionTrigger></AccordionHeader><AccordionContent>Content {{ item }}</AccordionContent></AccordionItem></AccordionRoot></ConfigProvider>',
+})
+
+const AccordionHydrationFixture = isVapor ? VaporAccordionHydrationFixture : VdomAccordionHydrationFixture
 
 afterEach(() => {
   vi.restoreAllMocks()

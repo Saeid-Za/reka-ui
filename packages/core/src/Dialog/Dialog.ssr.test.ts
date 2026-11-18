@@ -1,7 +1,7 @@
 import { renderToString } from '@vue/server-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, defineComponent, h, ref } from 'vue'
-import { sleep } from '@/test'
+import { isVapor, sleep } from '@/test'
 import { DialogContent, DialogOverlay, DialogRoot, DialogTitle } from '.'
 
 let isServer = false
@@ -19,6 +19,14 @@ vi.mock('@/shared/useBodyScrollLock', async (importOriginal) => {
 
 /** A modal Dialog (overlay + content) whose `open` state the test controls. */
 function createDialogFixture(open = ref(true)) {
+  if (isVapor) {
+    // Vapor SSR renders and hydrates compiled templates, not render functions
+    return defineComponent({
+      components: { DialogContent, DialogOverlay, DialogRoot, DialogTitle },
+      setup: () => ({ open }),
+      template: '<DialogRoot v-model:open="open"><DialogOverlay /><DialogContent :aria-describedby="undefined"><DialogTitle>Title</DialogTitle></DialogContent></DialogRoot>',
+    })
+  }
   return defineComponent({
     setup() {
       return () => h(DialogRoot, {

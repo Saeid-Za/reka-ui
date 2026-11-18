@@ -7,6 +7,7 @@ import { AccordionContent, AccordionHeader, AccordionItem, AccordionRoot, Accord
 import { CollapsibleContent, CollapsibleRoot, CollapsibleTrigger } from '@/Collapsible'
 import { NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger } from '@/NavigationMenu'
 import { TabsContent, TabsList, TabsRoot, TabsTrigger } from '@/Tabs'
+import { isVapor } from '@/test'
 
 interface Family {
   /** Whether the first content starts open (or selected). */
@@ -68,6 +69,53 @@ function createFixture(family: Family, open: Ref<boolean>, usedIds = 0, contentP
   })
 }
 
+/**
+ * Vapor variant of the server-render and hydration fixtures: Vapor SSR renders and
+ * hydrates compiled templates, not render functions. Each renders what `render` does.
+ */
+const ssrTemplates: Record<string, string> = {
+  'Collapsible (open)': '<CollapsibleRoot v-model:open="open"><CollapsibleTrigger>Trigger</CollapsibleTrigger><CollapsibleContent>Content</CollapsibleContent></CollapsibleRoot>',
+  'Collapsible (closed)': '<CollapsibleRoot v-model:open="open"><CollapsibleTrigger>Trigger</CollapsibleTrigger><CollapsibleContent>Content</CollapsibleContent></CollapsibleRoot>',
+  'Accordion': '<AccordionRoot type="single" collapsible :model-value="open ? \'a\' : \'b\'" @update:model-value="value => open = value === \'a\'"><AccordionItem value="a"><AccordionHeader><AccordionTrigger>A</AccordionTrigger></AccordionHeader><AccordionContent>Content A</AccordionContent></AccordionItem><AccordionItem value="b"><AccordionHeader><AccordionTrigger>B</AccordionTrigger></AccordionHeader><AccordionContent>Content B</AccordionContent></AccordionItem></AccordionRoot>',
+  'NavigationMenu (forceMount)': '<NavigationMenuRoot :model-value="open ? \'a\' : \'\'" @update:model-value="value => open = value === \'a\'"><NavigationMenuList><NavigationMenuItem value="a"><NavigationMenuTrigger>A</NavigationMenuTrigger><NavigationMenuContent force-mount>Content A</NavigationMenuContent></NavigationMenuItem><NavigationMenuItem value="b"><NavigationMenuTrigger>B</NavigationMenuTrigger><NavigationMenuContent force-mount>Content B</NavigationMenuContent></NavigationMenuItem></NavigationMenuList></NavigationMenuRoot>',
+  'Tabs': '<TabsRoot :model-value="open ? \'a\' : \'b\'" @update:model-value="value => open = value === \'a\'"><TabsList><TabsTrigger value="a">A</TabsTrigger><TabsTrigger value="b">B</TabsTrigger></TabsList><TabsContent value="a">Content A</TabsContent><TabsContent value="b">Content B</TabsContent></TabsRoot>',
+}
+
+const ssrComponents = {
+  AccordionContent,
+  AccordionHeader,
+  AccordionItem,
+  AccordionRoot,
+  AccordionTrigger,
+  CollapsibleContent,
+  CollapsibleRoot,
+  CollapsibleTrigger,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuRoot,
+  NavigationMenuTrigger,
+  TabsContent,
+  TabsList,
+  TabsRoot,
+  TabsTrigger,
+}
+
+/** `createFixture` in VDOM; in Vapor the same tree from `ssrTemplates`. */
+function ssrFixture(name: string, family: Family, open: Ref<boolean>, usedIds = 0) {
+  if (!isVapor)
+    return createFixture(family, open, usedIds)
+  return defineComponent({
+    components: ssrComponents,
+    setup() {
+      for (let i = 0; i < usedIds; i++)
+        useId()
+      return { open }
+    },
+    template: ssrTemplates[name],
+  })
+}
+
 /** Every id reference of the family, with whether an element carries that id. */
 function references(root: ParentNode) {
   return ['aria-controls', 'aria-labelledby'].flatMap(attribute =>
@@ -105,7 +153,7 @@ describe.each(Object.entries(families))('%s', (name, family) => {
   const controls = name.startsWith('Collapsible') ? 1 : 2
 
   it('never renders an empty aria-controls', async () => {
-    const server = await renderToString(createSSRApp(createFixture(family, ref(family.open))))
+    const server = await renderToString(createSSRApp(ssrFixture(name, family, ref(family.open))))
     expect(server).not.toContain('aria-controls=""')
 
     const wrapper = mount(createFixture(family, ref(family.open)), { attachTo: document.body })
@@ -126,11 +174,11 @@ describe.each(Object.entries(families))('%s', (name, family) => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const container = document.createElement('div')
-    container.innerHTML = await renderToString(createSSRApp(createFixture(family, ref(family.open), 5)))
+    container.innerHTML = await renderToString(createSSRApp(ssrFixture(name, family, ref(family.open), 5)))
     document.body.append(container)
 
     const open = ref(family.open)
-    const app = createSSRApp(createFixture(family, open))
+    const app = createSSRApp(ssrFixture(name, family, open))
     app.mount(container)
     await settle()
     expectResolvedReferences(container, { controls })
@@ -169,7 +217,7 @@ describe('given a NavigationMenu rendered on the server', () => {
   it('renders the trigger id its content is labelled by', async () => {
     const family = families['NavigationMenu (forceMount)']
     const container = document.createElement('div')
-    container.innerHTML = await renderToString(createSSRApp(createFixture(family, ref(true))))
+    container.innerHTML = await renderToString(createSSRApp(ssrFixture('NavigationMenu (forceMount)', family, ref(true))))
 
     const labelledBy = Array.from(container.querySelectorAll('[aria-labelledby]'), element => element.getAttribute('aria-labelledby'))
     expect(labelledBy).toHaveLength(2)

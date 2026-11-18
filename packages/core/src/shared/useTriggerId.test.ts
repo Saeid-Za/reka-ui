@@ -9,6 +9,7 @@ import { MenubarContent, MenubarItem, MenubarMenu, MenubarPortal, MenubarRoot, M
 import { NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger, NavigationMenuViewport } from '@/NavigationMenu'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from '@/Popover'
 import { TabsContent, TabsList, TabsRoot, TabsTrigger } from '@/Tabs'
+import { isVapor } from '@/test'
 
 /** Renders the trigger under test; `props` are the ones the family needs (e.g. `value`). */
 type RenderTrigger = (component: Component, props?: Record<string, unknown>) => VNode
@@ -103,6 +104,21 @@ const variants: Record<string, { expectedId?: string, trigger: RenderTrigger }> 
   },
 }
 
+/**
+ * Vapor variant of the server-rendered fixtures (Vapor SSR renders and hydrates compiled
+ * templates, not render functions): the family with the 'an id on the trigger' trigger.
+ */
+const ssrFixtures: Record<string, Component> = {
+  Accordion: defineComponent({
+    components: { AccordionContent, AccordionHeader, AccordionItem, AccordionRoot, AccordionTrigger },
+    template: '<AccordionRoot type="single" default-value="item"><AccordionItem value="item"><AccordionHeader><AccordionTrigger id="consumer-id" data-testid="trigger">Trigger</AccordionTrigger></AccordionHeader><AccordionContent data-testid="content">Content</AccordionContent></AccordionItem></AccordionRoot>',
+  }),
+  Tabs: defineComponent({
+    components: { TabsContent, TabsList, TabsRoot, TabsTrigger },
+    template: '<TabsRoot default-value="tab"><TabsList><TabsTrigger id="consumer-id" data-testid="trigger" value="tab">Trigger</TabsTrigger></TabsList><TabsContent value="tab" data-testid="content">Content</TabsContent></TabsRoot>',
+  }),
+}
+
 const getTrigger = () => document.querySelector<HTMLElement>('[data-testid="trigger"]')
 const getContent = () => document.querySelector<HTMLElement>('[data-testid="content"]')
 
@@ -177,7 +193,9 @@ describe('trigger ids', () => {
     }
 
     it('should render the same ids on the server and the client', async () => {
-      const Fixture = defineComponent({ render: () => families[name].render(variants['an id on the trigger'].trigger) })
+      const Fixture = isVapor
+        ? ssrFixtures[name]
+        : defineComponent({ render: () => families[name].render(variants['an id on the trigger'].trigger) })
       const html = await renderToString(createSSRApp(Fixture))
       expect(html).toContain('id="consumer-id"')
       expect(html).toContain('aria-labelledby="consumer-id"')

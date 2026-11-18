@@ -2,9 +2,25 @@ import { renderToString } from '@vue/server-renderer'
 import { flushPromises } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, defineComponent, h, onMounted, ref } from 'vue'
+import { isVapor } from '@/test'
 import * as Popover from '.'
 
 function createPopoverFixture({ PopoverContent, PopoverRoot, PopoverTrigger }: typeof Popover, open = ref(true), onContentMounted = () => {}) {
+  if (isVapor) {
+    // Vapor SSR renders and hydrates compiled templates, not render functions
+    const Content = defineComponent({
+      setup() {
+        onMounted(onContentMounted)
+        return {}
+      },
+      template: '<p data-testid="content">Popover content</p>',
+    })
+    return defineComponent({
+      components: { ProbeContent: Content, PopoverContent, PopoverRoot, PopoverTrigger },
+      setup: () => ({ open }),
+      template: '<PopoverRoot v-model:open="open"><PopoverTrigger>Trigger</PopoverTrigger><PopoverContent><ProbeContent /></PopoverContent></PopoverRoot>',
+    })
+  }
   const Content = defineComponent({
     setup() {
       onMounted(onContentMounted)

@@ -5,10 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { createApp, createSSRApp, defineComponent, h, nextTick, ref, useId } from 'vue'
 import { ConfigProvider } from '@/ConfigProvider'
+import { isVapor, normalizeMarkup } from '@/test'
 import { TabsContent, TabsList, TabsRoot, TabsTrigger } from '.'
 import Tabs from './story/_Tabs.vue'
 
-const TabsHydrationFixture = defineComponent({
+const VdomTabsHydrationFixture = defineComponent({
   setup() {
     let count = 0
     const useId = () => `nuxt-${++count}`
@@ -25,6 +26,27 @@ const TabsHydrationFixture = defineComponent({
         ]))
   },
 })
+
+/**
+ * Vapor variant of the hydration fixtures: Vapor SSR renders and hydrates compiled
+ * templates, not render functions. Same tree as the render function above.
+ */
+const VaporTabsHydrationFixture = defineComponent({
+  components: { ConfigProvider, TabsContent, TabsList, TabsRoot, TabsTrigger },
+  setup() {
+    let count = 0
+    return { useId: () => `nuxt-${++count}` }
+  },
+  template: '<ConfigProvider :use-id="useId"><TabsRoot default-value="account"><TabsList><TabsTrigger value="account">Account</TabsTrigger><TabsTrigger value="password">Password</TabsTrigger></TabsList><TabsContent value="account">Account content</TabsContent><TabsContent value="password">Password content</TabsContent></TabsRoot></ConfigProvider>',
+})
+
+const TabsHydrationFixture = isVapor ? VaporTabsHydrationFixture : VdomTabsHydrationFixture
+
+// What the VDOM run's inline snapshots below show, for comparing a Vapor render
+// with `normalizeMarkup` (Vapor's hydration anchors differ from VDOM's markers).
+const TABS_SERVER_HTML = `<div dir="ltr" data-orientation="horizontal"><!--[--><div tabindex="-1" data-orientation="horizontal" dir="ltr" style="outline:none;" role="tablist" aria-orientation="horizontal"><!--[--><button data-reka-collection-item tabindex="-1" data-orientation="horizontal" data-active id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active"><!--[-->Account<!--]--></button><button data-reka-collection-item tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive"><!--[-->Password<!--]--></button><!--]--></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style="animation-duration:0s;"><!--[-->Account content<!--]--></div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden tabindex="0" style=""><!--v-if--></div><!--]--></div>`
+const TABS_HYDRATED_HTML = `<div dir="ltr" data-orientation="horizontal"><!--[--><div tabindex="0" data-orientation="horizontal" dir="ltr" style="outline:none;" role="tablist" aria-orientation="horizontal"><!--[--><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" data-active="" id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active" aria-controls="reka-tabs-v-0-content-account"><!--[-->Account<!--]--></button><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive" aria-controls="reka-tabs-v-0-content-password"><!--[-->Password<!--]--></button><!--]--></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style=""><!--[-->Account content<!--]--></div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden="" tabindex="0" style=""><!--v-if--></div><!--]--></div>`
+const TABS_CLIENT_HTML = `<div dir="ltr" data-orientation="horizontal"><div tabindex="0" data-orientation="horizontal" dir="ltr" style="outline: none;" role="tablist" aria-orientation="horizontal"><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" data-active="" id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active" aria-controls="reka-tabs-v-0-content-account">Account</button><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive" aria-controls="reka-tabs-v-0-content-password">Password</button></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style="">Account content</div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden="" tabindex="0"><!--v-if--></div></div>`
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -66,6 +88,18 @@ describe('ssr hydration', () => {
   // `usedIds` stands for whatever else consumed ids before the tabs: when the server
   // and the client disagree on it, every generated id differs between the two.
   function createTabsFixture(usedIds = 0) {
+    if (isVapor) {
+      // Vapor SSR works from compiled templates (see VaporTabsHydrationFixture)
+      return defineComponent({
+        components: { TabsContent, TabsList, TabsRoot, TabsTrigger },
+        setup() {
+          for (let i = 0; i < usedIds; i++)
+            useId()
+          return {}
+        },
+        template: '<TabsRoot default-value="account"><TabsList><TabsTrigger value="account">Account</TabsTrigger><TabsTrigger value="password">Password</TabsTrigger></TabsList><TabsContent value="account">Account content</TabsContent><TabsContent value="password">Password content</TabsContent></TabsRoot>',
+      })
+    }
     return defineComponent({
       setup() {
         for (let i = 0; i < usedIds; i++)
@@ -123,7 +157,10 @@ describe('ssr hydration', () => {
     }
 
     const server = await renderToString(createSSRApp(createTabsFixture()))
-    expect(server).toMatchInlineSnapshot(`"<div dir="ltr" data-orientation="horizontal"><!--[--><div tabindex="-1" data-orientation="horizontal" dir="ltr" style="outline:none;" role="tablist" aria-orientation="horizontal"><!--[--><button data-reka-collection-item tabindex="-1" data-orientation="horizontal" data-active id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active"><!--[-->Account<!--]--></button><button data-reka-collection-item tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive"><!--[-->Password<!--]--></button><!--]--></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style="animation-duration:0s;"><!--[-->Account content<!--]--></div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden tabindex="0" style=""><!--v-if--></div><!--]--></div>"`)
+    if (isVapor)
+      expect(normalizeMarkup(server)).toBe(normalizeMarkup(TABS_SERVER_HTML))
+    else
+      expect(server).toMatchInlineSnapshot(`"<div dir="ltr" data-orientation="horizontal"><!--[--><div tabindex="-1" data-orientation="horizontal" dir="ltr" style="outline:none;" role="tablist" aria-orientation="horizontal"><!--[--><button data-reka-collection-item tabindex="-1" data-orientation="horizontal" data-active id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active"><!--[-->Account<!--]--></button><button data-reka-collection-item tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive"><!--[-->Password<!--]--></button><!--]--></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style="animation-duration:0s;"><!--[-->Account content<!--]--></div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden tabindex="0" style=""><!--v-if--></div><!--]--></div>"`)
 
     const container = document.createElement('div')
     container.innerHTML = server
@@ -132,7 +169,10 @@ describe('ssr hydration', () => {
     const hydrated = createSSRApp(createTabsFixture())
     hydrated.mount(container)
     await settled()
-    expect(container.innerHTML).toMatchInlineSnapshot(`"<div dir="ltr" data-orientation="horizontal"><!--[--><div tabindex="0" data-orientation="horizontal" dir="ltr" style="outline:none;" role="tablist" aria-orientation="horizontal"><!--[--><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" data-active="" id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active" aria-controls="reka-tabs-v-0-content-account"><!--[-->Account<!--]--></button><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive" aria-controls="reka-tabs-v-0-content-password"><!--[-->Password<!--]--></button><!--]--></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style=""><!--[-->Account content<!--]--></div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden="" tabindex="0" style=""><!--v-if--></div><!--]--></div>"`)
+    if (isVapor)
+      expect(normalizeMarkup(container.innerHTML)).toBe(normalizeMarkup(TABS_HYDRATED_HTML))
+    else
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<div dir="ltr" data-orientation="horizontal"><!--[--><div tabindex="0" data-orientation="horizontal" dir="ltr" style="outline:none;" role="tablist" aria-orientation="horizontal"><!--[--><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" data-active="" id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active" aria-controls="reka-tabs-v-0-content-account"><!--[-->Account<!--]--></button><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive" aria-controls="reka-tabs-v-0-content-password"><!--[-->Password<!--]--></button><!--]--></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style=""><!--[-->Account content<!--]--></div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden="" tabindex="0" style=""><!--v-if--></div><!--]--></div>"`)
     expect([...warn.mock.calls, ...error.mock.calls]).toEqual([])
     hydrated.unmount()
 
@@ -141,7 +181,10 @@ describe('ssr hydration', () => {
     const client = createApp(createTabsFixture())
     client.mount(clientContainer)
     await settled()
-    expect(clientContainer.innerHTML).toMatchInlineSnapshot(`"<div dir="ltr" data-orientation="horizontal"><div tabindex="0" data-orientation="horizontal" dir="ltr" style="outline: none;" role="tablist" aria-orientation="horizontal"><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" data-active="" id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active" aria-controls="reka-tabs-v-0-content-account">Account</button><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive" aria-controls="reka-tabs-v-0-content-password">Password</button></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style="">Account content</div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden="" tabindex="0"><!--v-if--></div></div>"`)
+    if (isVapor)
+      expect(normalizeMarkup(clientContainer.innerHTML)).toBe(normalizeMarkup(TABS_CLIENT_HTML))
+    else
+      expect(clientContainer.innerHTML).toMatchInlineSnapshot(`"<div dir="ltr" data-orientation="horizontal"><div tabindex="0" data-orientation="horizontal" dir="ltr" style="outline: none;" role="tablist" aria-orientation="horizontal"><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" data-active="" id="reka-tabs-v-0-trigger-account" role="tab" type="button" aria-selected="true" data-state="active" aria-controls="reka-tabs-v-0-content-account">Account</button><button data-reka-collection-item="" tabindex="-1" data-orientation="horizontal" id="reka-tabs-v-0-trigger-password" role="tab" type="button" aria-selected="false" data-state="inactive" aria-controls="reka-tabs-v-0-content-password">Password</button></div><div id="reka-tabs-v-0-content-account" role="tabpanel" data-state="active" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-account" tabindex="0" style="">Account content</div><div id="reka-tabs-v-0-content-password" role="tabpanel" data-state="inactive" data-orientation="horizontal" aria-labelledby="reka-tabs-v-0-trigger-password" hidden="" tabindex="0"><!--v-if--></div></div>"`)
     client.unmount()
   })
 })

@@ -2,6 +2,7 @@ import type vueuse from '@vueuse/core'
 import { renderToString } from '@vue/server-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, defineComponent, h, nextTick, shallowRef } from 'vue'
+import { isVapor } from '@/test'
 import { RatingItem, RatingItemIndicator, RatingRoot } from '.'
 
 let isServer = false
@@ -16,7 +17,7 @@ vi.mock('@vueuse/core', async (importOriginal) => {
   }
 })
 
-const RatingHydrationFixture = defineComponent({
+const VdomRatingHydrationFixture = defineComponent({
   setup() {
     return () =>
       h(RatingRoot, { modelValue: 3, step: 0.5, readonly: true }, {
@@ -28,6 +29,17 @@ const RatingHydrationFixture = defineComponent({
       })
   },
 })
+
+/**
+ * Vapor variant: Vapor SSR renders and hydrates compiled templates, not render
+ * functions. Same tree as the render function above.
+ */
+const VaporRatingHydrationFixture = defineComponent({
+  components: { RatingItem, RatingItemIndicator, RatingRoot },
+  template: '<RatingRoot :model-value="3" :step="0.5" readonly v-slot="{ items }"><RatingItem v-for="item in items" :key="item" :item="item" v-slot="{ steps }"><RatingItemIndicator v-for="step in steps" :key="step" :step="step" :data-step="step">★</RatingItemIndicator></RatingItem></RatingRoot>',
+})
+
+const RatingHydrationFixture = isVapor ? VaporRatingHydrationFixture : VdomRatingHydrationFixture
 
 afterEach(() => {
   isServer = false

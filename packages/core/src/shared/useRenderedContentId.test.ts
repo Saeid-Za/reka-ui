@@ -19,6 +19,7 @@ import { MenubarContent, MenubarItem, MenubarMenu, MenubarPortal, MenubarRoot, M
 import { NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger, NavigationMenuViewport } from '@/NavigationMenu'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from '@/Popover'
 import { SelectContent, SelectItem, SelectItemText, SelectPortal, SelectRoot, SelectTrigger, SelectValue, SelectViewport } from '@/Select'
+import { isVapor } from '@/test'
 import { TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from '@/Tooltip'
 
 interface OverlayFamily {
@@ -296,6 +297,148 @@ function createFixture(render: OverlayFamily['render'], open: Ref<boolean>, used
   })
 }
 
+/**
+ * Vapor variant of the SSR fixtures (see `ssrFixture`). Vapor SSR renders a component
+ * from its compiled template on the server and hydrates it from the same template on
+ * the client: render functions (`h()`) have no Vapor server output or hydration. Each
+ * template renders exactly what the family's `render` renders.
+ */
+const ssrTemplates: Record<string, string> = {
+  'Dialog': '<DialogRoot v-model:open="open"><DialogTrigger>Trigger</DialogTrigger><DialogPortal><DialogContent><DialogTitle>Title</DialogTitle><DialogDescription>Description</DialogDescription></DialogContent></DialogPortal></DialogRoot>',
+  'Dialog (inline)': '<DialogRoot v-model:open="open"><DialogTrigger>Trigger</DialogTrigger><DialogContent><DialogTitle>Title</DialogTitle><DialogDescription>Description</DialogDescription></DialogContent></DialogRoot>',
+  'AlertDialog': '<AlertDialogRoot v-model:open="open"><AlertDialogTrigger>Trigger</AlertDialogTrigger><AlertDialogPortal><AlertDialogContent><AlertDialogTitle>Title</AlertDialogTitle><AlertDialogDescription>Description</AlertDialogDescription></AlertDialogContent></AlertDialogPortal></AlertDialogRoot>',
+  'Drawer': '<DrawerRoot v-model:open="open"><DrawerTrigger>Trigger</DrawerTrigger><DrawerPortal><DrawerContent><DrawerTitle>Title</DrawerTitle><DrawerDescription>Description</DrawerDescription></DrawerContent></DrawerPortal></DrawerRoot>',
+  'Popover': '<PopoverRoot v-model:open="open"><PopoverTrigger>Trigger</PopoverTrigger><PopoverPortal><PopoverContent>Content</PopoverContent></PopoverPortal></PopoverRoot>',
+  'Popover (inline)': '<PopoverRoot v-model:open="open"><PopoverTrigger>Trigger</PopoverTrigger><PopoverContent>Content</PopoverContent></PopoverRoot>',
+  'DatePicker': '<DatePickerRoot v-model:open="open" :model-value="date"><DatePickerField v-slot="{ segments }"><DatePickerInput v-for="segment in segments" :key="segment.part" :part="segment.part">{{ segment.value }}</DatePickerInput><DatePickerTrigger>Trigger</DatePickerTrigger></DatePickerField><DatePickerContent>Content</DatePickerContent></DatePickerRoot>',
+  'DateRangePicker': '<DateRangePickerRoot v-model:open="open" :model-value="range"><DateRangePickerField v-slot="{ segments }"><template v-for="type in rangeTypes" :key="type"><DateRangePickerInput v-for="segment in segments[type]" :key="type + \'-\' + segment.part" :part="segment.part" :type="type">{{ segment.value }}</DateRangePickerInput></template><DateRangePickerTrigger>Trigger</DateRangePickerTrigger></DateRangePickerField><DateRangePickerContent>Content</DateRangePickerContent></DateRangePickerRoot>',
+  'Select': '<SelectRoot v-model:open="open"><SelectTrigger aria-label="Fruit"><SelectValue placeholder="Pick" /></SelectTrigger><SelectPortal><SelectContent><SelectViewport><SelectItem value="apple"><SelectItemText>Apple</SelectItemText></SelectItem></SelectViewport></SelectContent></SelectPortal></SelectRoot>',
+  'Select (popper)': '<SelectRoot v-model:open="open"><SelectTrigger aria-label="Fruit"><SelectValue placeholder="Pick" /></SelectTrigger><SelectPortal><SelectContent position="popper"><SelectViewport><SelectItem value="apple"><SelectItemText>Apple</SelectItemText></SelectItem></SelectViewport></SelectContent></SelectPortal></SelectRoot>',
+  'DropdownMenu': '<DropdownMenuRoot v-model:open="open"><DropdownMenuTrigger>Trigger</DropdownMenuTrigger><DropdownMenuPortal><DropdownMenuContent><DropdownMenuItem>Item</DropdownMenuItem></DropdownMenuContent></DropdownMenuPortal></DropdownMenuRoot>',
+  'DropdownMenu sub-trigger': '<DropdownMenuRoot :open="true"><DropdownMenuTrigger>Trigger</DropdownMenuTrigger><DropdownMenuPortal><DropdownMenuContent><DropdownMenuSub :open="open"><DropdownMenuSubTrigger>More</DropdownMenuSubTrigger><DropdownMenuPortal><DropdownMenuSubContent><DropdownMenuItem>Sub item</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuPortal></DropdownMenuSub></DropdownMenuContent></DropdownMenuPortal></DropdownMenuRoot>',
+  'Menubar': '<MenubarRoot :model-value="open ? \'a\' : \'\'" @update:model-value="value => open = value === \'a\'"><MenubarMenu value="a"><MenubarTrigger>Trigger</MenubarTrigger><MenubarPortal><MenubarContent><MenubarItem>Item</MenubarItem></MenubarContent></MenubarPortal></MenubarMenu></MenubarRoot>',
+  'NavigationMenu': '<NavigationMenuRoot :model-value="open ? \'a\' : \'\'" @update:model-value="value => open = value === \'a\'"><NavigationMenuList><NavigationMenuItem value="a"><NavigationMenuTrigger>A</NavigationMenuTrigger><NavigationMenuContent>Content A</NavigationMenuContent></NavigationMenuItem><NavigationMenuItem value="b"><NavigationMenuTrigger>B</NavigationMenuTrigger><NavigationMenuContent>Content B</NavigationMenuContent></NavigationMenuItem></NavigationMenuList></NavigationMenuRoot>',
+  'NavigationMenu (viewport)': '<NavigationMenuRoot :model-value="open ? \'a\' : \'\'" @update:model-value="value => open = value === \'a\'"><NavigationMenuList><NavigationMenuItem value="a"><NavigationMenuTrigger>A</NavigationMenuTrigger><NavigationMenuContent>Content A</NavigationMenuContent></NavigationMenuItem><NavigationMenuItem value="b"><NavigationMenuTrigger>B</NavigationMenuTrigger><NavigationMenuContent>Content B</NavigationMenuContent></NavigationMenuItem></NavigationMenuList><NavigationMenuViewport /></NavigationMenuRoot>',
+  'Combobox': '<ComboboxRoot v-model:open="open"><ComboboxAnchor><ComboboxInput aria-label="Fruit" /><ComboboxTrigger>Toggle</ComboboxTrigger></ComboboxAnchor><ComboboxPortal><ComboboxContent><ComboboxViewport><ComboboxItem value="apple">Apple</ComboboxItem></ComboboxViewport></ComboboxContent></ComboboxPortal></ComboboxRoot>',
+  'Combobox (popper)': '<ComboboxRoot v-model:open="open"><ComboboxAnchor><ComboboxInput aria-label="Fruit" /><ComboboxTrigger>Toggle</ComboboxTrigger></ComboboxAnchor><ComboboxPortal><ComboboxContent position="popper"><ComboboxViewport><ComboboxItem value="apple">Apple</ComboboxItem></ComboboxViewport></ComboboxContent></ComboboxPortal></ComboboxRoot>',
+  'Autocomplete': '<AutocompleteRoot v-model:open="open"><AutocompleteAnchor><AutocompleteInput aria-label="Fruit" /><AutocompleteTrigger>Toggle</AutocompleteTrigger></AutocompleteAnchor><AutocompletePortal><AutocompleteContent><AutocompleteViewport><AutocompleteItem value="apple">Apple</AutocompleteItem></AutocompleteViewport></AutocompleteContent></AutocompletePortal></AutocompleteRoot>',
+  'Autocomplete (popper)': '<AutocompleteRoot v-model:open="open"><AutocompleteAnchor><AutocompleteInput aria-label="Fruit" /><AutocompleteTrigger>Toggle</AutocompleteTrigger></AutocompleteAnchor><AutocompletePortal><AutocompleteContent position="popper"><AutocompleteViewport><AutocompleteItem value="apple">Apple</AutocompleteItem></AutocompleteViewport></AutocompleteContent></AutocompletePortal></AutocompleteRoot>',
+  'Tooltip': '<TooltipProvider><TooltipRoot v-model:open="open"><TooltipTrigger>Trigger</TooltipTrigger><TooltipPortal><TooltipContent>Content</TooltipContent></TooltipPortal></TooltipRoot></TooltipProvider>',
+  'HoverCard': '<HoverCardRoot v-model:open="open"><HoverCardTrigger href="#">Trigger</HoverCardTrigger><HoverCardPortal><HoverCardContent>Content</HoverCardContent></HoverCardPortal></HoverCardRoot>',
+  'ContextMenu': '<ContextMenuRoot><ContextMenuTrigger>Trigger</ContextMenuTrigger><ContextMenuPortal><ContextMenuContent><ContextMenuItem>Item</ContextMenuItem></ContextMenuContent></ContextMenuPortal></ContextMenuRoot>',
+}
+
+const ssrComponents = {
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogPortal,
+  AlertDialogRoot,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+  AutocompleteAnchor,
+  AutocompleteContent,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompletePortal,
+  AutocompleteRoot,
+  AutocompleteTrigger,
+  AutocompleteViewport,
+  ComboboxAnchor,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxPortal,
+  ComboboxRoot,
+  ComboboxTrigger,
+  ComboboxViewport,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuPortal,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  DatePickerContent,
+  DatePickerField,
+  DatePickerInput,
+  DatePickerRoot,
+  DatePickerTrigger,
+  DateRangePickerContent,
+  DateRangePickerField,
+  DateRangePickerInput,
+  DateRangePickerRoot,
+  DateRangePickerTrigger,
+  DialogContent,
+  DialogDescription,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+  DialogTrigger,
+  DrawerContent,
+  DrawerDescription,
+  DrawerPortal,
+  DrawerRoot,
+  DrawerTitle,
+  DrawerTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+  HoverCardContent,
+  HoverCardPortal,
+  HoverCardRoot,
+  HoverCardTrigger,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarPortal,
+  MenubarRoot,
+  MenubarTrigger,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuRoot,
+  NavigationMenuTrigger,
+  NavigationMenuViewport,
+  PopoverContent,
+  PopoverPortal,
+  PopoverRoot,
+  PopoverTrigger,
+  SelectContent,
+  SelectItem,
+  SelectItemText,
+  SelectPortal,
+  SelectRoot,
+  SelectTrigger,
+  SelectValue,
+  SelectViewport,
+  TooltipContent,
+  TooltipPortal,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+}
+
+/**
+ * The fixture of the server-render and hydration tests: `createFixture` in VDOM, and in
+ * Vapor the same tree from `ssrTemplates`, since Vapor SSR works from compiled templates.
+ */
+function ssrFixture(name: string, render: OverlayFamily['render'], open: Ref<boolean>, usedIds = 0) {
+  if (!isVapor)
+    return createFixture(render, open, usedIds)
+  return defineComponent({
+    components: ssrComponents,
+    setup() {
+      for (let i = 0; i < usedIds; i++)
+        useId()
+      return { open, date, range: { start: date, end: date.add({ days: 2 }) }, rangeTypes: ['start', 'end'] }
+    },
+    template: ssrTemplates[name],
+  })
+}
+
 /** Every id reference under `root`, with whether an element of `root` carries that id. */
 function references(root: ParentNode) {
   return ID_REFERENCES.flatMap(attribute =>
@@ -345,7 +488,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe.each(Object.entries(overlayFamilies))('%s', (_name, family) => {
+describe.each(Object.entries(overlayFamilies))('%s', (name, family) => {
   const closed = family.closedReferences ?? 0
 
   it('renders no reference while its content is not in the document', async () => {
@@ -380,7 +523,7 @@ describe.each(Object.entries(overlayFamilies))('%s', (_name, family) => {
 
   it.each([false, true])('renders no empty or dangling reference on the server (open: %s)', async (open) => {
     const container = document.createElement('div')
-    container.innerHTML = await renderToString(createSSRApp(createFixture(family.render, ref(open), 5)))
+    container.innerHTML = await renderToString(createSSRApp(ssrFixture(name, family.render, ref(open), 5)))
 
     for (const attribute of ID_REFERENCES)
       expect(container.innerHTML).not.toContain(`${attribute}=""`)
@@ -392,11 +535,11 @@ describe.each(Object.entries(overlayFamilies))('%s', (_name, family) => {
     ['diverged ids', 5],
   ])('keeps the reference resolvable after hydrating an open render with %s', async (_label, usedIds) => {
     const container = document.createElement('div')
-    container.innerHTML = await renderToString(createSSRApp(createFixture(family.render, ref(true), usedIds)))
+    container.innerHTML = await renderToString(createSSRApp(ssrFixture(name, family.render, ref(true), usedIds)))
     document.body.append(container)
 
     const open = ref(true)
-    const app = createSSRApp(createFixture(family.render, open))
+    const app = createSSRApp(ssrFixture(name, family.render, open))
     app.mount(container)
     await expectReferences(document.body, family, family.references)
 
@@ -410,11 +553,11 @@ describe.each(Object.entries(overlayFamilies))('%s', (_name, family) => {
 
   it('references the content after hydrating a closed render with diverged ids', async () => {
     const container = document.createElement('div')
-    container.innerHTML = await renderToString(createSSRApp(createFixture(family.render, ref(false), 5)))
+    container.innerHTML = await renderToString(createSSRApp(ssrFixture(name, family.render, ref(false), 5)))
     document.body.append(container)
 
     const open = ref(false)
-    const app = createSSRApp(createFixture(family.render, open))
+    const app = createSSRApp(ssrFixture(name, family.render, open))
     app.mount(container)
     await expectReferences(document.body, family, closed)
 
@@ -550,14 +693,14 @@ describe.each(Object.entries(overlayFamilies))('%s', (_name, family) => {
   })
 })
 
-describe.each(Object.entries(unreferencedFamilies))('%s', (_name, render) => {
+describe.each(Object.entries(unreferencedFamilies))('%s', (name, render) => {
   it('renders no id reference from its trigger to its content', async () => {
     const container = document.createElement('div')
-    container.innerHTML = await renderToString(createSSRApp(createFixture(render, ref(true), 5)))
+    container.innerHTML = await renderToString(createSSRApp(ssrFixture(name, render, ref(true), 5)))
     document.body.append(container)
     expect(references(container)).toEqual([])
 
-    const app = createSSRApp(createFixture(render, ref(true)))
+    const app = createSSRApp(ssrFixture(name, render, ref(true)))
     app.mount(container)
     await new Promise(resolve => setTimeout(resolve, 50))
 
