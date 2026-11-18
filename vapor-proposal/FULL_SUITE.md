@@ -48,8 +48,8 @@ Every non-passing test ends up in exactly one bucket, listed per file in the tab
 | `pass` | Passes under pure Vapor | none |
 | `fail:reka` | A Reka behaviour difference in Vapor | fix in Reka source |
 | `fail:harness` | The shim does not emulate something yet | fix in the harness |
-| `vdom-api` | The test builds VNodes (`h()`, render functions, `cloneVNode`), uses VTU `stubs`/`shallow`, or inspects VNode internals | listed with the reason; port to SFC fixtures is an open question (QS2) |
-| `ssr` | Uses `renderToString`/hydration | out of scope: Vapor SSR is a separate target (Q11) |
+| `vdom-api` | The test builds VNodes (`h()`, render functions, `cloneVNode`), uses VTU `stubs`/`shallow`, or inspects VNode internals | **superseded (r5):** each such test now has a Vapor variant in the test file (`isVapor`, QS6) or harness support; none are left |
+| `ssr` | Uses `renderToString`/hydration | **superseded (r5):** run through Vapor SSR + Vapor hydration (see "Vapor SSR"); none are cannot-run |
 | `env` | Depends on the test environment rather than the render mode (type-check/build tests) | listed; run in VDOM only |
 
 A test is only put in a non-`pass` bucket after its failure was read; the bucket and
@@ -100,6 +100,137 @@ are `it.skip` in the source in both modes.
 | VDOM (reference) | 3,548 | 0 | 35 |
 | Pure Vapor, first harness (VTU shim only, no bridge) | 2,422 | 1,110 (+1 file failed to load) | 35 |
 | Pure Vapor, harness with render-function bridge | 2,938 | 610 | 35 |
+
+## Current status (run r5, 2026-11-18 16:10 Asia/Tehran)
+
+**3304 pass / 244 fail / 35 skip** (3583 tests, 130 files), up from 2938 / 610 at the
+baseline (r1), 3105 / 443 at the triage (r2), 3230 / 318 after Vapor SSR (r3/r4).
+r4 → r5 fixed 72 tests and broke none (`diff.mjs`). VDOM suite unchanged: 3548 pass /
+35 skip. **Nothing is in `cannot-run` any more**: the 170 tests that were there are
+now run in Vapor, either through harness support or through a Vapor variant in the
+test file (`isVapor`, QS6). No test uses `skipIf(isVapor)` yet: every inherently
+different test so far had a Vapor equivalent.
+
+| Former cannot-run group | Tests | How it runs in Vapor now | r5 |
+|---|---|---|---|
+| C1 SSR `renderToString` + hydration | 127 | Vapor SSR: server-compiled Reka + `createVaporSSRApp` hydration (below); Vapor template fixtures where the VDOM test used `h()` | 124 pass, 3 fail (S1–S3) |
+| C2 Options-API `render()` with `this` (Toast) | 20 | harness: `this` is a stand-in for the public instance (ADR-S11) | 19 pass, 1 fail (U9, real) |
+| C3 `global.stubs` (Combobox, RovingFocus, Tooltip) | 18 | harness: compiled `createComponent*` calls resolve stubs per app (ADR-S12) | stubs work; remaining fails are R1/U9 |
+| C4 `wrapper.setData` (Form) | 1 | harness: `data()`/`methods` folded into setup state, `setData` merges (ADR-S11) | pass (Form 141/141) |
+| C5 `vm.$.subTree.el` (Toast) | 2 | test variant: the Vapor instance's root block must be that one element | pass |
+| C6 VDOM-instance helper tests (instance.test) | 2 | test variants: `isVaporInstance(seen) === isVapor`; the test also restores the resolver it replaces | pass |
+| M1 markup-only | 19 | test variants: `expectMarkupSnapshot` / `modeMarkup` compare modulo anchors (ADR-S13) | 18 pass, 1 is really Presence U9 |
+
+### Vapor SSR: what upstream supports (verified in refs/vue-core = 3.6.0-rc.15)
+
+- Server: the *same* SFC compiled with `compileScript(…, { vapor: true, inlineTemplate: true,
+  templateOptions: { ssr: true } })` emits `defineComponent({ __vapor: true, … })` with an
+  `ssrRender`; it is rendered by the normal `@vue/server-renderer` `renderToString` in a
+  `createSSRApp` (runtime-core instances). Evidence: `compiler-sfc/src/compileScript.ts`
+  L1195 ("in SSR, always use defineComponent, so __vapor flag is required"),
+  `compileTemplate.ts` L244 (`vapor: ssr && vapor`), `server-renderer/src/render.ts`
+  L150–230 (Vapor slot outlets on the server).
+- Client: `createVaporSSRApp(comp).mount(container)` hydrates
+  (`runtime-vapor/src/apiCreateApp.ts` L151). Vue's own tests do exactly this pair:
+  `runtime-vapor/__tests__/hydration/_helpers.ts` (`testHydration`, L116–170).
+- Async components: `defineAsyncComponent` on the server, `defineVaporAsyncComponent`
+  on the client (`hydration/asyncComponent.spec.ts` L45, "use defineAsyncComponent in SSR").
+
+### How the harness does it (`packages/vapor/suite/ssr.ts`, `ssrTwins.ts`)
+
+- `renderToString(app)` renders a **server twin** of the test's component: a `vssr:`
+  module graph in which every Reka `.vue` (and every `.ts` that reaches one) is
+  compiled for the server as above. Plain composables are shared with the client
+  graph, like in Reka's VDOM SSR tests. Literal `template:` fixtures in test files
+  get an `__ssrRender` at build time; runtime strings are compiled on demand.
+- `createSSRApp(comp).mount(el)` is `createVaporSSRApp` on the client component.
+- An `h()` component cannot be server-rendered or hydrated by Vapor (there is no
+  VNode format for either), so such SSR fixtures got Vapor template variants in the
+  test files (useRenderedContentId, useContentId, useTriggerId, Tabs, Accordion,
+  Rating, Dialog.ssr, DismissableLayer.ssr, useForwardExpose.ssr, Popover.ssr).
+- A setup hook preloads the server graph for files that call `renderToString`
+  (compiling it took longer than the 5 s test timeout on first use).
+
+### The 3 SSR failures left
+
+- **S1 Dialog.ssr** (harness): the test's `vi.mock('@/shared/useBodyScrollLock')`
+  applies by resolved id, and the server twin of that module (it imports
+  ConfigProvider.vue) has another id. The mock factory runs, but only the client uses it.
+- **S2 Popover.ssr** (harness, suspected): "Maximum call stack size exceeded" after
+  `vi.resetModules()`, which re-evaluates the inlined `vue` and gives two Vue copies. Not
+  yet confirmed.
+- **S3 Tabs "keeps the default output"** (Reka): the hydrated markup matches, but the
+  *server* markup lacks the attrs an as-child Primitive puts on its slotted element
+  (`tabindex`, `style`, `data-orientation`, `dir` on the tablist;
+  `data-reka-collection-item`, `tabindex`, `data-active` on the buttons). The Vapor
+  Primitive applies them to DOM nodes, which only exist on the client. Tried: keeping
+  the VDOM `Primitive.ts`/`Slot.ts` on the server (Vapor SSR slots do carry a VNode
+  fallback branch, so `cloneVNode` could work), but the markup was unchanged, so the
+  attrs are also lost before Primitive. Not solved; see QS7.
+
+### Triage of the 244 (r5)
+
+| File | fail:reka | fail:harness | markup-only | cannot-run | undiagnosed | total |
+|---|---|---|---|---|---|---|
+| AlertDialog/AlertDialog.test.ts |  |  |  |  | 1 | 1 |
+| Checkbox/Checkbox.test.ts | 3 |  |  |  | 1 | 4 |
+| Combobox/Combobox.test.ts | 13 |  |  |  | 10 | 23 |
+| DateField/DateField.test.ts |  |  |  |  | 1 | 1 |
+| Dialog/Dialog.ssr.test.ts |  | 1 |  |  |  | 1 |
+| Dialog/Dialog.test.ts | 3 |  |  |  | 2 | 5 |
+| DismissableLayer/DismissableLayer.test.ts |  | 3 |  |  |  | 3 |
+| DropdownMenu/DropdownMenu.test.ts | 4 |  |  |  | 1 | 5 |
+| FocusScope/FocusScope.test.ts |  |  |  |  | 1 | 1 |
+| Listbox/Listbox.test.ts | 8 |  |  |  |  | 8 |
+| Menubar/Menubar.test.ts | 4 |  |  |  | 1 | 5 |
+| NavigationMenu/NavigationMenu.test.ts |  | 5 |  |  |  | 5 |
+| Popover/Popover.ssr.test.ts |  | 1 |  |  |  | 1 |
+| Popover/Popover.test.ts |  |  |  |  | 3 | 3 |
+| Popper/PopperRootContext.test.ts |  | 1 |  |  |  | 1 |
+| Presence/Presence.test.ts |  |  | 1 |  | 3 | 4 |
+| Primitive/Primitive.test.ts | 4 |  |  |  |  | 4 |
+| Primitive/usePrimitiveElement.test.ts | 3 |  |  |  |  | 3 |
+| RadioGroup/RadioGroup.test.ts | 3 | 1 |  |  |  | 4 |
+| RovingFocus/RovingFocus.test.ts |  |  |  |  | 1 | 1 |
+| ScrollArea/ScrollArea.test.ts | 8 | 3 |  |  |  | 11 |
+| Select/Select.test.ts | 7 |  |  |  |  | 7 |
+| Slider/Slider.test.ts |  | 6 |  |  | 2 | 8 |
+| Stepper/StepperAnnouncement.test.ts |  |  |  |  | 4 | 4 |
+| Switch/Switch.test.ts | 2 |  |  |  |  | 2 |
+| Tabs/Tabs.test.ts | 5 |  |  |  |  | 5 |
+| TagGroup/TagGroup.test.ts |  |  |  |  | 1 | 1 |
+| Toast/Toast.test.ts |  |  |  |  | 1 | 1 |
+| Toggle/Toggle.test.ts | 4 |  |  |  |  | 4 |
+| Tooltip/Tooltip.test.ts |  |  |  |  | 3 | 3 |
+| Tree/Tree.test.ts | 6 |  |  |  |  | 6 |
+| VisuallyHidden/HiddenNativeLabels.test.ts | 1 | 1 |  |  |  | 2 |
+| shared/useContentId.test.ts | 4 |  |  |  |  | 4 |
+| shared/useForwardExpose.test.ts | 9 |  |  |  |  | 9 |
+| shared/useForwardScopeId.test.ts | 3 |  |  |  |  | 3 |
+| shared/useRenderedContentId.test.ts | 9 |  |  |  | 76 | 85 |
+| shared/useTriggerId.test.ts | 6 |  |  |  |  | 6 |
+| **total** | 109 | 22 | 1 | 0 | 112 | 244 |
+
+| Root cause | Bucket | Tests | Files |
+|---|---|---|---|
+| H1 findComponent(css selector) not implemented | fail:harness | 9 | Slider 6, DismissableLayer 3 |
+| H2 findComponent(Component) finds nothing (empty VueWrapper) | fail:harness | 9 | NavigationMenu 5, ScrollArea 3, PopperRootContext 1 |
+| H3 vm / exposed access through the shim (`vm.field`, `vm.form`, refs, proxy set) | fail:harness | 1 | RadioGroup 1 |
+| H4 real VNode reached the render-function bridge | fail:harness | 1 | HiddenNativeLabels 1 |
+| M1 html()/snapshot differs only by Vapor anchor comments (<!--slot-->, <!--if-->, <!--dynamic-component-->) and attribute order | markup-only | 1 | Presence 1 |
+| R1 virtualizer item refs ($el of undefined) — known gap ADR-017 | fail:reka | 33 | Combobox 11, Listbox 8, ScrollArea 8, Tree 6 |
+| R2 consumer listeners run after the component's own handlers (preventDefault opt-out ignored) | fail:reka | 18 | Select 7, DropdownMenu 4, Menubar 4, Tabs 3 |
+| R3 form-control detection: closest('form') read before the element is inserted into <form> | fail:reka | 13 | Toggle 4, Checkbox 3, RadioGroup 3, Switch 2, HiddenNativeLabels 1 |
+| R4 consumer id / trigger id change not propagated (remaining after fix #1) | fail:reka | 20 | useRenderedContentId 9, useTriggerId 6, useContentId 4, Tabs 1 |
+| R5 as-child / element resolution (Primitive, usePrimitiveElement, useForwardExpose) | fail:reka | 16 | useForwardExpose 9, Primitive 4, usePrimitiveElement 3 |
+| R6 scope-id forwarding (useForwardScopeId) | fail:reka | 3 | useForwardScopeId 3 |
+| R7 unmountOnHide=false content not hidden (v-show/display on persistent content) | fail:reka | 5 | Dialog 3, Combobox 2 |
+| S1 Vapor SSR: vi.mock() does not reach the server-compiled copy of a module (Dialog.ssr, useBodyScrollLock) | fail:harness | 1 | Dialog.ssr 1 |
+| S2 Vapor SSR: vi.resetModules() reloads the inlined vue, stack overflow (Popover.ssr, suspected) | fail:harness | 1 | Popover.ssr 1 |
+| S3 Vapor SSR: as-child attrs are applied on the client only, missing from server markup (QS7) | fail:reka | 1 | Tabs 1 |
+| U1 useRenderedContentId: KeepAlive deactivation (bridge KeepAlive vs Reka onDeactivated) | undiagnosed | 51 | useRenderedContentId 51 |
+| U2 useRenderedContentId: as-child content with no element | undiagnosed | 25 | useRenderedContentId 25 |
+| U9 other (to investigate one by one) | undiagnosed | 36 | Combobox 10, StepperAnnouncement 4, Popover 3, Presence 3, Tooltip 3, Dialog 2, Slider 2, AlertDialog 1, Checkbox 1, DateField 1, DropdownMenu 1, FocusScope 1, Menubar 1, RovingFocus 1, TagGroup 1, Toast 1 |
 
 ## Triage of the 610 failures (run r1 → r2, 2026-11-18)
 
@@ -169,9 +300,8 @@ went from pass to fail in either step.
 
 What the causes are, and why each is in its bucket:
 
-- **C1 SSR**: `renderToString` and hydration. **Being re-examined:** the user pointed out that Vapor
-  has SSR and hydration support, so these 127 tests are being moved to a Vapor SSR path
-  (see "Vapor SSR" below). Until then they are counted here only as a starting figure.
+- **C1 SSR**: `renderToString` and hydration. **Superseded:** Vapor has SSR and hydration,
+  and these tests now run through it (see "Current status (run r5)").
 - **C2 Options-API `render()` using `this`**: Toast fixtures. Vapor has no component proxy
   for `this` in `render`, so the test itself would have to change (QS2).
 - **C3 `global.stubs`**: Vapor templates import components at compile time. There is no

@@ -483,3 +483,69 @@ These are shim bugs, not Reka changes. The per-test attribution is in FULL_SUITE
 parallel worktree, and `git stash` was ruled out for that reason. Commits on
 `feat/vapor-full-suite` run `eslint` on the staged files by hand, and only then
 commit with `--no-verify`. The check is the same; only the stash is avoided.
+
+## ADR-S08 SSR tests run through Vapor SSR, never marked cannot-run
+
+Vue 3.6 has Vapor SSR and hydration (evidence in FULL_SUITE.md, "Vapor SSR"). The
+harness does what Vue's own `testHydration` helper does: the server render uses the
+SFCs compiled with `vapor + ssr` through `@vue/server-renderer`, and the client
+hydrates with `createVaporSSRApp`. Reka modules are compiled twice (a `vssr:` server
+graph next to the client graph). A plain `.ts` composable that reaches no SFC is
+shared by both, as in Reka's VDOM SSR tests, so its module state and `vi.mock()`s
+are the same for both renders. The server keeps `defineAsyncComponent` and the
+client uses `defineVaporAsyncComponent`, as upstream's `asyncComponent.spec.ts` does.
+Known limit: `vi.mock()` of a module that does get a server copy reaches only the
+client copy (S1 in FULL_SUITE.md).
+
+## ADR-S09 Vapor Primitive treats `as="template"` as as-child
+
+The VDOM `Primitive.ts` renders the Slot for `as === 'template'`; the Vapor Primitive
+rendered a real `<template>` element instead, which broke ContextMenu hydration
+(`insertBefore` on null). It now uses `asChild || as === 'template'`, like VDOM.
+
+## ADR-S10 Inherently different tests get a Vapor variant in the test file
+
+Per the user's direction, tests that legitimately differ between modes are branched
+in the test file with `isVapor` (`@/test`), and the VDOM branch is left exactly as it
+was (the VDOM suite still passes 3548). The Vapor branch asserts the equivalent
+behaviour, for example the root block instead of `subTree.el`, or a template fixture
+instead of an `h()` one for SSR. `it.skipIf(isVapor)` is allowed only with a comment
+explaining why no Vapor equivalent exists; none was needed so far. Provisional
+convention: QS6.
+
+## ADR-S11 The harness emulates Options-API state for test scaffolding
+
+Some fixtures use Options-API `render()` with `this`, `data()`, `methods` and
+`wrapper.setData`. These are test scaffolding, not Reka code. The harness gives
+`render()` a `this` stand-in that reads setup state, then props, then `$attrs`,
+`$slots`, `$emit` and `$props`. It folds `data()` and `methods` into one reactive
+setup state, and `setData` merges into that state. `computed` and `watch` options are
+not emulated. With this, the Toast and Form tests run unchanged instead of being
+rewritten.
+
+## ADR-S12 `global.stubs` work in pure Vapor through the compiled create calls
+
+VTU stubs by intercepting VNode creation, and Vapor has no VNodes. A suite-only
+post-transform re-points `createComponent`, `createComponentWithFallback` and
+`createDynamicComponent` in every compiled SFC (and every test file) to wrappers. A
+wrapper swaps the component for the stub registered on the current app, matched by
+name or `__name` in either case, with `teleport` matching the built-in Teleport.
+Runtime-compiled templates get the same wrappers. Stubs are per app.
+
+## ADR-S13 Markup comparisons ignore Vapor anchors through test helpers, not the shim
+
+Instead of normalising `html()` in the shim (QS5 (a)), which would also hide real
+differences in every other test, the affected tests call `expectMarkupSnapshot()` or
+`modeMarkup()`. Under VDOM these are exactly `toMatchSnapshot()` and the raw string.
+Under Vapor they compare after `normalizeMarkup` (comments, attribute order, `style`
+spelling, and pretty-printer indentation removed) against the stored VDOM snapshot.
+The stored snapshot is read from the `.snap` file and never written. The one other
+difference ignored is a slot anchor comment rendered inside ScrollArea's `<style>`,
+which CSS ignores. Supersedes QS5's provisional default.
+
+## ADR-S14 `setVaporInstanceResolver` returns the previous resolver
+
+The instance-helper tests replace the resolver and used to reset it to `undefined`.
+That silently unregistered the resolver the Vapor entry had installed, for the rest of
+the file. The setter now returns the previous resolver, and the tests put it back.
+Under VDOM the previous resolver is `undefined`, so nothing changes there.

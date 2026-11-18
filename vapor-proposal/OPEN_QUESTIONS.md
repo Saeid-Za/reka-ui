@@ -312,3 +312,48 @@ differently. See FULL_SUITE.md, M1.
 **Recommendation:** (a), limited to Vapor's own anchor comment names, with the raw HTML
 still available.
 **⚑ Provisional default:** (c), until this is decided.
+**Update (r5):** superseded by option (d), per-test helpers (`expectMarkupSnapshot`,
+`modeMarkup`) under the QS6 convention, ADR-S13. The 19 tests pass. Reopen this if a
+reviewer prefers (a).
+
+### QS6. Convention for tests that differ between VDOM and Vapor (provisional)
+
+The user asked for inherently different tests to be branched in the test files. The
+convention in use:
+
+- `isVapor` from `@/test` (set by the pure-Vapor suite's setup).
+- Markup helpers that are a no-op under VDOM: `normalizeMarkup`, `modeMarkup`,
+  `expectMarkupSnapshot`.
+- The VDOM branch is kept byte-for-byte where possible.
+- `it.skipIf(isVapor)` only with a comment giving the reason (unused so far).
+
+| Option | Trade-offs |
+|---|---|
+| (a) `isVapor` branches inside existing tests (current) | Small diffs, one test name per behaviour. Branches can pile up in a test. |
+| (b) Separate `*.vapor.test.ts` files | Clean files, but duplicated setup, and the two versions drift apart. |
+| (c) Mode-agnostic fixtures only (SFC/templates everywhere) | No branching, but it rewrites many VDOM tests (QS2). |
+
+**Recommendation:** (a) for assertions, (c) for new fixtures.
+**⚑ Provisional default:** (a).
+
+### QS7. As-child attrs are missing from Vapor SSR markup
+
+Under Vapor SSR, the server markup lacks the attrs that an as-child Primitive merges
+into its slotted element. Hydration patches them in on the client, so the hydrated DOM
+matches; only the first paint differs (Tabs "keeps the default output", S3 in
+FULL_SUITE.md). The Vapor Primitive applies these attrs to DOM nodes, and there are no
+DOM nodes on the server. Vapor SSR slots do carry a VNode fallback branch.
+
+Keeping the VDOM `Primitive.ts`/`Slot.ts` for the server build alone did *not* fix the
+markup, so the attrs are lost earlier too, most likely in the Vapor Collection swap and
+the RovingFocus chain. This has not been confirmed.
+
+| Option | Trade-offs |
+|---|---|
+| (a) A server-side as-child path (ship the VDOM Primitive/Slot for SSR, and fix the other places that drop attrs) | Correct first paint, but two Primitive code paths. |
+| (b) Accept client-only as-child attrs in Vapor SSR | Simple, but there is a flash of unstyled or unfocusable markup, and a11y attrs are missing before hydration. |
+| (c) Ask Vue for attr fallthrough into slot content in Vapor SSR | The right layer, but it depends on upstream. |
+
+**Recommendation:** (a), after locating where the attrs are lost; file (c) upstream.
+**⚑ Provisional default:** (b), documented as a known difference.
+
