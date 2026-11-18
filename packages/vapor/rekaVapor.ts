@@ -11,7 +11,7 @@ const rekaSrc = fileURLToPath(new URL('../core/src', import.meta.url))
  * inspection); every other reka-ui SFC compiles to Vapor unchanged.
  * A `reka-ui/vapor` build would use the same mapping.
  */
-const SWAPS: Record<string, string> = {
+export const SWAPS: Record<string, string> = {
   [`${rekaSrc}/Primitive/Primitive.ts`]: `export { default as Primitive } from '${rekaSrc}/Primitive/Primitive.vapor.vue'\n`,
   [`${rekaSrc}/Primitive/Slot.ts`]: `export { default as Slot } from '${rekaSrc}/Primitive/Slot.vapor.vue'\n`,
   [`${rekaSrc}/Presence/Presence.ts`]: `export { default } from '${rekaSrc}/Presence/Presence.vapor.vue'\n`,
@@ -53,9 +53,17 @@ const ASYNC_IMPORT_VAPOR = `import { defineVaporAsyncComponent as defineAsyncCom
  * reka-ui SFC gets an `exposeRootElement()` call at the end of its setup.
  */
 const SCRIPT_SETUP_RE = /(<script[^>]*\ssetup\b[^>]*>)([\s\S]*?)(<\/script>)/
-function injectExposeRoot(code: string) {
+export function injectExposeRoot(code: string) {
   return code.replace(SCRIPT_SETUP_RE, (_, open, body, close) =>
     `${open}${body}\nimport { exposeRootElement as __rekaExposeRoot } from '${rekaSrc}/shared/instance'\n__rekaExposeRoot()\n${close}`)
+}
+
+/** The source rewrites every reka-ui SFC gets in the Vapor client build. */
+export function transformRekaSfc(code: string) {
+  let out = injectExposeRoot(code)
+  if (out.includes('defineAsyncComponent'))
+    out = out.replace(ASYNC_IMPORT_RE, ASYNC_IMPORT_VAPOR)
+  return out
 }
 
 export function rekaVaporSwap(): Plugin {
@@ -82,6 +90,7 @@ export function rekaVaporSwap(): Plugin {
       if (out.includes('defineAsyncComponent'))
         out = out.replace(ASYNC_IMPORT_RE, ASYNC_IMPORT_VAPOR)
       return out
+      return transformRekaSfc(code)
     },
     load(id) {
       if (id === VUEUSE_VUE)

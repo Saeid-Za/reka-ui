@@ -130,7 +130,7 @@ export function toVaporComponent(options: any): any {
     return cached
   let comp: any
   if (typeof options.template === 'string') {
-    comp = { ...options, __vapor: true, render: compileRuntimeTemplate(options.template) }
+    comp = { ...options, __vapor: true, render: compileRuntimeTemplate(options.template), __template: options.template }
     delete comp.template
   }
   else if (options.setup || options.render) {

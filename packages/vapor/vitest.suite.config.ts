@@ -1,10 +1,11 @@
 import { createRequire } from 'node:module'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { createConfig } from './config.shared.ts'
-import { rekaVaporSwap } from './rekaVapor.ts'
+import { injectExposeRoot, rekaVaporSwap, SWAPS } from './rekaVapor.ts'
 import { inlineVaporTemplates } from './suite/inlineTemplates.ts'
+import { vaporSsrTwins } from './suite/ssrTwins.ts'
 import { testFileVue } from './suite/testFileVue.ts'
 
 // Reka's own jsdom suite (packages/core/src/**/*.test.ts), unchanged, in pure
@@ -16,8 +17,12 @@ const suite = fileURLToPath(new URL('./suite/', import.meta.url))
 const coreRequire = createRequire(`${core}package.json`)
 const testingLibraryDom = coreRequire.resolve('@testing-library/dom', { paths: [dirname(coreRequire.resolve('@testing-library/vue'))] })
 
+// The real server renderer, the one `vue` itself ships with (Vapor SSR, suite/ssr.ts).
+const vueRequire = createRequire(createRequire(import.meta.url).resolve('vue/package.json'))
+const serverRenderer = join(dirname(vueRequire.resolve('@vue/server-renderer/package.json')), 'dist/server-renderer.esm-bundler.js')
+
 const config = createConfig({
-  plugins: [testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } })],
+  plugins: [vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } })],
   include: [],
 })
 
@@ -28,6 +33,7 @@ config.resolve!.alias = [
   { find: /^@testing-library\/dom$/, replacement: testingLibraryDom },
   { find: /^@iconify\/vue$/, replacement: `${suite}iconify.ts` },
   { find: /^(?:@vue|vue)\/server-renderer$/, replacement: `${suite}server-renderer.ts` },
+  { find: /^vapor-suite:real-server-renderer$/, replacement: serverRenderer },
   ...(config.resolve!.alias as any[]),
 ]
 Object.assign(config.test!, {

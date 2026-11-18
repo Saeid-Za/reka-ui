@@ -3,7 +3,12 @@ import { fileURLToPath } from 'node:url'
 import { babelParse, compileTemplate, MagicString } from 'vue/compiler-sfc'
 
 const coreSrc = fileURLToPath(new URL('../../core/src/', import.meta.url))
+const suiteDir = fileURLToPath(new URL('./', import.meta.url))
 const NS = '__vaporSuiteVue'
+const REAL_NS = '__vaporSuiteRealVue'
+const SSR_NS = '__vaporSuiteServerRenderer'
+const SSR_IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*['"]vue\/server-renderer['"];?/g
+const EXPORT_SSR_RENDER_RE = /export function ssrRender/
 const TEST_FILE_RE = /\.test\.ts$/
 const VUE_IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*['"]vue['"];?/g
 const AS_RE = /\s+as\s+/g
@@ -55,7 +60,17 @@ export function inlineVaporTemplates(): Plugin {
               .replace(VUE_IMPORT_RE, (_, names: string) =>
                 `const {${names.replace(AS_RE, ': ')}} = ${NS};`)
               .replace(EXPORT_RENDER_RE, 'function render')
-            s.overwrite(prop.start, prop.end, `__vapor: true, render: (() => {\n${body}\nreturn render\n})()`)
+            // the server build of the same template (Vapor SSR, see ssrTwins.ts)
+            const server = compileTemplate({ source, filename: id, id: `suite-${counter++}`, vapor: true, ssr: true, ssrCssVars: [] })
+            if (server.errors.length)
+              this.error(`[vapor-suite] cannot compile inline template for SSR in ${id}: ${server.errors.join('; ')}`)
+            const ssrBody = server.code
+              .replace(SSR_IMPORT_RE, (_, names: string) =>
+                `const {${names.replace(AS_RE, ': ')}} = ${SSR_NS};`)
+              .replace(VUE_IMPORT_RE, (_, names: string) =>
+                `const {${names.replace(AS_RE, ': ')}} = ${REAL_NS};`)
+              .replace(EXPORT_SSR_RENDER_RE, 'function ssrRender')
+            s.overwrite(prop.start, prop.end, `__vapor: true, render: (() => {\n${body}\nreturn render\n})(), __ssrRender: (() => {\n${ssrBody}\nreturn ssrRender\n})()`)
             changed = true
           }
         }
@@ -72,7 +87,7 @@ export function inlineVaporTemplates(): Plugin {
       visit(ast.program)
       if (!changed)
         return null
-      s.prepend(`import * as ${NS} from 'vue'\n`)
+      s.prepend(`import * as ${NS} from 'vue'\nimport * as ${REAL_NS} from '${suiteDir}vue-real.ts'\nimport * as ${SSR_NS} from '${suiteDir}server-renderer.ts'\n`)
       return { code: s.toString(), map: s.generateMap({ hires: true }) }
     },
   }
