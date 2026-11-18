@@ -187,3 +187,35 @@ The Reka-free controls show no such cost, so it is Reka's Vapor path (applier,
 
 **Recommendation:** ship it as experimental, label the trade-off, and profile the
 `as-child` applier first.
+
+### Q16. Pure-Vapor bundle size is set by Vue, not by Reka (upstream ask)
+
+PERF_LOG P2 found that no VDOM renderer leaks into the pure-Vapor bundle. The +13.9 KiB gzip over
+VDOM comes from `@vue/runtime-vapor` 3.6.0-rc.15. It keeps its hydration, interop, KeepAlive,
+Suspense and Transition paths behind **runtime** flags (`let isInteropEnabled`, …), and those
+paths still reference `runtime-core` VNode helpers. The Reka side adds +8.9 KiB of compiled
+templates, unminified.
+
+Options:
+- Ask Vue for compile-time feature flags, in the style of `__VUE_OPTIONS_API__`, so that apps
+  without SSR or interop can drop that code. This is the biggest possible gain, but it is not in
+  Reka's hands.
+- Accept the size for now.
+
+**Recommendation:** raise the flags with Vue (not filed; this work is local only), and accept
+the size meanwhile.
+
+### Q17. Bigger pure-Vapor perf levers that change behaviour (not decided here)
+
+The profiles (PERF_LOG P1, P3, P4) point at costs that Reka could only remove by changing
+behaviour or source used by both builds:
+
+| Lever | Expected gain | Trade-off |
+|---|---|---|
+| Treat `as`/`asChild` as static in `Primitive.vapor.vue` (choose the branch once in setup) | one `createIf` + render effect less per `Primitive` (P3: 6 `DynamicFragment`s per Checkbox row) | toggling `as-child` or `as` at runtime would stop working in Vapor; VDOM supports it |
+| Replace `toRefs(props)` in components with per-prop `computed`/getters | P1: `toRefs` costs 25 ms of self time in Vapor, against 9 ms in VDOM | touches many SFCs; this would be churn in the VDOM build too |
+| Replace `inheritAttrs: false` + `v-bind="$attrs"` chains with direct fallthrough | fewer `collectProps`/`resolveDynamicProps` passes (P1: the largest Vue-internal cost) | changes attr precedence in some components; needs a per-component audit |
+| Drop the VueUse lifecycle helpers (`useMounted`, `tryOnMounted`) inside components | removes the shim (Q5), a little less work | source changes in both builds |
+
+**Recommendation:** none of these for the first release. Revisit after Vue 3.6 is stable, using
+the A/B harness (`PERF_LOG.md`).
