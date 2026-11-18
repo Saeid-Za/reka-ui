@@ -271,3 +271,49 @@ So the double application was not where the time goes. The first post-flush `wat
 run most likely happens before `onMounted`, while `mounted` is still false, so the attrs
 were applied only once. That was not verified separately. A 0.8 % memory gain is not worth
 moving the initial apply to a different lifecycle point.
+
+### E4. Fast paths and caches in `applyAsChildAttrs`
+
+- **Hypothesis:** In Tabs, `applyAsChildAttrs` spends its self time (88 ms, P4) on
+  work it repeats for every instance and every run:
+  - `normalizeClass` / `normalizeStyle` plus `split` and a new `Set`, even when there
+    is no `class` or `style`;
+  - regex-based `hyphenate` and `parseEventName` for the same few keys;
+  - `shouldSetAsProp`, which reads a DOM property (`typeof el[key]`) for every
+    attribute.
+
+  The planned fixes:
+  - Skip the class and style passes when neither the attrs nor the previous state
+    have any.
+  - Memoise `hyphenate` and `parseEventName` per key.
+  - Memoise the "boolean DOM property" check per tag name and key.
+
+  Together these should cut the applier's self time and make Tabs mount faster, with
+  no change in behaviour.
+- **Change:** `asChildAttrs.ts` only. The existing `asChildAttrs.test.ts` covers class,
+  style, listener, prop and override behaviour.
+- **Measure:** A/B, plus the Tabs profile self time.
+
+**Result: KEPT.**
+
+**Gate:** passed. One caveat: in that gate run the consumer `sideEffects` check was *skipped*, because
+`packages/core/dist` had been removed while the repo's `node_modules` were missing and got
+reinstalled. The gate now builds `dist` first. The check passes again on the next gate (E5).
+
+**Tabs profile:** `applyAsChildAttrs` self time went from 88.1 ms (4.7 %) to 78.1 ms (3.9 %). The
+cached helpers (`hyphenate`, `parseEventName`) now take 0.2 ms each.
+
+**A/B results** (`raw/perf/E4ab.json`). Another worker's test run shared the machine during this
+run, so the noise was higher than before.
+
+| Op (script ms) | HEAD | E4 | Δ | Verdict |
+|---|---|---|---|---|
+| tabs mount | 928.7 (±73.7) | 836.7 (±57.8) | −9.9 % | better |
+| tabs update:on / off | 122.6 / 124.9 | 116.5 / 114.6 | −5 % / −8 % | noise |
+| checkbox unmount | 106.2 (±13.46) | 69.2 (±22.36) | −34.8 % | flagged as better, but Checkbox has no `as-child` layer: treat as noise |
+| collapsible mount | 406.9 | 388.8 | −4.4 % | noise |
+| everything else | | | | noise |
+
+**Memory per instance:** Tabs 203626 → 202874 B (−0.4 %). The others did not change.
+
+**Bundle:** +107 B gzip, accepted for the Tabs mount gain.

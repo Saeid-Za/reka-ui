@@ -1,7 +1,15 @@
 import { camelize, normalizeClass, normalizeStyle } from 'vue'
 
 const HYPHENATE_RE = /\B([A-Z])/g
-const hyphenate = (str: string) => str.replace(HYPHENATE_RE, '-$1').toLowerCase()
+// Attr keys repeat across instances (`aria-*`, `data-*`, `on*`), so the string
+// helpers below are memoised per key.
+const hyphenateCache = new Map<string, string>()
+function hyphenate(str: string) {
+  let result = hyphenateCache.get(str)
+  if (result === undefined)
+    hyphenateCache.set(str, result = str.replace(HYPHENATE_RE, '-$1').toLowerCase())
+  return result
+}
 
 type Attrs = Record<string, unknown>
 
@@ -25,7 +33,16 @@ const defaultStates = new WeakMap<Element, AppliedState>()
 const WHITESPACE_RE = /\s+/
 const EVENT_OPTION_RE = /(?:Once|Passive|Capture)$/
 
+const eventNameCache = new Map<string, [string, AddEventListenerOptions]>()
+
 function parseEventName(key: string): [string, AddEventListenerOptions] {
+  let parsed = eventNameCache.get(key)
+  if (!parsed)
+    eventNameCache.set(key, parsed = parseEventNameUncached(key))
+  return parsed
+}
+
+function parseEventNameUncached(key: string): [string, AddEventListenerOptions] {
   let name = key.slice(2)
   const options: AddEventListenerOptions = {}
   let match: RegExpMatchArray | null
@@ -48,12 +65,21 @@ function callHandlers(value: unknown, event: Event) {
     value(event)
 }
 
+// Whether `key` is a boolean DOM property, per tag name (`BUTTON:disabled`).
+const booleanPropCache = new Map<string, boolean>()
+
 function shouldSetAsProp(el: Element, key: string, value: unknown) {
   // Same spirit as runtime-dom's `shouldSetAsProp`: boolean-ish DOM properties
   // (`disabled`, `checked`, `hidden`, …) and `value` are set as properties.
   if (key === 'value' && 'value' in el)
     return true
-  return key in el && typeof (el as any)[key] === 'boolean' && (typeof value === 'boolean' || value === '' || value == null)
+  if (!(typeof value === 'boolean' || value === '' || value == null))
+    return false
+  const cacheKey = `${el.tagName}:${key}`
+  let isBooleanProp = booleanPropCache.get(cacheKey)
+  if (isBooleanProp === undefined)
+    booleanPropCache.set(cacheKey, isBooleanProp = key in el && typeof (el as any)[key] === 'boolean')
+  return isBooleanProp
 }
 
 /**
@@ -84,31 +110,37 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
     states.set(el, state)
   }
 
-  const nextClasses = new Set(normalizeClass(attrs.class).split(WHITESPACE_RE).filter(Boolean))
-  for (const token of state.classes) {
-    if (!nextClasses.has(token))
-      el.classList.remove(token)
+  // Most as-child layers pass no class/style: skip both passes when there is
+  // nothing to apply and nothing applied before.
+  if (attrs.class != null || state.classes.size) {
+    const nextClasses = new Set(normalizeClass(attrs.class).split(WHITESPACE_RE).filter(Boolean))
+    for (const token of state.classes) {
+      if (!nextClasses.has(token))
+        el.classList.remove(token)
+    }
+    for (const token of nextClasses) {
+      if (!state.classes.has(token))
+        el.classList.add(token)
+    }
+    state.classes = nextClasses
   }
-  for (const token of nextClasses) {
-    if (!state.classes.has(token))
-      el.classList.add(token)
-  }
-  state.classes = nextClasses
 
-  const style = (el as HTMLElement).style
-  const nextStyle = (normalizeStyle(attrs.style) ?? {}) as Record<string, string | number>
-  const styleObject = typeof nextStyle === 'string' ? parseStyleString(nextStyle) : nextStyle
-  const nextStyles = new Set<string>()
-  for (const key in styleObject) {
-    const prop = key.startsWith('--') ? key : hyphenate(key)
-    nextStyles.add(prop)
-    style?.setProperty(prop, styleObject[key] == null ? '' : String(styleObject[key]))
+  if (attrs.style != null || state.styles.size) {
+    const style = (el as HTMLElement).style
+    const nextStyle = (normalizeStyle(attrs.style) ?? {}) as Record<string, string | number>
+    const styleObject = typeof nextStyle === 'string' ? parseStyleString(nextStyle) : nextStyle
+    const nextStyles = new Set<string>()
+    for (const key in styleObject) {
+      const prop = key.startsWith('--') ? key : hyphenate(key)
+      nextStyles.add(prop)
+      style?.setProperty(prop, styleObject[key] == null ? '' : String(styleObject[key]))
+    }
+    for (const prop of state.styles) {
+      if (!nextStyles.has(prop))
+        style?.removeProperty(prop)
+    }
+    state.styles = nextStyles
   }
-  for (const prop of state.styles) {
-    if (!nextStyles.has(prop))
-      style?.removeProperty(prop)
-  }
-  state.styles = nextStyles
 
   const seenListeners = new Set<string>()
   const seenAttrs = new Set<string>()
