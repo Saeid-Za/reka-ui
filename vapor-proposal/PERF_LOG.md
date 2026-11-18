@@ -609,3 +609,79 @@ The work goes in this order:
   `useForwardExpose` scenario (`ForwardExposeDemo.vue`) runs in all three app modes. The
   consumer-build test now checks that `reka-ui/vapor` keeps the registration and that a
   default-only build contains no Vapor half (`new Proxy(ret`).
+
+### P5. Heap closures by source location: Checkbox ×1000, VDOM vs pure Vapor (round 2)
+
+**Tool:** `bench/heap.mjs --locations`. It groups closures by their line and column in the
+unminified bundle. Totals are in `scratch/perf/heap-r2.txt` and the per-location list is in
+`heap-r2-closures.txt`.
+
+**Totals:**
+
+| Scenario | VDOM (B/instance) | Pure Vapor (B/instance) |
+|---|---|---|
+| Checkbox | 23,384 | 30,477 |
+| Collapsible | 34,498 | 47,566 |
+
+**Checkbox, by kind:**
+
+| Kind | VDOM | Pure Vapor |
+|---|---|---|
+| closures | 59 | 115 |
+| `Dep` | 14 | 40 |
+| `RenderEffect` | — | 12 |
+| `RenderWatcherEffect` | 4 | 6 |
+| `EffectScope` | 5 | 12 |
+| `DynamicFragment` | — | 6 |
+
+**Where the closures come from:**
+
+- **Watchers, 6 per row.** Each pays `job`, `boundCleanup`, `baseWatchOptions.call` and a
+  getter, about 4 closures plus a `RenderWatcherEffect`. VDOM rows have 4 watchers. The two
+  extra are both in `Presence.vapor.vue`: `watch(shouldRender)` and
+  `watch(() => ({ ...attrs }))`. The second also allocates a copy of the attrs on every run.
+- **Compiler-generated per-prop getters** for `CheckboxRoot` → `Primitive` (`id`, `as-child`,
+  `as`, `type`, `aria-*`, `data-*`: 13 closures). These are inherent to Vapor props and the
+  same in any Vapor component library.
+- **`createIf` and `renderEffect` closures** from the `Primitive` branch chain. E2 showed the
+  alternatives cost more.
+- **`useForwardExpose`:** the Proxy handler, 4 closures per call, 2 calls per row.
+- **`Primitive.vapor.vue` setup:** `SELF_CLOSING_TAGS` is a fresh array per instance,
+  because it is declared inside `<script setup>`.
+
+### E8. One watcher in `Presence.vapor.vue` instead of two
+
+- **Hypothesis:** merging `watch(shouldRender, syncNode)` and
+  `watch(() => ({ ...attrs }), () => node.value && syncNode())` into one post-flush watcher
+  that tracks both saves one watcher per `Presence`: about 4 closures, a
+  `RenderWatcherEffect`, its `Dep` links and the attrs copy made on every run. Memory should
+  drop by about 0.5–1% in Checkbox and Collapsible (one Presence per row) and in Tabs (one per
+  tab), and unmount should get slightly cheaper. Behaviour must not change: a `shouldRender`
+  change always syncs, and an attrs change syncs only while a node is rendered.
+- **Change:** `Presence.vapor.vue` only (Vapor build). The watcher's getter reads
+  `shouldRender` and every attr key and value, and returns `shouldRender`. Its callback runs
+  `syncNode()` when `shouldRender` changed or a node exists. The getter returns a new array
+  each run, so the callback also fires for attr-only changes.
+- **Result** (`scratch/perf/E8.md`, 15 runs, interleaved against HEAD = E7b):
+
+  | Metric | HEAD | E8 | Change |
+  |---|---|---|---|
+  | Checkbox memory (B/instance) | 28,198 | 27,820 | **−1.3%** |
+  | Collapsible memory | 42,354 | 41,971 | **−0.9%** |
+  | Tabs memory | 201,517 | 200,376 | **−0.6%** |
+  | pure-Vapor bundle, min / gzip / brotli | 226,232 / 75,841 / 66,525 | 226,257 / 75,856 / 66,406 | +25 / +15 / −119 B |
+  | timings | | | Checkbox unmount −28% ("better"); everything else noise, between +21% and −32% |
+
+  A Checkbox row saves 378 B, which matches one watcher plus its closures and `Dep` links.
+  The −28% Checkbox unmount is in the expected direction, but it is not claimed: unmount
+  swings ±35% on this machine (F1, E7b).
+- **Tests:** a new pure-Vapor test (`test-native/vapor-only.test.ts`, "re-applies changed
+  attrs"). It changes an attr while the child is rendered, hides the child, changes the attr
+  again while nothing is rendered, then shows the child. It passes on HEAD and on E8. It
+  fails on a variant that only syncs on render changes, so it guards the merged condition.
+  The same test against VDOM-compiled Reka under interop fails at the first assertion: a
+  Vapor parent's attrs on the VDOM `Presence` never reach the child. That is not caused by
+  this change (it does not touch the VDOM `Presence`), and it is recorded under Q7.
+  The gate passed: build, 51/118/62 vapor tests (VDOM, interop, pure Vapor), 3548 core
+  tests, type-check and lint.
+- **Verdict: kept.**

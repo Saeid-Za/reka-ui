@@ -88,6 +88,12 @@ wins (ADR-016). Options:
 **Recommendation:** document it and recommend pure Vapor.
 **⚑ Provisional default:** documented as `it.fails`.
 
+**Related observation (round 2, PERF_LOG E8):** under interop, attrs that a Vapor parent puts
+on Reka's VDOM `Presence` (`<Presence :present :data-tone="...">`) do not appear on the child
+`Presence` renders. The pure-Vapor `Presence.vapor.vue` applies them. The root cause was not
+investigated. It is probably the same interop fallthrough path as the precedence case above,
+so it belongs in the same upstream report.
+
 ### Q8. Interop memory leak (pre-existing, `useForwardExpose` under a Vapor parent)
 
 Found by the benchmark (`BENCHMARKS.md` §7). It reproduces with the unmodified
