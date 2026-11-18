@@ -1,0 +1,200 @@
+{
+  "date": "2026-11-18T10:14:56.473Z",
+  "environment": {
+    "chrome": "156.0.8078.47",
+    "node": "v24.22.1",
+    "os": "Linux 6.12.113+",
+    "cpu": "Intel(R) Xeon(R) Processor",
+    "cores": 8,
+    "memoryGB": 16,
+    "cpuThrottling": 4,
+    "runs": 10,
+    "warmup": 3,
+    "vue": "3.6.0-rc.15"
+  },
+  "bundle": {
+    "vdom": {
+      "min": 178266,
+      "gzip": 60379,
+      "brotli": 53545
+    },
+    "interop": {
+      "min": 288437,
+      "gzip": 99788,
+      "brotli": 87549
+    },
+    "vapor": {
+      "min": 220885,
+      "gzip": 74322,
+      "brotli": 65718
+    }
+  },
+  "sanity": {},
+  "timing": {},
+  "memory": {
+    "plain-fragment/vdom": {
+      "bytesPerInstance": {
+        "median": 2098.52,
+        "mean": 2098.45,
+        "std": 0.56,
+        "min": 2097.73,
+        "max": 2099.1,
+        "n": 3
+      },
+      "residualBytesAfterUnmount": {
+        "median": 237572,
+        "mean": 237509.33,
+        "std": 555.36,
+        "min": 236800,
+        "max": 238156,
+        "n": 3
+      },
+      "residualAfterCycles": [
+        [
+          236800,
+          264616,
+          277140
+        ],
+        [
+          238156,
+          266236,
+          278568
+        ],
+        [
+          237572,
+          265388,
+          277912
+        ]
+      ],
+      "count": 1000
+    },
+    "plain-fragment/interop": {
+      "bytesPerInstance": {
+        "median": 4942.09,
+        "mean": 4942.68,
+        "std": 0.88,
+        "min": 4942.03,
+        "max": 4943.92,
+        "n": 3
+      },
+      "residualBytesAfterUnmount": {
+        "median": 252880,
+        "mean": 252766.67,
+        "std": 337.87,
+        "min": 252308,
+        "max": 253112,
+        "n": 3
+      },
+      "residualAfterCycles": [
+        [
+          252308,
+          274984,
+          281916
+        ],
+        [
+          253112,
+          274276,
+          281840
+        ],
+        [
+          252880,
+          273944,
+          281380
+        ]
+      ],
+      "count": 1000
+    },
+    "plain-fragment/vapor": {
+      "bytesPerInstance": {
+        "median": 2177.34,
+        "mean": 2177.34,
+        "std": 0,
+        "min": 2177.34,
+        "max": 2177.34,
+        "n": 3
+      },
+      "residualBytesAfterUnmount": {
+        "median": 199524,
+        "mean": 199192,
+        "std": 469.52,
+        "min": 198528,
+        "max": 199524,
+        "n": 3
+      },
+      "residualAfterCycles": [
+        [
+          199524,
+          211464,
+          223920
+        ],
+        [
+          198528,
+          210540,
+          222924
+        ],
+        [
+          199524,
+          211464,
+          223920
+        ]
+      ],
+      "count": 1000
+    }
+  },
+  "startup": {
+    "vdom": {
+      "appMountedMs": {
+        "median": 46,
+        "mean": 46.86,
+        "std": 3.86,
+        "min": 43.8,
+        "max": 58.1,
+        "n": 10
+      },
+      "readyHeapBytes": {
+        "median": 1618060,
+        "mean": 1618060,
+        "std": 0,
+        "min": 1618060,
+        "max": 1618060,
+        "n": 10
+      }
+    },
+    "interop": {
+      "appMountedMs": {
+        "median": 52.4,
+        "mean": 53.39,
+        "std": 6.83,
+        "min": 46,
+        "max": 66.4,
+        "n": 10
+      },
+      "readyHeapBytes": {
+        "median": 1765248,
+        "mean": 1765248,
+        "std": 0,
+        "min": 1765248,
+        "max": 1765248,
+        "n": 10
+      }
+    },
+    "vapor": {
+      "appMountedMs": {
+        "median": 45.4,
+        "mean": 46.44,
+        "std": 3.92,
+        "min": 42.9,
+        "max": 55.9,
+        "n": 10
+      },
+      "readyHeapBytes": {
+        "median": 1695880,
+        "mean": 1695880,
+        "std": 0,
+        "min": 1695880,
+        "max": 1695880,
+        "n": 10
+      }
+    }
+  }
+}

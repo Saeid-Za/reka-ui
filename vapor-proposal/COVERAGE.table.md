@@ -1,0 +1,51 @@
+| Component | VDOM (baseline) | VDOM app + interop | Vapor app + interop | Pure Vapor |
+|---|---|---|---|---|
+| Accordion | pass | pass | pass | pass |
+| AlertDialog | pass | pass | pass | pass |
+| AspectRatio | pass | pass | pass | pass |
+| Avatar | pass | pass | pass | pass |
+| Calendar | pass | pass | pass | pass |
+| Checkbox | pass | pass | pass | pass |
+| Collapsible | pass | pass | pass | pass |
+| ColorField | pass | pass | pass | pass |
+| ColorSlider | pass | pass | pass | pass |
+| Combobox | pass | pass | pass | pass |
+| ContextMenu | pass | pass | pass | pass |
+| DateField | pass | pass | pass | pass |
+| Dialog | pass | pass | pass | pass |
+| DropdownMenu | pass | pass | pass | pass |
+| Editable | pass | pass | pass | pass |
+| Form | pass | pass | pass | pass |
+| HoverCard | pass | pass | pass | pass |
+| Label | pass | pass | pass | pass |
+| Listbox | pass | pass | pass | pass |
+| ListboxVirtualizer | pass | pass | pass | known gap |
+| Menubar | pass | pass | pass | pass |
+| NavigationMenu | pass | pass | pass | pass |
+| NumberField | pass | pass | pass | pass |
+| Pagination | pass | pass | pass | pass |
+| PinInput | pass | pass | pass | pass |
+| Popover | pass | pass | pass | pass |
+| Progress | pass | pass | pass | pass |
+| RadioGroup | pass | pass | pass | pass |
+| RangeCalendar | pass | pass | pass | pass |
+| Rating | pass | pass | pass | pass |
+| ScrollArea | pass | pass | pass | pass |
+| Select | pass | pass | pass | pass |
+| Separator | pass | pass | pass | pass |
+| Slider | pass | pass | pass | pass |
+| Splitter | pass | pass | pass | pass |
+| Stepper | pass | pass | pass | pass |
+| Switch | pass | pass | pass | pass |
+| Tabs | pass | pass | pass | pass |
+| TagGroup | pass | pass | pass | pass |
+| TagsInput | pass | pass | pass | pass |
+| TimeField | pass | pass | pass | pass |
+| Toast | pass | pass | pass | pass |
+| Toggle | pass | pass | pass | pass |
+| ToggleGroup | pass | pass | pass | pass |
+| Toolbar | pass | pass | pass | pass |
+| Tooltip | pass | pass | pass | pass |
+| Tree | pass | pass | pass | pass |
+| VisuallyHidden | pass | pass | pass | pass |
+| **Total passing** | 48/48 | 48/48 | 48/48 | 47/48 |
