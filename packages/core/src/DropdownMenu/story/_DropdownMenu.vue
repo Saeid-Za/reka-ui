@@ -23,6 +23,7 @@ import {
 const props = defineProps<{ defaultOpen?: boolean }>()
 
 const emits = defineEmits<DropdownMenuItemEmits>()
+const emitsAsProps = useEmitAsProps(emits)
 const toggleState = ref(props.defaultOpen ?? false)
 const checkboxOne = ref(false)
 const checkboxTwo = ref(false)
@@ -56,7 +57,7 @@ function handleCheck(ev: any) {
           <DropdownMenuItem
             value="New Tab"
             class="group text-[13px] leading-none text-violet11 rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none data-[highlighted]:bg-violet9 data-[highlighted]:text-violet1"
-            v-bind="useEmitAsProps(emits)"
+            v-bind="emitsAsProps"
             @click="handleClick"
           >
             New Tab

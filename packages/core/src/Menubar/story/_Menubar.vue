@@ -20,6 +20,7 @@ import {
 } from '..'
 
 const emits = defineEmits<MenubarItemEmits>()
+const emitsAsProps = useEmitAsProps(emits)
 const currentMenu = ref('')
 const checkboxOne = ref(false)
 const checkboxTwo = ref(false)
@@ -52,7 +53,7 @@ function handleClick() {
           >
             <MenubarItem
               class="group text-[13px] leading-none text-violet11 rounded flex items-center h-[25px] px-[10px] relative select-none outline-none data-[state=open]:bg-violet4 data-[state=open]:text-violet11 data-[highlighted]:bg-gradient-to-br data-[highlighted]:from-violet9 data-[highlighted]:to-violet10 data-[highlighted]:text-violet1 data-[highlighted]:data-[state=open]:text-violet1 data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none"
-              v-bind="useEmitAsProps(emits)"
+              v-bind="emitsAsProps"
             >
               New Tab
               <div
