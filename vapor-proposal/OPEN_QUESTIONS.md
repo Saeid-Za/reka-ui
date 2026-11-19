@@ -502,3 +502,20 @@ a VDOM-safe design; investigate `suite/test-utils.ts` `setValue` / keyboard path
 
 **⚑ Provisional default:** leave both Combobox Vapor fails red; file QS under W9/W11 in triage.
 
+### QS17. Dialog dev `useWarning` fires twice under pure Vapor (FIX_PLAN_4 §9.1)
+
+**Symptom:** `Dialog.test.ts` `toHaveBeenCalledTimes(1)` fails with 2 calls for both missing-title
+and missing-description cases; VDOM `pnpm exec vitest run src/Dialog/Dialog.test.ts` passes.
+
+**Tried (step 33):** `nextTick` deferral, `findById` via `contentElement`, per-root
+`devA11yWarned`, `onMounted` `ran` guard — no delta. Likely duplicate `onMounted` or a second
+`DialogContentImpl` shell in Vapor jsdom; needs a minimal reproduction against plain Vue 3.6 Vapor.
+
+| Option | Trade-off |
+|---|---|
+| (a) Harness dedupe identical `console.warn` per tick | Hides real double warnings. |
+| (b) Defer checks in `useWarning` until DOM ids exist | VDOM-safe if timed correctly. |
+| (c) Leave red; investigate Vue Vapor lifecycle | Current. |
+
+**⚑ Provisional default:** (c).
+
