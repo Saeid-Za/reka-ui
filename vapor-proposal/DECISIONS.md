@@ -697,4 +697,9 @@ update, and fragment branch swaps so `v-show` / `v-if` slot changes re-apply att
 Vapor compilation does not handle `:is` switching between `Primitive` and `PopperAnchor` the same
 way as VDOM; split into two static branches with equivalent markup.
 
+## ADR-S27 Full-suite `defineAsyncComponent` maps to `defineVaporAsyncComponent`
+
+Test files import `vue` from `suite/vue-test.ts`; async fixtures must use Vapor's async
+helper so client mounts hydrate consistently with Vapor SSR.
+
 
