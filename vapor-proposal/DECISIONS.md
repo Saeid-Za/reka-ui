@@ -874,3 +874,7 @@ VDOM `Presence` always leaves force-mounted children visible; hiding is only via
 apply the same boolean as inline `display: none` on the modal/content root; `Presence.vapor`
 must not set `display:none`. Mapped in `VUE_VAPOR_TWINS` (`rekaVapor.ts`).
 
+**Process (H6):** Commit G1 referenced `test-vdom/fixtures/PresenceForceMount.vue` before that file
+landed (in C3). Before each commit, `git ls-files --others --exclude-standard packages/` must be
+empty so tests do not import untracked files.
+
