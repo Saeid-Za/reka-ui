@@ -6,7 +6,7 @@ import type {
 import { createContext, useEmitAsProps, useForwardExpose } from '@/shared'
 
 interface AlertDialogContentContext {
-  onCancelElementChange: (el: HTMLElement | undefined) => void
+  onCancelElementChange: (el: HTMLElement | undefined, sender?: HTMLElement | undefined) => void
 }
 
 export const [injectAlertDialogContentContext, provideAlertDialogContentContext]
@@ -34,11 +34,15 @@ useForwardExpose()
 const cancelElement = ref<HTMLElement | undefined>()
 
 provideAlertDialogContentContext({
-  onCancelElementChange: (el) => {
-    // A cancel button that unmounts only releases the registered one once it has left the
-    // document, so another cancel button that is still rendered keeps its registration.
-    if (!el && cancelElement.value?.isConnected)
-      return
+  onCancelElementChange: (el, sender) => {
+    // A cancel button that unmounts only releases the registered one if it was the registered one
+    // and no other registered cancel button remains connected.
+    if (!el) {
+      if (sender && cancelElement.value && sender !== cancelElement.value)
+        return
+      if (cancelElement.value?.isConnected)
+        return
+    }
     cancelElement.value = el
   },
 })

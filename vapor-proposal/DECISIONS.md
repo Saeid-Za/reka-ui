@@ -672,4 +672,11 @@ the DOM tree in Vapor jsdom and report `false` when the control is inside a form
 Gate the real `closest('form')` lookup behind `mounted` while keeping the SSR default (`true`
 when `el` is missing or not yet mounted).
 
+## ADR-S23 AlertDialog cancel registration is sender-aware
+
+`AlertDialogContent` tracks the registered cancel element for initial focus and Escape. When a
+cancel button unmounts, only that sender may clear the registration; an earlier-unmounting
+non-primary cancel must not wipe the still-connected registered button (`onCancelElementChange`
+accepts an optional `sender` and `AlertDialogCancel` passes `currentElement` on teardown).
+
 
