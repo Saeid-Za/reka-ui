@@ -775,18 +775,24 @@ Measured bundle size after unifying virtualizers via `<Primitive as-child v-for>
 
 By avoiding duplicate virtualizer twins, the pure Vapor bundle only incurs +898 B gzip over baseline B0 (75,632 B) despite adding full `@tanstack/vue-virtual` compatibility.
 
-## Step 25 / FIX_PLAN_4 step 32: 10k Listbox VDOM A/B (`step25-listbox-vapor`)
+## Step 25 / FIX_PLAN_4–5 (A3): 10k Listbox VDOM A/B (`step25-listbox-vapor-a3`)
 
-2026-11-19, `BASE=0b2c515e~1` vs HEAD, `BENCH_MODE=vdom`, `packages/vapor/scripts/ab.sh`
-`--only listbox-virtual --runs 10`. Bench scenario: single `ListboxVirtualRow` with 10k options,
-ops mount / scroll / unmount.
+2026-11-19, `BASE=0b2c515e~1` (36c0f04a) vs HEAD, `BENCH_MODE=vdom`, worktree baseline +
+bench sync (`ab.sh`). Scroll: 12 steps × 8k px, wait until `[data-index]` changes each step.
+Memory: forced GC + `JSHeapUsedSize` around single 10k mount/unmount (3 samples).
 
 | Scenario/op (script median ms) | baseline | HEAD | Δ | verdict |
 |---|---|---|---|---|
-| listbox-virtual mount | 18.3 (±3.47) | 16.3 (±1.35) | −10.9% | noise |
-| listbox-virtual scroll | 0 (±0.05) | 0 (±0.09) | +NaN% | noise |
-| listbox-virtual unmount | 1.0 (±0.28) | 1.1 (±0.33) | +10.0% | noise |
+| listbox-virtual mount | 13.1 (±0.54) | 14.3 (±1.33) | +9.2% | noise |
+| listbox-virtual scroll | 6200.1 (±11.63) | 6242.7 (±15.11) | +0.7% | noise |
+| listbox-virtual unmount | 1.3 (±0.38) | 1.5 (±0.45) | +15.4% | noise |
 
-Bundle gzip: 70,322 → 70,473 (+151 B). No metric >5% worse vs baseline; unified virtualizer kept.
-Raw: `packages/vapor/scratch/perf/step25-listbox-vapor.json`.
+| Memory | baseline | HEAD | Δ |
+|---|---|---|---|
+| mount heap (1×10k listbox) | 1,940,904 B | 2,013,764 B | +3.8% |
+
+Bundle (unified `<Primitive as-child v-for>` in Listbox/ScrollArea/Tree virtualizer SFCs;
+`git diff --stat 0b2c515e~1..HEAD` those three files only): min +1,404 B, **gzip +158 B**
+(70,415 → 70,573), brotli +196 B. No VDOM timing metric >5% worse outside noise.
+Raw: `packages/vapor/scratch/perf/step25-listbox-vapor-a3.json`.
 

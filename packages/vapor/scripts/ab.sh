@@ -1,6 +1,7 @@
 #!/bin/bash
 # A/B benchmark: baseline = $BASE (default HEAD), candidate = working tree.
-# Baseline is built in a detached worktree; the main working tree is never checked out.
+# Baseline core is built in a detached worktree; bench harness is synced from HEAD
+# so new scenarios exist on both sides. The main working tree is never checked out.
 #   BASE=<ref> BENCH_MODE=vdom ab.sh <name> [extra run.mjs args]
 set -e
 name=$1; shift
@@ -13,20 +14,29 @@ SCRATCH="${REPO_ROOT}/packages/vapor/scratch/perf"
 mkdir -p "$SCRATCH"
 BASE_WT="${TMPDIR:-/tmp}/reka-ab-base-$$"
 cleanup() {
-  if [ -d "$BASE_WT/.git" ] || git worktree list | grep -q "$BASE_WT"; then
-    git worktree remove --force "$BASE_WT" 2>/dev/null || rm -rf "$BASE_WT"
+  if git worktree list 2>/dev/null | grep -qF "$BASE_WT"; then
+    git worktree remove --force "$BASE_WT" 2>/dev/null || true
   fi
+  rm -rf "$BASE_WT"
 }
 trap cleanup EXIT
 
 git worktree add --detach "$BASE_WT" "$BASE" >/dev/null
-rm -rf "$V/bench/dist/vapor-base"
-(cd "$BASE_WT/$V" && BENCH_MODE="$BENCH_MODE" npx vite build -c bench/vite.config.ts --logLevel error)
-mkdir -p "$V/bench/dist/vapor-base"
-cp -a "$BASE_WT/$V/bench/dist/$BENCH_MODE/." "$V/bench/dist/vapor-base/"
+for link in node_modules packages/vapor/node_modules packages/core/node_modules; do
+  [ -e "$REPO_ROOT/$link" ] && ln -sfn "$REPO_ROOT/$link" "$BASE_WT/$link"
+done
+# Same bench app/scenarios on both sides; only core + rekaVapor differ at $BASE.
+rsync -a "$REPO_ROOT/$V/bench/" "$BASE_WT/$V/bench/"
 
-git diff --quiet "$BASE" -- packages/core/src packages/core/package.json packages/vapor/rekaVapor.ts packages/vapor/bench \
-  && [ "$BASE" != HEAD ] && echo "warning: no diff vs $BASE" >&2 || true
+rm -rf "$REPO_ROOT/$V/bench/dist/vapor-base"
+(cd "$BASE_WT/$V" && BENCH_MODE="$BENCH_MODE" npx vite build -c bench/vite.config.ts --logLevel error)
+mkdir -p "$REPO_ROOT/$V/bench/dist/vapor-base"
+rsync -a --delete "$BASE_WT/$V/bench/dist/$BENCH_MODE/" "$REPO_ROOT/$V/bench/dist/vapor-base/"
+
+cd "$REPO_ROOT"
+if git diff --quiet "$BASE" -- packages/core/src packages/core/package.json packages/vapor/rekaVapor.ts && [ "$BASE" != HEAD ]; then
+  echo "warning: no diff vs $BASE" >&2
+fi
 (cd $V && BENCH_MODE="$BENCH_MODE" npx vite build -c bench/vite.config.ts --logLevel error)
 (cd $V && node bench/run.mjs --skip-build --modes "vapor-base,${BENCH_MODE}" --runs 15 "$@" --out "$SCRATCH/$name.json") > "$SCRATCH/$name.log" 2>&1
 node - "$name" "$SCRATCH" "$BENCH_MODE" <<'JS'

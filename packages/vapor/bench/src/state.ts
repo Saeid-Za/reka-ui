@@ -47,9 +47,30 @@ async function measure(fn: () => void) {
     await settle()
   },
   count: (selector: string) => document.querySelectorAll(selector).length,
-  scrollListbox: () => measure(() => {
+  scrollListbox: async () => {
+    await settle()
+    const start = performance.now()
     const el = document.querySelector('.listbox-virtual-content') as HTMLElement | null
-    if (el)
-      el.scrollTop = 500_000
-  }),
+    const readIndex = () => document.querySelector('[data-index]')?.getAttribute('data-index')
+    if (el) {
+      let index = readIndex()
+      for (let step = 0; step < 12; step++) {
+        el.scrollTop += 8000
+        await nextTick()
+        await settle()
+        for (let wait = 0; wait < 30; wait++) {
+          const next = readIndex()
+          if (next != null && next !== index) {
+            index = next
+            break
+          }
+          await settle()
+        }
+      }
+    }
+    await nextTick()
+    const script = performance.now() - start
+    await settle()
+    return { script, frame: performance.now() - start }
+  },
 }

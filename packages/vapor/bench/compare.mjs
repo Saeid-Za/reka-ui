@@ -29,9 +29,13 @@ out.push('', `| Memory (bytes/instance) | before | after | delta |`, `|---|---|-
 for (const [key, m] of Object.entries(b.memory ?? {})) {
   if (!key.endsWith(`/${mode}`) || !a.memory?.[key])
     continue
-  const p = a.memory[key].bytesPerInstance.median
-  const s = m.bytesPerInstance.median
-  out.push(`| ${key.replace(`/${mode}`, '')} | ${p} | ${s} | ${pct(p, s)} |`)
+  const pick = row => row.bytesPerInstance?.median ?? row.mountHeapBytes?.median
+  const p = pick(a.memory[key])
+  const s = pick(m)
+  if (p == null || s == null)
+    continue
+  const label = a.memory[key].bytesPerInstance ? key.replace(`/${mode}`, '') : `${key.replace(`/${mode}`, '')} mount heap`
+  out.push(`| ${label} | ${p} | ${s} | ${pct(p, s)} |`)
 }
 if (a.bundle?.[mode] && b.bundle?.[mode]) {
   out.push('', `| Bundle (bytes) | before | after | delta |`, `|---|---|---|---|`)

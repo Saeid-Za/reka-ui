@@ -210,6 +210,36 @@ async function main() {
     log(`memory ${scenario.name}`)
   }
 
+  const listboxVirtual = SCENARIOS.find(s => s.name === 'listbox-virtual')
+  if (listboxVirtual) {
+    for (const mode of MODES) {
+      const mountDelta = []
+      const residual = []
+      for (let i = 0; i < 3; i++) {
+        const { page, cdp, close } = await openPage(mode)
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+        await cdp.send('HeapProfiler.collectGarbage')
+        await cdp.send('HeapProfiler.collectGarbage')
+        const base = await heapUsed(cdp)
+        await page.evaluate(() => window.bench.mount('listbox-virtual', 1))
+        const mounted = await heapUsed(cdp)
+        await page.evaluate(() => window.bench.unmount())
+        await cdp.send('HeapProfiler.collectGarbage')
+        await cdp.send('HeapProfiler.collectGarbage')
+        const after = await heapUsed(cdp)
+        mountDelta.push(mounted - base)
+        residual.push(after - base)
+        await close()
+      }
+      memory[`listbox-virtual/${mode}`] = {
+        mountHeapBytes: stats(mountDelta),
+        residualBytesAfterUnmount: stats(residual),
+        count: 1,
+      }
+    }
+    log('memory listbox-virtual')
+  }
+
   // Startup: navigation start -> app mounted (empty bench root), and ready heap.
   for (const mode of MODES) {
     const mounted = []
