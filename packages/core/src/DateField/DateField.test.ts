@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { axe } from 'vitest-axe'
 import { nextTick } from 'vue'
 import { useTestKbd } from '@/shared'
+import { isVapor } from '@/test'
 import DateField from './story/_DateField.vue'
 
 const calendarDate = new CalendarDate(1980, 1, 20)
@@ -349,10 +350,11 @@ describe('dateField', async () => {
       },
     })
 
+    // Vapor segments expose text, not markup wrappers, for segment values.
     const initialValues = {
-      month: month.innerHTML,
-      day: day.innerHTML,
-      year: year.innerHTML,
+      month: isVapor ? month.textContent! : month.innerHTML,
+      day: isVapor ? day.textContent! : day.innerHTML,
+      year: isVapor ? year.textContent! : year.innerHTML,
     }
 
     await user.click(month)
