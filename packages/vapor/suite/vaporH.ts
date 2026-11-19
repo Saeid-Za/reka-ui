@@ -470,8 +470,8 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
     },
   })
   const rawProps: Record<string, any> = { $: [() => propsRef.value] }
-  if (c.key != null && propsRef.value?.key != null)
-    rawProps.key = () => propsRef.value.key
+  if (c.key != null)
+    rawProps.key = () => c.key
   const inst = inOwner(ctx, scope, () => createComponent(type, rawProps as any, rawSlots as any))
   const m: M = { kind: 'comp', type: c.type, inst, scope, propsRef, slotsRef, ref, key: c.key }
   applyRef(ctx, inst, ref)
