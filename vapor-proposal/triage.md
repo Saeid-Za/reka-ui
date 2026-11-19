@@ -1,6 +1,6 @@
 # Pure-Vapor full-suite triage (after FIX_PLAN_2 step 11x)
 
-Gate: **3523 pass / 26 fail / 35 skip** (`suite/out/report.json`, 2026-11-19, `--maxWorkers=4`).
+Gate: **3532 pass / 20 fail / 35 skip** (`suite/out/report.json`, 2026-11-19, `--maxWorkers=4`).
 Each row maps to the expected FIX_PLAN item (or **unknown**).
 
 | File | Test | Expected fix |

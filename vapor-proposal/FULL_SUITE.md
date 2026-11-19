@@ -420,3 +420,10 @@ Vapor package modes: `test:vdom` 51 pass; `test:interop` 116 pass + 2 expected f
 The report at `36c0f04a` listed **3619** as “3483 + 101 + 35”; Vitest’s `numTotalTests` is **3584** (same as the VDOM suite). No test files changed between `36c0f04a` and `0b2c515e` (`git diff --stat` only touches virtualizer SFCs, twins, harness docs). The 35-gap is adding `skip` on top of pass+fail: 3483+101 already equals 3584.
 
 `useRenderedContentId` triage at r9 (from `suite/out/report.json`): down from 76 undiagnosed at handoff r8 to 0 failures here; remaining reds are elsewhere (45 total fails — see `node suite/report.mjs suite/out/report.json`).
+
+## After FIX_PLAN cleanup (step 29, HEAD)
+
+Pure Vapor `test:full-suite` (`--maxWorkers=4`): **3532 pass / 20 fail / 35 skip** (130 files).
+`pnpm test:run`: **3552 pass / 35 skip** (includes step 24 fragment virtualizer VDOM tests).
+Triage regenerated: `packages/vapor/suite/out/triage.json` from `suite/out/report.json`
+(`node suite/triage.mjs`). Per-file map: `vapor-proposal/triage.md`.

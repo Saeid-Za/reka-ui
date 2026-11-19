@@ -775,3 +775,9 @@ Measured bundle size after unifying virtualizers via `<Primitive as-child v-for>
 
 By avoiding duplicate virtualizer twins, the pure Vapor bundle only incurs +898 B gzip over baseline B0 (75,632 B) despite adding full `@tanstack/vue-virtual` compatibility.
 
+## Step 25 (FIX_PLAN): 10k Listbox VDOM A/B — not run
+
+Deferred: `reka-vapor-export/scripts/ab.sh` hard-codes `/workspace/reka-vapor/` paths; retarget to
+`/media/saeid/projects/Contribs/reka-ui` before comparing `0b2c515e~1` vs HEAD. Run with no other
+Vitest jobs (earlyoom risk). **STOP** until owner approves a local run or updated script.
+
