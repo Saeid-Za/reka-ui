@@ -1,34 +1,50 @@
-# Pure-Vapor full-suite triage (after FIX_PLAN_2 step 11x)
+# Pure-Vapor full-suite triage (FIX_PLAN_4 step 31)
 
-Gate: **3532 pass / 20 fail / 35 skip** (`suite/out/report.json`, 2026-11-19, `--maxWorkers=4`).
-Each row maps to the expected FIX_PLAN item (or **unknown**).
+Gate: **3532 pass / 20 fail / 35 skip** (`packages/vapor/suite/out/report.json`, 2026-11-19,
+`--maxWorkers=4`). Rows below come from `node suite/triage.mjs suite/out/report.json
+suite/out/triage.json` (20 failures).
 
-| File | Test | Expected fix |
+## Actionable now (section 9, in order)
+
+| # | Test | Notes |
 |---|---|---|
-| `AlertDialog/AlertDialog.test.ts` | should keep the registered cancel element when another cancel button unmounts | **§9** AlertDialog cancel (Vapor only; K1 reverted ADR-S34) |
-| `Combobox/Combobox.test.ts` | unmountOnHide=false keeps the same hidden content node… | **QS14 (step 20)** (R10 `v-show`; do not implement) |
-| `Combobox/Combobox.test.ts` | two persistent Comboboxes… Escape when a hidden one mounted after it | **QS14 (step 20)** |
-| `Combobox/Combobox.test.ts` | opening the popup should not reset searchTerm when close | **W9** (ComboboxRoot timeout) |
-| `DateField/DateField.test.ts` | preserve other segment when one segment's value is deleted | **W5** (`isVapor` textContent vs innerHTML) |
-| `Dialog/Dialog.ssr.test.ts` | SSR open modal… restore body pointer-events after hydrated dialog closes | **H4** / **§9 S1** (ssrTwins / module mock) |
-| `Dialog/Dialog.test.ts` | unmountOnHide=false keeps content in DOM (modal) | **QS14 (step 20)** |
-| `Dialog/Dialog.test.ts` | unmountOnHide=false keeps content in DOM (non-modal) | **QS14 (step 20)** |
-| `Dialog/Dialog.test.ts` | two Dialogs unmountOnHide=false… Escape | **QS14 (step 20)** |
-| `Dialog/Dialog.test.ts` | no description… should warn to the console | **unknown** |
-| `Dialog/Dialog.test.ts` | no title… should warn to the console | **unknown** |
-| `FocusScope/FocusScope.test.ts` | Combobox input inside Dialog (#2749) keeps focus | **W6** / **QS15 (step 21)** (FocusScope stack) |
-| `Popover/Popover.ssr.test.ts` | open in SSR… hydrate once content loads | **H4** / **§9 S2** |
-| `Slider/Slider.test.ts` | out-in transition… pointer input while page leaves (horizontal) | **QS12** (harness VaporTransition; reverted H1c) |
-| `Slider/Slider.test.ts` | out-in transition… pointer input (vertical) | **QS12** |
-| `Tabs/Tabs.test.ts` | ssr hydration keeps the default output when ids do not diverge | **step 22** (QS7; test stays red on purpose, R3) |
-| `TagGroup/TagGroup.test.ts` | removal focuses the group once the last tag is removed | **§9 U9** |
-| `Toast/Toast.test.ts` | viewport element replaced… pause/resume on current viewport | **W13** |
-| `VisuallyHidden/HiddenNativeLabels.test.ts` | labelled forms… every twin… axe | **unknown** |
-| `shared/useForwardExpose.test.ts` | safely read cached child exposures… $el-only ref | **QS9** / **W14** area |
+| 9.1 | `Dialog/Dialog.test.ts` — no description / no title should warn to the console (2 tests) | Warn fires twice in Vapor (`toHaveBeenCalledTimes(1)` → 2) |
+| 9.2 | `AlertDialog/AlertDialog.test.ts` — keep the registered cancel element when another cancel button unmounts | Vapor only (K1 reverted, ADR-S34) |
+| 9.3 | `TagGroup/TagGroup.test.ts` — focuses the group once the last tag is removed | U9 tabindex (`-1` vs `0`) |
+| 9.4 | `Popover/Popover.ssr.test.ts` — keep the server content in place and hydrate once the content loads | S2 harness (`vi.resetModules` / SSR stack) |
+
+## Blocked on owner decisions (15 tests — do not touch)
+
+| Question | Tests |
+|---|---|
+| QS14 `v-show` / `unmountOnHide` | Combobox ×2 (hidden content node, Escape with hidden one), Dialog ×3 |
+| QS12 Transition slot | Slider out-in ×2 |
+| QS16 Combobox `setTimeout` | Combobox opening should not reset `searchTerm` when close |
+| QS7 Tabs SSR (red on purpose) | Tabs keeps the default output when ids do not diverge |
+| QS9 forward expose | `useForwardExpose` ×5 |
+| QS15 FocusScope stack | FocusScope Combobox input keep focus inside a Dialog |
+
+## All failures (20)
+
+| File | Test | Bucket / fix |
+|---|---|---|
+| `Dialog/Dialog.test.ts` | given a default Dialog … when no description has been provided should warn to the console | **9.1** |
+| `Dialog/Dialog.test.ts` | given a default Dialog … when no title has been provided should warn to the console | **9.1** |
+| `AlertDialog/AlertDialog.test.ts` | … keep the registered cancel element when another cancel button unmounts | **9.2** |
+| `TagGroup/TagGroup.test.ts` | tagGroup removal focuses the group once the last tag is removed | **9.3** |
+| `Popover/Popover.ssr.test.ts` | … keep the server content in place and hydrate it once the content loads | **9.4** (S2) |
+| `Combobox/Combobox.test.ts` | unmountOnHide=false keeps the same hidden content node … | **QS14** |
+| `Combobox/Combobox.test.ts` | two persistent Comboboxes … Escape when a hidden one mounted after it | **QS14** |
+| `Combobox/Combobox.test.ts` | opening the popup should not reset searchTerm when close | **QS16** |
+| `Dialog/Dialog.test.ts` | unmountOnHide=false keeps content in DOM when closed (modal) | **QS14** |
+| `Dialog/Dialog.test.ts` | unmountOnHide=false keeps content in DOM when closed (non-modal) | **QS14** |
+| `Dialog/Dialog.test.ts` | two Dialogs unmountOnHide=false … Escape | **QS14** |
+| `Slider/Slider.test.ts` | out-in transition … pointer input while the page leaves (horizontal) | **QS12** |
+| `Slider/Slider.test.ts` | out-in transition … pointer input while the page leaves (vertical) | **QS12** |
+| `Tabs/Tabs.test.ts` | ssr hydration keeps the default output when ids do not diverge | **QS7** |
+| `FocusScope/FocusScope.test.ts` | Combobox input inside Dialog (#2749) keeps focus | **QS15** |
+| `shared/useForwardExpose.test.ts` | safely read cached child exposures … $el-only ref | **QS9** |
 | `shared/useForwardExpose.test.ts` | release forwarded component when child unmounts | **QS9** |
 | `shared/useForwardExpose.test.ts` | forward component instance for component | **QS9** |
 | `shared/useForwardExpose.test.ts` | merge child exposed properties with parent props | **QS9** |
 | `shared/useForwardExpose.test.ts` | forward multiple exposed properties | **QS9** |
-| `shared/useForwardScopeId.test.ts` | multi-root component root | **W14** |
-| `shared/useForwardScopeId.test.ts` | RadioGroupItem onto control | **W14** |
-| `shared/useForwardScopeId.test.ts` | ToggleGroupItem onto control | **W14** |
