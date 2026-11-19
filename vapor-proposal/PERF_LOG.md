@@ -775,9 +775,18 @@ Measured bundle size after unifying virtualizers via `<Primitive as-child v-for>
 
 By avoiding duplicate virtualizer twins, the pure Vapor bundle only incurs +898 B gzip over baseline B0 (75,632 B) despite adding full `@tanstack/vue-virtual` compatibility.
 
-## Step 25 (FIX_PLAN): 10k Listbox VDOM A/B — not run
+## Step 25 / FIX_PLAN_4 step 32: 10k Listbox VDOM A/B (`step25-listbox-vapor`)
 
-Deferred: `reka-vapor-export/scripts/ab.sh` hard-codes `/workspace/reka-vapor/` paths; retarget to
-`/media/saeid/projects/Contribs/reka-ui` before comparing `0b2c515e~1` vs HEAD. Run with no other
-Vitest jobs (earlyoom risk). **STOP** until owner approves a local run or updated script.
+2026-11-19, `BASE=0b2c515e~1` vs HEAD, `BENCH_MODE=vdom`, `packages/vapor/scripts/ab.sh`
+`--only listbox-virtual --runs 10`. Bench scenario: single `ListboxVirtualRow` with 10k options,
+ops mount / scroll / unmount.
+
+| Scenario/op (script median ms) | baseline | HEAD | Δ | verdict |
+|---|---|---|---|---|
+| listbox-virtual mount | 18.3 (±3.47) | 16.3 (±1.35) | −10.9% | noise |
+| listbox-virtual scroll | 0 (±0.05) | 0 (±0.09) | +NaN% | noise |
+| listbox-virtual unmount | 1.0 (±0.28) | 1.1 (±0.33) | +10.0% | noise |
+
+Bundle gzip: 70,322 → 70,473 (+151 B). No metric >5% worse vs baseline; unified virtualizer kept.
+Raw: `packages/vapor/scratch/perf/step25-listbox-vapor.json`.
 

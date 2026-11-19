@@ -125,6 +125,7 @@ async function main() {
     { name: 'tabs', count: 200, check: '[role="tab"]', ops: ['mount', 'update:on', 'update:off', 'unmount'] },
     { name: 'dialog', count: 1, check: 'button', ops: ['mount', 'update:on', 'update:off', 'unmount'], openCheck: '.dialog-content' },
     { name: 'popover', count: 1, check: 'button', ops: ['mount', 'update:on', 'update:off', 'unmount'], openCheck: '.popover-content' },
+    { name: 'listbox-virtual', count: 1, check: '[role=option]', ops: ['mount', 'scroll', 'unmount'] },
   ]
   const only = args.only ? args.only.split(',') : null
   // probes run only when asked for with --only
@@ -135,6 +136,8 @@ async function main() {
       return page.evaluate(([s, n]) => window.bench.mount(s, n), [scenario.name, scenario.count])
     if (op === 'unmount')
       return page.evaluate(() => window.bench.unmount())
+    if (op === 'scroll')
+      return page.evaluate(() => window.bench.scrollListbox())
     return page.evaluate(on => window.bench.update(on), op === 'update:on')
   }
 

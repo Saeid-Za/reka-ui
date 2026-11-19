@@ -1,6 +1,6 @@
 import { nextTick, reactive } from 'vue'
 
-export type Scenario = 'none' | 'checkbox' | 'collapsible' | 'tabs' | 'dialog' | 'popover' | 'plain' | 'plain-slot' | 'plain-fragment' | 'plain-vmodel' | 'plain-expose' | 'plain-expose-original' | 'plain-onupdated' | 'plain-fnref' | `probe:${string}`
+export type Scenario = 'none' | 'checkbox' | 'collapsible' | 'tabs' | 'dialog' | 'popover' | 'listbox-virtual' | 'plain' | 'plain-slot' | 'plain-fragment' | 'plain-vmodel' | 'plain-expose' | 'plain-expose-original' | 'plain-onupdated' | 'plain-fnref' | `probe:${string}`
 
 export const state = reactive({
   scenario: 'none' as Scenario,
@@ -47,4 +47,9 @@ async function measure(fn: () => void) {
     await settle()
   },
   count: (selector: string) => document.querySelectorAll(selector).length,
+  scrollListbox: () => measure(() => {
+    const el = document.querySelector('.listbox-virtual-content') as HTMLElement | null
+    if (el)
+      el.scrollTop = 500_000
+  }),
 }

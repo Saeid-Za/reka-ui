@@ -2,6 +2,7 @@
 import CheckboxRow from './CheckboxRow.vue'
 import CollapsibleRow from './CollapsibleRow.vue'
 import DialogCase from './DialogCase.vue'
+import ListboxVirtualRow from './ListboxVirtualRow.vue'
 import PlainExposeOriginalRow from './PlainExposeOriginalRow.vue'
 import PlainExposeRow from './PlainExposeRow.vue'
 import PlainFnRefRow from './PlainFnRefRow.vue'
@@ -111,6 +112,9 @@ import TabsRow from './TabsRow.vue'
         :probe="state.scenario.slice(6)"
         :checked="state.on"
       />
+    </template>
+    <template v-else-if="state.scenario === 'listbox-virtual'">
+      <ListboxVirtualRow />
     </template>
     <template v-else-if="state.scenario === 'popover'">
       <PopoverCase
