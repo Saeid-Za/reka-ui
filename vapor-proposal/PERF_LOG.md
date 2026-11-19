@@ -796,3 +796,38 @@ Bundle (unified `<Primitive as-child v-for>` in Listbox/ScrollArea/Tree virtuali
 (70,415 → 70,573), brotli +196 B. No VDOM timing metric >5% worse outside noise.
 Raw: `packages/vapor/scratch/perf/step25-listbox-vapor-a3.json`.
 
+### superseded: scroll metric timed out every step
+
+The pre-G3 waiter used the **first** `[data-index]` in document order, which did not move when
+the virtualizer scrolled. Each of 12 steps burned 30 `settle()` waits (~517 ms/step → ~6200 ms
+total, ±11 ms jitter only).
+
+## G3 (FIX_PLAN_6): scroll bench measures virtualizer progress
+
+Diagnosis (`ListboxVirtualRow.vue` + `scrollListboxDiagnose` after mount):
+
+| | |
+|---|---|
+| `clientHeight` | 200 px (inline on `ListboxContent`) |
+| `overflowY` | `auto` |
+| `scrollHeight` | ≫ `clientHeight` (10k-row virtual list) |
+| `scrollTop` after `+= 8000` | advances (container scrollable) |
+| `max data-index` before / after one step | increases (e.g. low hundreds → higher hundreds) |
+
+Fix (`bench/src/state.ts`): progress = **max** `data-index` among rendered rows; step throws on
+timeout (`timeouts` must be 0). Heap for listbox-virtual: **n = 5** with median ± σ.
+
+A/B (`BASE=0b2c515e`, `BENCH_MODE=vdom`, `step25-listbox-g3.json`, 15 timing samples):
+
+| Scenario/op (script median ms) | baseline | HEAD | Δ | verdict |
+|---|---|---|---|---|
+| listbox-virtual mount | 11.3 (±1.05) | 11.6 (±1.04) | +2.7% | noise |
+| listbox-virtual scroll | 216.6 (±32.78) | 229.3 (±20.14) | +5.9% | noise |
+| listbox-virtual unmount | 0.8 (±0.32) | 0.9 (±0.3) | +12.5% | noise |
+
+| Memory (mount heap, 1×10k) | baseline | HEAD | Δ |
+|---|---|---|---|
+| median ± σ (n=5) | 2,012,208 (±1,693) B | 2,010,596 (±1,950) B | −0.1% |
+
+12 scroll steps complete in ~230 ms total (well below `12 × 31 × frame` sanity bound).
+

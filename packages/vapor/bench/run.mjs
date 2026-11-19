@@ -215,7 +215,7 @@ async function main() {
     for (const mode of MODES) {
       const mountDelta = []
       const residual = []
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         const { page, cdp, close } = await openPage(mode)
         await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
         await cdp.send('HeapProfiler.collectGarbage')
