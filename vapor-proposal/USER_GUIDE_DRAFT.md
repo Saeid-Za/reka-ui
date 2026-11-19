@@ -19,7 +19,7 @@ your app with Vue 3.6+ Vapor mode; use `@reka-ui/vapor-tests` patterns for parit
 
 ## `__VUE_OPTIONS_API__: false`
 
-`pnpm test:no-options-api` in `packages/core` matches `pnpm test:run` (3552 pass / 35 skip, 2026-11-19).
+`pnpm test:no-options-api` runs the **probe only** (1 test, QS19); it does not mirror `pnpm test:run`.
 
 ## Migration: `useForwardExpose` under Vapor
 

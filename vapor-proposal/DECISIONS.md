@@ -840,8 +840,9 @@ apply `v-show` on `DialogContent` / `ComboboxContent`.
 
 ## ADR-S52 Q18 Options API off matches VDOM suite (D1)
 
-`vitest.no-options-api.config.ts` sets `__VUE_OPTIONS_API__: false`; `test:no-options-api` yields
-3552 pass / 35 skip (same as `test:run`).
+**Superseded in H5 (QS19).** `vitest.no-options-api.config.ts` is **probe-only** (`src/__probe__/**`).
+`define: { __VUE_OPTIONS_API__: false }` does not stop `data()` from rendering in the probe harness;
+do not claim parity with `pnpm test:run`.
 
 ## ADR-S51 QS12 Transition default slot attempt failed (C3)
 

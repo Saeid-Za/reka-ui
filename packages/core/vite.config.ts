@@ -15,7 +15,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     // `*.browser.test.ts` runs in a real browser, see `vitest.browser.config.ts`
-    exclude: ['**/node_modules/**', './**/*.browser.test.{ts,js}'],
+    exclude: ['**/node_modules/**', './**/*.browser.test.{ts,js}', './src/__probe__/**'],
     include: ['./**/*.test.{ts,js}'],
     coverage: {
       provider: 'istanbul', // or 'v8'

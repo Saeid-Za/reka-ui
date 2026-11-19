@@ -250,6 +250,25 @@ in production by default. The pure-Vapor size floor is the runtime code that no 
 guards: hydration, interop and the built-ins (Q16). Any flag for those would have to come from Vue.
 **Decided (owner, 2026-11-19):** (B) — document safe to disable; verify with `test:no-options-api` (D1/D2).
 
+### QS19. `vitest` + `__VUE_OPTIONS_API__: false` does not disable Options API (H5)
+
+**Probe (`packages/core/src/__probe__/optionsApiOff.test.ts`):** `define` sets
+`__VUE_OPTIONS_API__ === false`, but mounting a `data()` SFC still renders **`1`** with
+`vue` aliased to `vue.runtime.esm-bundler.js` and `@vitejs/plugin-vue`.
+
+**Full core suite** under the same alias yields **0 tests** in most files (SFC transform /
+resolution breaks); only the probe config runs (**1 pass**). Do **not** equate
+`pnpm --filter reka-ui test:no-options-api` with `pnpm test:run` until a maintainer-owned
+harness exists.
+
+| Option | Trade-off |
+|---|---|
+| (a) Probe-only script documents the flag for apps, not for this repo's CI | Honest; ADR-S52 updated. |
+| (b) Custom Vue build / fork for CI | Out of scope locally. |
+| (c) Delete script | Loses regression that the flag is at least defined. |
+
+**⚑ Provisional default:** (a). **Decided (owner, 2026-11-19 H5):** (a) — keep probe config.
+
 ## Process (FIX_PLAN_5)
 
 **Decided (owner, 2026-11-19):** Do not change lint-staged hook config (would leak into upstream PR);
