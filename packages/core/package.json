@@ -90,6 +90,7 @@
     "watch": "tsdown --watch",
     "type-check": "vue-tsc -p tsconfig.check.json --noEmit",
     "test:run": "vitest run",
+    "test:no-options-api": "vitest run -c vitest.no-options-api.config.ts",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:browser": "vitest run --config vitest.browser.config.ts",

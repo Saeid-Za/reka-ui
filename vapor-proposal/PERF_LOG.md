@@ -831,3 +831,10 @@ A/B (`BASE=0b2c515e`, `BENCH_MODE=vdom`, `step25-listbox-g3.json`, 15 timing sam
 
 12 scroll steps complete in ~230 ms total (well below `12 × 31 × frame` sanity bound).
 
+## F0 baseline (Phase F start, post G1–D)
+
+Gate @ `feat/vapor-full-suite` (2026-11-19): **3541 / 11 / 35** Vapor full suite;
+**3552 / 35 skip** `pnpm test:run`. Listbox A/B after G3 scroll fix: see table above
+(`step25-listbox-g3.json`). Hill-climb: no experiments run in this pass (STOP: remaining
+C7/E work items completed as documentation only).
+

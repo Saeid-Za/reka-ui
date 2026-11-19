@@ -519,6 +519,8 @@ Dirty-tree changed stack registration in `setup` for all VDOM users (R6); **reve
 **⚑ Provisional default:** (c).
 **Decided (owner, 2026-11-19):** re-check after C1; Vapor-only fix allowed else (c).
 
+**C6 (post-G1):** still red (`toHaveFocus` on Combobox input). No change this pass.
+
 ### QS16. Combobox `resetSearchTermOnBlur` 1 ms `setTimeout` (W9) and input sync (W11)
 
 **W9:** `setTimeout(…, 1)` on close comes from upstream `05ef43bf` / #2284 (defer
@@ -531,6 +533,20 @@ a VDOM-safe design; investigate `suite/test-utils.ts` `setValue` / keyboard path
 
 **⚑ Provisional default:** leave both Combobox Vapor fails red; file QS under W9/W11 in triage.
 **Decided (owner, 2026-11-19):** keep `setTimeout`; fix harness only (C4), else leave red.
+
+**C4 attempt (2026-11-19):** “should not reset searchTerm when close” fails (`''` vs `'Testing'`)
+with `resetSearchTermOnBlur: false`. Close sets `isUserInputted = false`, then
+`ComboboxInput`'s `watch(modelValue)` still calls `resetSearchTerm()` when
+`resetSearchTermOnSelect` is default true — not the 1 ms blur timer. Harness `setProps` OK.
+→ Leave red (not harness-only).
+
+### QS18. Section 9 leftovers (C7, one attempt each)
+
+**9.2 AlertDialog cancel:** registered element undefined after sibling unmount — still red; harness/twin only, K1 must not return.
+
+**9.3 TagGroup:** empty collection leaves `tabindex="-1"` vs `0` — Collection reactivity under Vapor; no fix this pass.
+
+**9.4 Popover.ssr:** `vi.resetModules` + inlined `vue` → stack overflow (S2); needs single `vue` module instance after reset.
 
 ### QS17. Dialog dev `useWarning` fires twice under pure Vapor (FIX_PLAN_4 §9.1)
 
@@ -549,4 +565,7 @@ and missing-description cases; VDOM `pnpm exec vitest run src/Dialog/Dialog.test
 
 **⚑ Provisional default:** (c).
 **Decided (owner, 2026-11-19):** (c) plus C5 diagnosis; **never (a)** harness warn dedupe.
+
+**C5 (2026-11-19):** Double-`console.warn` Dialog tests are **green** on current gate (`Dialog.test.ts`
+37/37). No harness double-mount signature reproduced; QS17 stays closed unless the failure returns.
 
