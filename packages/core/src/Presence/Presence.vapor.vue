@@ -6,9 +6,9 @@
 // behind `v-if` and reads the element the slot rendered from its own block.
 // It is swapped in for `Presence.ts` by the Vapor build (see packages/vapor).
 import type { PresenceProps } from './Presence'
-import { computed, onBeforeUnmount, onMounted, ref, toRefs, useAttrs, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUpdated, ref, toRefs, useAttrs, watch } from 'vue'
 import { createAsChildApplier, resolveAsChildTarget } from '@/Primitive/asChildAttrs'
-import { findBlockElement, getInstance } from '@/shared/instance'
+import { findBlockElement, getInstance, onRootFragmentUpdate } from '@/shared/instance'
 import { usePresence } from './usePresence'
 import '@/shared/instance.vapor'
 
@@ -71,7 +71,19 @@ function syncNode() {
     applyAsChildAttrs(node.value, attrs)
 }
 
-onMounted(syncNode)
+function onRootUpdate() {
+  syncNode()
+  onRootFragmentUpdate(instance, onRootUpdate)
+}
+
+onMounted(() => {
+  syncNode()
+  onRootFragmentUpdate(instance, onRootUpdate)
+})
+onUpdated(() => {
+  syncNode()
+  onRootFragmentUpdate(instance, onRootUpdate)
+})
 onBeforeUnmount(stopObserving)
 // One watcher for both sources: a render change always syncs; an attrs change
 // only re-applies them while an element is rendered.

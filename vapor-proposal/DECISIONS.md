@@ -687,4 +687,9 @@ resolve when the first output is a text node or comment anchor. `findBlockNode` 
 `as` changes and always registers `onRootFragmentUpdate` so `$el` tracks forwarded subtrees.
 Cycle guards (`WeakSet`) protect `findBlockElement`, `findBlockNode`, and `onRootFragmentUpdate` walks.
 
+## ADR-S25 Presence.vapor re-syncs as-child attrs on root fragment updates
+
+`Presence` as-child mirrors `Primitive`: register `onRootFragmentUpdate` and call `syncNode` on mount,
+update, and fragment branch swaps so `v-show` / `v-if` slot changes re-apply attrs on the resolved node.
+
 
