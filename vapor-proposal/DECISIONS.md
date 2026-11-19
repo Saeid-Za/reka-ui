@@ -799,3 +799,9 @@ W12 (`f7e5c2a4`) reverted: it changed VDOM focus behaviour (watcher on `inputEle
 `nextTick` re-check, `hasFocusedInput`), fixed no Vapor test (3527 → 3527), and added no VDOM
 test per FIX_PLAN step 15. Combobox Vapor failures remain QS14 / QS16 / W9 / W11.
 
+## ADR-S42 Local `packages/vapor/scripts/ab.sh` (`REPO_ROOT`)
+
+Step 25/32 A/B script copied from `reka-vapor-export` with `REPO_ROOT=$(git rev-parse
+--show-toplevel)`, scratch under `packages/vapor/scratch/perf/`, and `BENCH_MODE` defaulting to
+`vapor` (use `BENCH_MODE=vdom` for virtualizer Listbox A/B vs `0b2c515e~1`).
+
