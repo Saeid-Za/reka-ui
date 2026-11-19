@@ -750,3 +750,9 @@ correct Transition slot approach and QS13 for propsRef keys if pursued.
 test helpers (`test/index.ts`, `mode.ts`, `utils.ts`, `hiddenNativeFamilies.ts`) resolve
 `vue` to `suite/vue-test.ts` with the render-function bridge.
 
+## ADR-S35 Shared `useBodyScrollLock` module in Vapor SSR twins
+
+`needsTwin` skips `shared/useBodyScrollLock.ts` via `NO_SSR_TWIN_TS` so the composable is not
+server-twin duplicated. Dialog.ssr mocks it by resolved id; a twin would load a second copy and
+the mock would not apply to the server render path (FULL_SUITE S1).
+

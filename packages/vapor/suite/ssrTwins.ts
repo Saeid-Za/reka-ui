@@ -26,6 +26,15 @@ import { compileScript, parse } from 'vue/compiler-sfc'
  * `defineVaporAsyncComponent` (runtime-vapor/__tests__/hydration/asyncComponent.spec.ts).
  */
 const coreSrc = fileURLToPath(new URL('../../core/src/', import.meta.url))
+
+/**
+ * Composables that must not get a `\0vssr:` server twin even if they import an SFC.
+ * They stay shared with the client graph so `vi.mock()` in SSR tests applies to both
+ * renders (Dialog.ssr S1: `@/shared/useBodyScrollLock` must match the test mock).
+ */
+const NO_SSR_TWIN_TS = new Set([
+  `${coreSrc}shared/useBodyScrollLock.ts`,
+])
 const PREFIX = '\0vssr:'
 const PUBLIC = 'vssr:'
 const SWAP_PREFIX = '\0reka-vapor-swap:'
@@ -48,6 +57,8 @@ export function vaporSsrTwins(transformSfc: (code: string) => string, swaps: Rec
   // module state and the test file's `vi.mock()`s the same for both renders.
   const reachesSfc = new Map<string, boolean>()
   async function needsTwin(ctx: any, file: string, stack = new Set<string>()): Promise<boolean> {
+    if (NO_SSR_TWIN_TS.has(file))
+      return false
     if (VUE_RE.test(file) || swaps[file])
       return true
     const known = reachesSfc.get(file)
