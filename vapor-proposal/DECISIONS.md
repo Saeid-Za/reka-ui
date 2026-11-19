@@ -674,10 +674,15 @@ when `el` is missing or not yet mounted).
 
 ## ADR-S23 AlertDialog cancel registration is sender-aware
 
-`AlertDialogContent` tracks the registered cancel element for initial focus and Escape. When a
-cancel button unmounts, only that sender may clear the registration; an earlier-unmounting
-non-primary cancel must not wipe the still-connected registered button (`onCancelElementChange`
-accepts an optional `sender` and `AlertDialogCancel` passes `currentElement` on teardown).
+**Superseded by ADR-S34 (reverted).** Sender-aware `onCancelElementChange` was intended so only
+the registered cancel button clears itself when a secondary cancel unmounts.
+
+## ADR-S34 Revert K1 AlertDialog sender check (commit acefbd82)
+
+FIX_PLAN step 12b: with `acefbd82~1` Vue files, `pnpm exec vitest run src/AlertDialog` in VDOM is
+**6/6 pass** including "keep the registered cancel element when another cancel button unmounts".
+K1 did not fix a VDOM failure and did not turn the targeted Vapor test green. Reverted `acefbd82`.
+The Vapor red stays in triage (section 9: AlertDialog cancel Vapor-only).
 
 ## ADR-S24 Vapor root node resolution through forwarded refs and text anchors
 
@@ -744,5 +749,4 @@ correct Transition slot approach and QS13 for propsRef keys if pursued.
 `testFileVue` now matches `*.test.ts` and any importer under `core/src/test/` so shared
 test helpers (`test/index.ts`, `mode.ts`, `utils.ts`, `hiddenNativeFamilies.ts`) resolve
 `vue` to `suite/vue-test.ts` with the render-function bridge.
-
 

@@ -19,7 +19,7 @@ onMounted(() => {
 })
 // `AlertDialogContent` stays mounted while closed, so it must not keep this element.
 onUnmounted(() => {
-  contentContext.onCancelElementChange(undefined, currentElement.value)
+  contentContext.onCancelElementChange(undefined)
 })
 </script>
 

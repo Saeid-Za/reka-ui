@@ -5,7 +5,7 @@ Each row maps to the expected FIX_PLAN item (or **unknown**).
 
 | File | Test | Expected fix |
 |---|---|---|
-| `AlertDialog/AlertDialog.test.ts` | should keep the registered cancel element when another cancel button unmounts | **unknown** (K1 landed; still red — investigate) |
+| `AlertDialog/AlertDialog.test.ts` | should keep the registered cancel element when another cancel button unmounts | **§9** AlertDialog cancel (Vapor only; K1 reverted ADR-S34) |
 | `Combobox/Combobox.test.ts` | unmountOnHide=false keeps the same hidden content node… | **QS14 (step 20)** (R10 `v-show`; do not implement) |
 | `Combobox/Combobox.test.ts` | two persistent Comboboxes… Escape when a hidden one mounted after it | **QS14 (step 20)** |
 | `Combobox/Combobox.test.ts` | opening the popup should not reset searchTerm when close | **W9** (ComboboxRoot timeout) |
