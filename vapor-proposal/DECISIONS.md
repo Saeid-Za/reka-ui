@@ -838,6 +838,13 @@ VDOM SFCs unchanged. Fallback (c) if C1 fails.
 `forceMount && !present && !isPresent` diverged from VDOM: `Presence` never hides; callers
 apply `v-show` on `DialogContent` / `ComboboxContent`.
 
+## ADR-S50 QS9 suite tests expose child `$el` under Vapor (C2)
+
+Vapor tests add an `isVapor` branch so child fixtures call `defineExpose({ $el })` (via
+`exposeWithOptionalEl` in `useForwardExpose.test.ts`). VDOM branches stay upstream-identical.
+Documented limit test in `test-native/forward-expose-heuristic.test.ts`; migration note in
+`USER_GUIDE_DRAFT.md`.
+
 ## ADR-S49 QS14 hide via caller `v-show`, not `Presence.vapor` (G1)
 
 VDOM `Presence` always leaves force-mounted children visible; hiding is only via the child's

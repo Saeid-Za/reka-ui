@@ -21,6 +21,39 @@ describe('useForwardExpose.vapor: static vs dynamic getter $el refs', () => {
     expect(forwarded.currentElement.value).toBe(host.querySelector('#root-fallback'))
   })
 
+  // QS9: Vapor does not synthesize `$el` on child instances — see vapor-proposal/OPEN_QUESTIONS.md
+  it('leaves parent $el undefined when the forwarded Vapor child exposes nothing', async () => {
+    const Child = defineComponent({
+      __vapor: true,
+      setup() {
+        return () => h('span', { id: 'inner' }, 'child')
+      },
+    })
+    const Parent = defineComponent({
+      __vapor: true,
+      setup() {
+        const { forwardRef } = useForwardExpose()
+        const parentEl = ref<{ $el?: HTMLElement }>()
+        return () => h('div', [
+          h(Child, { ref: forwardRef }),
+          h('div', { id: 'probe', ref: parentEl as any }),
+        ])
+      },
+    })
+    let forwarded!: ReturnType<typeof useForwardExpose>
+    const Root = defineComponent({
+      __vapor: true,
+      setup() {
+        const { forwardRef, ...rest } = useForwardExpose()
+        forwarded = { forwardRef, ...rest } as typeof forwarded
+        return () => h(Parent)
+      },
+    })
+    mount(Root, 'vapor-only')
+    await flush()
+    expect(forwarded.currentElement.value).toBeUndefined()
+  })
+
   it('preserves ref with dynamic $el getter even when it temporarily returns null', async () => {
     let forwarded!: ReturnType<typeof useForwardExpose>
     const activeEl = ref<HTMLElement | null>(null)

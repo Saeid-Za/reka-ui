@@ -2,8 +2,28 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { computed, defineComponent, Fragment, h, nextTick, ref, watchPostEffect } from 'vue'
 
+import { isVapor } from '@/test'
 import { Primitive } from '../Primitive'
 import { useForwardExpose } from './useForwardExpose'
+
+/** Under Vapor, forwarded component refs need the child to expose `$el` (QS9). */
+function exposeWithOptionalEl(
+  expose: (exposed?: Record<string, unknown>) => void,
+  el: { value: HTMLElement | undefined },
+  rest: Record<string, unknown>,
+) {
+  if (isVapor) {
+    expose({
+      ...rest,
+      get $el() {
+        return el.value
+      },
+    })
+  }
+  else {
+    expose(rest)
+  }
+}
 
 describe('useForwardRef', async () => {
   it.each([null, undefined])('should fall back to the root when a forwarded $el becomes %s', async (emptyElement) => {
@@ -45,8 +65,9 @@ describe('useForwardRef', async () => {
     const showComponent = ref(true)
     const Child = defineComponent({
       setup(_, { expose }) {
-        expose({ childValue: 'child' })
-        return () => h('span', 'Child')
+        const el = ref<HTMLElement>()
+        exposeWithOptionalEl(expose, el, { childValue: 'child' })
+        return () => h('span', { ref: el }, 'Child')
       },
     })
     const wrapper = mount(defineComponent({
@@ -85,7 +106,7 @@ describe('useForwardRef', async () => {
     const Child = defineComponent({
       setup(_, { expose }) {
         const element = ref<HTMLElement>()
-        expose({ element })
+        exposeWithOptionalEl(expose, element, { element })
         return () => h('span', { ref: element }, 'Child')
       },
     })
@@ -277,9 +298,17 @@ describe('useForwardRef', async () => {
     expect(wrapper.attributes('test')).toBe('[object HTMLSpanElement]')
   })
   it('should forward component instance for component', async () => {
-    const InnerComp = defineComponent(() => {
-      return () => h('span', {}, 'inner component')
-    })
+    const InnerComp = isVapor
+      ? defineComponent({
+          setup(_, { expose }) {
+            const el = ref<HTMLElement>()
+            expose({ get $el() { return el.value } })
+            return () => h('span', { ref: el }, 'inner component')
+          },
+        })
+      : defineComponent(() => {
+          return () => h('span', {}, 'inner component')
+        })
     const comp = defineComponent({
       setup() {
         const { forwardRef } = useForwardExpose()
@@ -349,9 +378,10 @@ describe('useForwardRef', async () => {
     // Define an inner component with expose
     const InnerComp = defineComponent({
       setup(_, { expose }) {
+        const el = ref<HTMLElement>()
         const childExposedValue = ref('child-exposed')
-        expose({ childExposedValue })
-        return () => h('span', {}, 'inner component')
+        exposeWithOptionalEl(expose, el, { childExposedValue })
+        return () => h('span', { ref: el }, 'inner component')
       },
     })
 
@@ -394,13 +424,13 @@ describe('useForwardRef', async () => {
     // Inner component exposing multiple properties and methods
     const InnerComp = defineComponent({
       setup(_, { expose }) {
+        const el = ref<HTMLElement>()
         const count = ref(0)
         const message = ref('hello')
         const increment = () => count.value++
         const getMessage = () => message.value
-        // Expose multiple properties and methods
-        expose({ count, message, increment, getMessage })
-        return () => h('button', {}, 'inner')
+        exposeWithOptionalEl(expose, el, { count, message, increment, getMessage })
+        return () => h('button', { ref: el }, 'inner')
       },
     })
 
