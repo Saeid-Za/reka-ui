@@ -1,7 +1,13 @@
-# Pure-Vapor full-suite triage (after C2)
+# Pure-Vapor full-suite triage (after H2)
 
 Gate: **3541 pass / 11 fail / 35 skip** (`packages/vapor/suite/out/report.json`,
 `--maxWorkers=4`). Rows from `node suite/triage.mjs` (**11** failures).
+
+## Flaky when green (QS17)
+
+| File | Notes |
+|---|---|
+| `Dialog/Dialog.test.ts` — missing title/description `console.warn` ×2 | **flaky (QS17)** — green isolated and on current gate; red in full suite at G1 (`a8eb1dea` triage 9.1). Do not treat green as fixed. |
 
 ## Actionable now
 

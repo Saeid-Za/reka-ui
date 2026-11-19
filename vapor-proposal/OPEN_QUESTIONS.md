@@ -569,3 +569,16 @@ and missing-description cases; VDOM `pnpm exec vitest run src/Dialog/Dialog.test
 **C5 (2026-11-19):** Double-`console.warn` Dialog tests are **green** on current gate (`Dialog.test.ts`
 37/37). No harness double-mount signature reproduced; QS17 stays closed unless the failure returns.
 
+### H2 — Dialog warn ×2 flake analysis (2026-11-19)
+
+| Run | Context | Result |
+|---|---|---|
+| 1–5 | HEAD, isolated `Dialog.test.ts` `-t "warn to the console"` | **3 pass** each (2 warn tests + suite) |
+| 1–5 | G1 (`a8eb1dea`), isolated same filter | **3 pass** each |
+| 1 | `--maxWorkers=1` @ HEAD | 3 pass |
+| 1–2 | `--sequence.shuffle` @ HEAD | 3 pass |
+| Triage @ G1 (`a8eb1dea`) | full suite | **2 fail** (9.1) |
+
+**Verdict:** **order-dependent** (green isolated, red in full suite at G1). Triage keeps them as
+**flaky (QS17)** when green; re-add to actionable if they fail in full gate again.
+
