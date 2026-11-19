@@ -357,6 +357,10 @@ the RovingFocus chain. This has not been confirmed.
 **Recommendation:** (a), after locating where the attrs are lost; file (c) upstream.
 **⚑ Provisional default:** (b), documented as a known difference.
 
+The pure-Vapor Tabs SSR test **"ssr hydration keeps the default output when ids do not diverge"**
+stays red on purpose (R3 reverted): expected SSR markup was not rewritten to match the known
+as-child server gap.
+
 ### QS8. Listener order for events bubbling from a descendant of an as-child element
 
 Since ADR-S17, Vapor runs a consumer's as-child listener before the element's own for
@@ -458,4 +462,43 @@ fixtures.
 | (c) Leave `rawProps.key = () => c.key` | Stable; any setProps-key test stays red until understood. |
 
 **⚑ Provisional default:** (c).
+
+### QS14. Dialog/Combobox `unmountOnHide=false` and `v-show` vs inline `display` (FIX_PLAN step 20)
+
+Remaining reds: Dialog (3), Combobox (2) in `triage.md`. Dirty-tree used inline `display` and
+`forceMount` on content (R10); that changes VDOM semantics (consumer `style="display:…"` can
+override hidden content).
+
+| Option | Trade-offs |
+|---|---|
+| (a) Keep `v-show` in VDOM; Vapor-only twin or compile-time path | No VDOM behaviour change. |
+| (b) Inline `display` with guard so consumer attrs cannot override | VDOM behaviour change. |
+| (c) Leave tests red until Vue Vapor supports `v-show` on components | Stable. |
+
+**⚑ Provisional default:** (c). **Do not implement** without maintainer choice.
+
+### QS15. FocusScope stack registration timing (FIX_PLAN step 21)
+
+`FocusScope/FocusScope.test.ts` — Combobox input inside Dialog (#2749) fails in pure Vapor.
+Dirty-tree changed stack registration in `setup` for all VDOM users (R6); **reverted**.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Vapor-only stack timing | Isolated; needs VDOM parity proof. |
+| (b) Harness focus emulation | May hide real traps. |
+| (c) Leave red until understood | Current. |
+
+**⚑ Provisional default:** (c).
+
+### QS16. Combobox `resetSearchTermOnBlur` 1 ms `setTimeout` (W9) and input sync (W11)
+
+**W9:** `setTimeout(…, 1)` on close comes from upstream `05ef43bf` / #2284 (defer
+`resetSearchTerm` until after blur). Vapor test: "opening the popup should not reset searchTerm
+when close". **Keep `setTimeout`** unless a VDOM test proves the deferral is obsolete.
+
+**W11:** Prototype `syncInputValue` in `ComboboxInput` broke **VDOM** (`pnpm test:run` 3548→3548
+fail). Native typing test did not prove harness vs Reka. **Do not** land `syncInputValue` without
+a VDOM-safe design; investigate `suite/test-utils.ts` `setValue` / keyboard path first.
+
+**⚑ Provisional default:** leave both Combobox Vapor fails red; file QS under W9/W11 in triage.
 
