@@ -9,6 +9,9 @@ import { camelize, getCurrentInstance } from 'vue'
  * inside them by design, so composables that need the instance go through
  * the helpers in this file instead of touching `vnode` directly.
  */
+/** Non-public key for Primitive's Vapor block on expose (replaces string `$block`). */
+export const REKA_VAPOR_BLOCK = Symbol('reka.block')
+
 export interface VaporInstanceLike {
   vapor: true
   type: { name?: string, __name?: string, props?: any, emits?: any }
@@ -18,6 +21,7 @@ export interface VaporInstanceLike {
   exposed: Record<string, any> | null
   block: unknown
   parent: { type?: { name?: string } } | null
+  /** Target passed to `forwardRef`; may expose `REKA_VAPOR_BLOCK` for nested resolution. */
   forwarded?: { value: any }
 }
 
@@ -97,6 +101,18 @@ export function getInstanceName(instance: { type?: { name?: string, __name?: str
   return instance?.type?.name ?? instance?.type?.__name
 }
 
+function resolveForwardedBlock(target: unknown): unknown {
+  if (!target || typeof target !== 'object')
+    return undefined
+  if (REKA_VAPOR_BLOCK in target)
+    return (target as Record<symbol, unknown>)[REKA_VAPOR_BLOCK]
+  if ('$block' in target)
+    return (target as { $block: unknown }).$block
+  if (isVaporInstance(target))
+    return target.block
+  return undefined
+}
+
 /**
  * First DOM element rendered by a Vapor block (element, fragment, component
  * instance or array of those). Fragments are duck-typed by `nodes`, Vapor
@@ -132,7 +148,7 @@ export function findBlockElement(
         if (f && typeof f === 'object') {
           if ('$el' in f && f.$el instanceof Element)
             return f.$el
-          const fBlock = '$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined
+          const fBlock = resolveForwardedBlock(f)
           if (fBlock)
             return findBlockElement(fBlock, seen)
         }
@@ -177,7 +193,7 @@ export function findBlockNode(
         if (f && typeof f === 'object') {
           if ('$el' in f && f.$el instanceof Node)
             return f.$el
-          const fBlock = '$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined
+          const fBlock = resolveForwardedBlock(f)
           if (fBlock)
             return findBlockNode(fBlock, seen)
         }
@@ -243,7 +259,7 @@ export function onRootFragmentUpdate(instance: RekaInstance | null, callback: ()
       if (isVaporInstance(block)) {
         if (block.forwarded?.value) {
           const f = block.forwarded.value
-          const fBlock = f && typeof f === 'object' && ('$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined)
+          const fBlock = resolveForwardedBlock(f)
           if (fBlock)
             return walk(fBlock)
         }

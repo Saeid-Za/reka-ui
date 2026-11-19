@@ -757,6 +757,11 @@ test helpers (`test/index.ts`, `mode.ts`, `utils.ts`, `hiddenNativeFamilies.ts`)
 defines `getItemKey(index) => index + rootContext.getKey(…)`. Template `:key="item.key"` is correct
 for both; no change to `:key="item.index"` needed on Listbox/ScrollArea.
 
+## ADR-S39 `REKA_VAPOR_BLOCK` symbol on Primitive expose
+
+`Primitive.vapor` exposes its block at `REKA_VAPOR_BLOCK` (`Symbol('reka.block')`) instead of
+public string `$block`. `instance.ts` resolves forwarded refs via the symbol with `$block` fallback.
+
 ## ADR-S35 Shared `useBodyScrollLock` module in Vapor SSR twins
 
 `needsTwin` skips `shared/useBodyScrollLock.ts` via `NO_SSR_TWIN_TS` so the composable is not

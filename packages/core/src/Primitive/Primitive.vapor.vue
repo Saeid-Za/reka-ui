@@ -8,7 +8,7 @@
 // Vapor build (see packages/vapor) and is never imported by the VDOM build.
 import type { PrimitiveProps } from './Primitive'
 import { onMounted, onUpdated, shallowRef, useAttrs, watchEffect } from 'vue'
-import { findBlockElement, getInstance, onRootFragmentUpdate } from '@/shared/instance'
+import { findBlockElement, getInstance, onRootFragmentUpdate, REKA_VAPOR_BLOCK } from '@/shared/instance'
 import { createAsChildApplier, resolveAsChildTarget } from './asChildAttrs'
 import '@/shared/instance.vapor'
 
@@ -47,7 +47,7 @@ defineExpose({
     void rootVersion.value
     return rootElement()
   },
-  get $block() {
+  get [REKA_VAPOR_BLOCK]() {
     return instance && 'block' in instance ? instance.block : undefined
   },
 })
