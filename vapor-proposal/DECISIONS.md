@@ -663,4 +663,13 @@ harness gaps (`findComponent(css)` and `findComponent(Component)`).
    - Implemented `findComponent(cssSelector)` and `findAllComponents(cssSelector)` using DOM
      containment checks on component blocks.
 
+## ADR-S22 `useFormControl` reads `closest('form')` only after mount
+
+`useFormControl` defaulted to `true` before mount so SSR/tests without a root element still bubble
+events to forms. A `void mounted.value` + unconditional `closest('form')` made client mounts race
+the DOM tree in Vapor jsdom and report `false` when the control is inside a form.
+
+Gate the real `closest('form')` lookup behind `mounted` while keeping the SSR default (`true`
+when `el` is missing or not yet mounted).
+
 

@@ -12,7 +12,6 @@ export function useFormControl(el: MaybeElementRef) {
     onMounted(() => { mounted.value = true })
   // We set this to true by default so that events bubble to forms without JS (SSR)
   return computed(() => {
-    void mounted.value
-    return toValue(el) ? Boolean(unrefElement(el)?.closest('form')) : true
+    return toValue(el) && mounted.value ? Boolean(unrefElement(el)?.closest('form')) : true
   })
 }
