@@ -18,6 +18,7 @@ export interface VaporInstanceLike {
   exposed: Record<string, any> | null
   block: unknown
   parent: { type?: { name?: string } } | null
+  forwarded?: { value: any }
 }
 
 export type RekaInstance = ComponentInternalInstance | VaporInstanceLike
@@ -115,8 +116,23 @@ export function findBlockElement(block: unknown): HTMLElement | undefined {
     return undefined
   }
   if (typeof block === 'object') {
-    if (isVaporInstance(block))
+    if (isVaporInstance(block)) {
+      if (block.forwarded?.value) {
+        const f = block.forwarded.value
+        if (typeof Element !== 'undefined' && f instanceof Element)
+          return f
+        if (f && typeof f === 'object') {
+          if ('$el' in f && f.$el instanceof Element)
+            return f.$el
+          const fBlock = '$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined
+          if (fBlock)
+            return findBlockElement(fBlock)
+        }
+      }
       return findBlockElement(block.block)
+    }
+    if ('$block' in block && (block as any).$block)
+      return findBlockElement((block as any).$block)
     if ('nodes' in block)
       return findBlockElement((block as { nodes: unknown }).nodes)
   }
@@ -160,8 +176,17 @@ export function onRootFragmentUpdate(instance: RekaInstance | null, callback: ()
       return block.some(walk)
     }
     if (typeof block === 'object') {
-      if (isVaporInstance(block))
+      if (isVaporInstance(block)) {
+        if (block.forwarded?.value) {
+          const f = block.forwarded.value
+          const fBlock = f && typeof f === 'object' && ('$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined)
+          if (fBlock)
+            return walk(fBlock)
+        }
         return walk(block.block)
+      }
+      if ('$block' in block && (block as any).$block)
+        return walk((block as any).$block)
       if ('nodes' in block) {
         hook(block as { u?: Array<() => void> })
         return walk((block as { nodes: unknown }).nodes)

@@ -388,3 +388,30 @@ In Vapor, a template ref on a component is its expose proxy. When the component
 **Recommendation:** (a) together with (c). Use (b) only if the user wants those tests green.
 **⚑ Provisional default:** (a). The 6 tests stay red.
 
+### QS10. Virtualizer implementation: unified `<Primitive as-child v-for>` vs twin SFCs
+
+In VDOM, `ListboxVirtualizer`, `ScrollAreaVirtualizer`, and `TreeVirtualizer` previously used `useSlots()` and `cloneVNode()` in computed properties to attach virtual positioning styles and attributes. Because Vapor has no VNodes, initial approaches considered `.vapor.vue` twins (~700 LOC duplicate code).
+Instead, replacing `cloneVNode` with a direct template `<Primitive v-for="item in virtualizer.getVirtualItems()" :key="item.key" as-child :data-index="item.index" :style="{ ... }"><slot ... /></Primitive>` and `useParentElement(virtualizerEl)` works identically and cleanly in both VDOM and Vapor mode without any twin SFCs.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Unified `<Primitive as-child v-for>` in the existing SFCs (current) | Zero code duplication, identical behavior in VDOM and Vapor, 100% green tests in both modes. |
+| (b) Dedicated `.vapor.vue` twins | Keeps VDOM `cloneVNode` unchanged, but doubles maintenance surface (~700 lines) and risks drift. |
+| (c) Extract shared logic to composable and keep only templates twinned | Modest reduction in duplication, but still requires synchronizing two files per component. |
+
+**Recommendation:** (a).
+**⚑ Provisional default:** (a).
+
+### QS11. Caching and scoping `proxy` on Vapor instances for VueUse helpers
+
+`getCurrentInstance()` in Vue Vapor returns `null`. Certain VueUse utilities (such as `useParentElement()` when invoked without an element ref argument) access `getCurrentInstance().proxy.$el`. `packages/vapor/rekaVapor.ts` patches `getCurrentInstance` inside `@vueuse` imports to return a shim instance whose `.proxy.$el` traverses the Vapor block.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Cached WeakMap proxy on Vapor instance (current) | O(1) cached access without re-allocating a new proxy on every property access. Confined to `@vueuse` import resolution. |
+| (b) Pass explicit element ref to `useParentElement(targetRef)` in Reka SFCs | Avoids instance access entirely in Reka components (as done in `ListboxVirtualizer` and `TreeVirtualizer`). Other external consumer code using VueUse may still need the shim. |
+| (c) Upstream PR to VueUse to support Vapor native instance / block resolution | Cleanest long term, pending upstream VueUse release. |
+
+**Recommendation:** Combine (a) and (b): use explicit element refs where possible in Reka source, and retain the WeakMap-cached shim in `rekaVapor.ts` for any remaining VueUse internals.
+**⚑ Provisional default:** (a) with (b).
+

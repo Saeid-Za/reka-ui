@@ -15,8 +15,9 @@ import type { Ref } from 'vue'
 import type { FlattenedItem } from './TreeRoot.vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { refAutoReset, useParentElement } from '@vueuse/core'
-import { cloneVNode, computed, nextTick, useSlots } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useCollection } from '@/Collection'
+import { Primitive } from '@/Primitive'
 import { MAP_KEY_TO_FOCUS_INTENT } from '@/RovingFocus/utils'
 import { getActiveElement } from '@/shared'
 import { getNextMatch } from '@/shared/useTypeahead'
@@ -32,9 +33,9 @@ defineSlots<{
   }) => any
 }>()
 
-const slots = useSlots()
+const virtualizerEl = ref<HTMLElement>()
 const rootContext = injectTreeRootContext()
-const parentEl = useParentElement() as Ref<HTMLElement>
+const parentEl = useParentElement(virtualizerEl) as Ref<HTMLElement>
 const { getItems } = useCollection()
 
 // Reset `search` 1 second after it was last updated
@@ -89,26 +90,6 @@ const virtualizer = useVirtualizer(
     overscan: props.overscan ?? 12,
   },
 )
-
-const virtualizedItems = computed(() => virtualizer.value.getVirtualItems().map((item) => {
-  return {
-    item,
-    is: cloneVNode(slots.default!({
-      item: rootContext.expandedItems.value[item.index],
-      virtualizer: virtualizer.value,
-      virtualItem: item,
-    })![0], {
-      'data-index': item.index,
-      'style': {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        transform: `translateY(${item.start}px)`,
-        overflowAnchor: 'none',
-      },
-    }),
-  }
-}))
 
 function scrollToIndexAndFocus(index: number) {
   virtualizer.value.scrollToIndex(index, { align: 'start' })
@@ -185,6 +166,7 @@ rootContext.virtualKeydownHook.on((event) => {
 
 <template>
   <div
+    ref="virtualizerEl"
     data-reka-virtualizer
     :style="{
       position: 'relative',
@@ -192,10 +174,24 @@ rootContext.virtualKeydownHook.on((event) => {
       height: `${virtualizer.getTotalSize()}px`,
     }"
   >
-    <component
-      :is="is"
-      v-for="{ is, item } in virtualizedItems"
+    <Primitive
+      v-for="item in virtualizer.getVirtualItems()"
       :key="item.key"
-    />
+      as-child
+      :data-index="item.index"
+      :style="{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        transform: `translateY(${item.start}px)`,
+        overflowAnchor: 'none',
+      }"
+    >
+      <slot
+        :item="rootContext.expandedItems.value[item.index]"
+        :virtualizer="virtualizer"
+        :virtual-item="item"
+      />
+    </Primitive>
   </div>
 </template>

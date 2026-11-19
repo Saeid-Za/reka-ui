@@ -13,13 +13,14 @@ export interface ListboxVirtualizerProps<T extends AcceptableValue = AcceptableV
 
 <script setup lang="ts" generic="T extends AcceptableValue = AcceptableValue">
 import type { Range, VirtualItem, Virtualizer } from '@tanstack/vue-virtual'
-import type { Ref, VNode } from 'vue'
+import type { Ref } from 'vue'
 import type { AcceptableValue } from '@/shared/types'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/vue-virtual'
 import { useParentElement } from '@vueuse/core'
 import { refAutoReset } from '@vueuse/shared'
-import { cloneVNode, computed, Fragment, nextTick, shallowRef, useSlots, watch } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { useCollection } from '@/Collection'
+import { Primitive } from '@/Primitive'
 import { MAP_KEY_TO_FOCUS_INTENT } from '@/RovingFocus/utils'
 import { findValuesBetween, getActiveElement } from '@/shared'
 import { getNextMatch } from '@/shared/useTypeahead'
@@ -36,9 +37,9 @@ defineSlots<{
   }) => any
 }>()
 
-const slots = useSlots()
+const virtualizerEl = ref<HTMLElement>()
 const rootContext = injectListboxRootContext()
-const parentEl = useParentElement() as Ref<HTMLElement>
+const parentEl = useParentElement(virtualizerEl) as Ref<HTMLElement>
 const { getItems } = useCollection<{ value: T }>()
 
 // set virtual true when this component mounted
@@ -146,35 +147,6 @@ watch(() => props.options.slice(), (options) => {
       row.focus({ preventScroll: true })
   })
 })
-
-const virtualizedItems = computed(() => virtualizer.value.getVirtualItems().map((item) => {
-  const defaultNode = slots.default!({
-    option: props.options[item.index],
-    virtualizer: virtualizer.value,
-    virtualItem: item,
-  })[0]
-
-  const targetNode = defaultNode.type === Fragment && Array.isArray(defaultNode.children)
-    ? defaultNode.children.find(child => typeof (child as VNode).type !== 'symbol') as VNode
-    : defaultNode
-
-  return {
-    item,
-    is: cloneVNode(targetNode, {
-      'key': `${item.key}`,
-      'data-index': item.index,
-      'aria-setsize': props.options.length,
-      'aria-posinset': item.index + 1,
-      'style': {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        transform: `translateY(${item.start}px)`,
-        overflowAnchor: 'none',
-      },
-    }),
-  }
-}))
 
 rootContext.virtualFocusHook.on(({ event, scroll }) => {
   // `scroll` is `false` only for the initial mount highlight. There we set the
@@ -325,6 +297,7 @@ rootContext.virtualKeydownHook.on((event) => {
 
 <template>
   <div
+    ref="virtualizerEl"
     data-reka-virtualizer
     :style="{
       position: 'relative',
@@ -332,10 +305,26 @@ rootContext.virtualKeydownHook.on((event) => {
       height: `${virtualizer.getTotalSize()}px`,
     }"
   >
-    <component
-      :is="is"
-      v-for="{ is, item } in virtualizedItems"
-      :key="item.index"
-    />
+    <Primitive
+      v-for="item in virtualizer.getVirtualItems()"
+      :key="item.key"
+      as-child
+      :data-index="item.index"
+      :aria-setsize="props.options.length"
+      :aria-posinset="item.index + 1"
+      :style="{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        transform: `translateY(${item.start}px)`,
+        overflowAnchor: 'none',
+      }"
+    >
+      <slot
+        :option="props.options[item.index]"
+        :virtualizer="virtualizer"
+        :virtual-item="item"
+      />
+    </Primitive>
   </div>
 </template>

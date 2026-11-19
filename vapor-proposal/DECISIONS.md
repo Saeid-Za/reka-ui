@@ -622,8 +622,8 @@ This fixes the U1 (51 tests) and U2 (25 tests) groups in FULL_SUITE.md (76 tests
 1. **U2: As-child content without an element (initial mount & slot swap):**
    - In `packages/core/src/shared/useForwardExpose.vapor.ts`, forwarded component refs that define an `$el` getter are no longer coerced to `null` if the getter currently returns null/undefined. In Vapor, an as-child target may resolve its element asynchronously or when child slots populate.
    - In `packages/core/src/shared/instance.ts`, `onRootFragmentUpdate` now walks array blocks that provide an update hook array `('u' in block)`. In `packages/vapor/suite/vaporH.ts`, `reactiveBlock()` registers `block.u` and fires updates when slots re-render.
-   - In `packages/core/src/Primitive/Primitive.vapor.vue`, popper wrapper elements (`data-reka-popper-content-wrapper`) now observe child DOM mutations with a `MutationObserver` to re-sync forwarded attributes (such as `id`, `aria-labelledby`, layer tags) when inner slotted content mounts or swaps.
-   - In `packages/core/src/Select/SelectContentImpl.vue`, `content.value` observes mutations on `SelectPopperPosition`'s DOM wrapper in Vapor mode so forwarded refs track dynamic element swaps.
+   - For `as-child` overlays wrapping Popper content (e.g. `FocusScope as-child > DismissableLayer as-child > RovingFocusGroup as-child > PopperContent`), `useForwardExpose.vapor.ts` sets `instance.forwarded = currentRef`, and `Primitive.vapor.vue` exposes `$block`.
+   - `findBlockElement` and `onRootFragmentUpdate` in `shared/instance.ts` follow `forwarded` component targets and traverse into child block fragments cleanly. This ensures ancestor `as-child` wrappers hook and react directly to child slot fragment update callbacks (`block.u`), re-applying attrs to newly swapped or mounted elements without needing any DOM `MutationObserver`.
 
 2. **U1: KeepAlive deactivation and transitions:**
    - In Vue Vapor, `VaporKeepAlive` requires its default slot to return a `DynamicFragment` with `currentInstance` bound to the `VaporKeepAlive` instance so that `keepAliveCtx` is captured and `registerDynamicFragmentHooks` can register update and deactivation hooks.
@@ -631,27 +631,22 @@ This fixes the U1 (51 tests) and U2 (25 tests) groups in FULL_SUITE.md (76 tests
    - On branch changes, `frag.update(renderFn, key)` invokes Vapor's native branch management (`prepareBranchRemoval`, `removeBranchWithLeave`, pausing effect scopes, moving elements to `storageContainer`, and triggering KeepAlive lifecycle hooks).
    - Array children in test fixtures (e.g. `[isActive ? h(...) : h(...)]`) are normalized to single descriptors and `c.key` is passed in `rawProps.key` so `createComponent` can retrieve kept-alive components from cache by key.
 
-## ADR-S21 Virtualizer Vapor twins, slot function stability, and component tree traversal
+## ADR-S21 Virtualizer consolidation without twins, slot stability, and component tree traversal
 
 This fixes the R1 group (Combobox, Listbox, ScrollArea, Tree) and H1/H2 test-utils
 harness gaps (`findComponent(css)` and `findComponent(Component)`).
 
-1. **Virtualizer Vapor twins (R1):**
+1. **Virtualizer consolidation without SFC twins (R1):**
    - VDOM virtualizer SFCs (`ListboxVirtualizer`, `ScrollAreaVirtualizer`, `TreeVirtualizer`)
-     relied on VNode manipulation (`cloneVNode`, `computed(() => slots.default())`) to pass
-     virtual item context down. In Vapor mode, slots return DOM blocks rather than VNodes.
-   - Created Vapor twins:
-     - `packages/core/src/Listbox/ListboxVirtualizer.vapor.vue`: loops over
-       `virtualizer.getVirtualItems()` using `<Primitive as-child><slot ... /></Primitive>`.
-     - `packages/core/src/ScrollArea/ScrollAreaVirtualizer.vapor.vue`: preserves `virtualizer`
-       expose and forwards expose via `useForwardExpose()`.
-     - `packages/core/src/Tree/TreeVirtualizer.vapor.vue`: maps virtual items using
-       `rootContext.expandedItems.value[item.index]`.
-   - Registered twins in `packages/vapor/rekaVapor.ts` (`SWAPS` and `SWAP_NAMES`).
-   - In `packages/vapor/rekaVapor.ts`, added a `proxy` getter on the Vapor component instance
-     returning `{ get $el() { return instance.exposed?.$el ?? findEl(instance.block) } }`
-     so that `@vueuse/core` composables (`useParentElement`, `useCurrentElement`) can resolve
-     the element.
+     previously relied on VNode manipulation (`cloneVNode`, `computed(() => slots.default())`) to pass
+     virtual item positioning styles and attributes.
+   - Replaced `cloneVNode` with a direct template `<Primitive v-for="item in virtualizer.getVirtualItems()" :key="item.key" as-child :data-index="item.index" :style="{ ... }"><slot ... /></Primitive>`.
+   - In `ListboxVirtualizer.vue` and `TreeVirtualizer.vue`, added `virtualizerEl = ref<HTMLElement>()`
+     and passed it directly to `useParentElement(virtualizerEl)`, avoiding reliance on `getCurrentInstance().proxy.$el`.
+   - This works identically and 100% green in both VDOM and Vapor modes, completely avoiding the need
+     for duplicate `.vapor.vue` twins (~700 LOC saved).
+   - In `packages/vapor/rekaVapor.ts`, added a `WeakMap` cache (`proxyCache`) for the `proxy` getter on
+     Vapor instances for `@vueuse` imports, preventing redundant proxy re-allocations on property accesses.
    - Removed `ListboxVirtualizer` known gap from `packages/vapor/test/families.ts`.
 
 2. **Slot function stability and dynamic slot descriptors (`vaporH.ts`):**

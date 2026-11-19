@@ -7,7 +7,7 @@
 // to the element the slot rendered. It is swapped in for `Primitive.ts` by the
 // Vapor build (see packages/vapor) and is never imported by the VDOM build.
 import type { PrimitiveProps } from './Primitive'
-import { onMounted, onUnmounted, onUpdated, shallowRef, useAttrs, watchEffect } from 'vue'
+import { onMounted, onUpdated, shallowRef, useAttrs, watchEffect } from 'vue'
 import { findBlockElement, getInstance, onRootFragmentUpdate } from '@/shared/instance'
 import { createAsChildApplier, resolveAsChildTarget } from './asChildAttrs'
 import '@/shared/instance.vapor'
@@ -47,24 +47,18 @@ defineExpose({
     void rootVersion.value
     return rootElement()
   },
+  get $block() {
+    return instance && 'block' in instance ? instance.block : undefined
+  },
 })
 
 if (renderAsChild) {
   let mounted = false
-  let observedWrapper: HTMLElement | null = null
-  let wrapperObserver: MutationObserver | undefined
   const applyAsChildAttrs = createAsChildApplier()
   const sync = () => {
     const el = rootElement()
-    if (el) {
+    if (el)
       applyAsChildAttrs(resolveAsChildTarget(el), attrs)
-      if (el.hasAttribute('data-reka-popper-content-wrapper') && el !== observedWrapper) {
-        observedWrapper = el
-        wrapperObserver?.disconnect()
-        wrapperObserver ??= new MutationObserver(sync)
-        wrapperObserver.observe(el, { childList: true })
-      }
-    }
   }
   const onRootUpdate = () => {
     sync()
@@ -77,9 +71,6 @@ if (renderAsChild) {
     onRootFragmentUpdate(instance, onRootUpdate)
   })
   onUpdated(sync)
-  onUnmounted(() => {
-    wrapperObserver?.disconnect()
-  })
   // attrs is reactive in Vapor: re-apply when the parent changes them.
   watchEffect(() => {
     // track every attr key and value

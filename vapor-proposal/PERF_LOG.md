@@ -761,3 +761,17 @@ What remains, from P5, is mostly Vapor-runtime bookkeeping:
 
 Reka can only remove these with the behaviour-changing levers in Q17. No A/B run in this round
 moved unmount outside noise.
+
+## Full Suite Sprint: Virtualizer Unification (ADR-S21)
+
+Measured bundle size after unifying virtualizers via `<Primitive as-child v-for>` in original SFCs
+(dropping separate `.vapor.vue` virtualizer twins):
+
+| Mode | min (bytes) | gzip (bytes) | brotli (bytes) |
+|---|---|---|---|
+| VDOM | 182,456 | 61,524 | 53,895 |
+| Interop | 293,109 | 101,202 | 87,998 |
+| Pure Vapor | 228,700 | 76,530 | 66,984 |
+
+By avoiding duplicate virtualizer twins, the pure Vapor bundle only incurs +898 B gzip over baseline B0 (75,632 B) despite adding full `@tanstack/vue-virtual` compatibility.
+

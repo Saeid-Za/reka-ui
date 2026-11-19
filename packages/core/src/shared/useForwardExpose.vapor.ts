@@ -40,6 +40,7 @@ const exposeHandler: ProxyHandler<Record<string, any>> = {
  */
 export function useVaporForwardExpose(instance: VaporInstanceLike) {
   const currentRef = ref<any>()
+  instance.forwarded = currentRef
   const currentElement = computed(() => resolveCurrentElement())
 
   // See useForwardExpose.ts: $el is not reactive, so sync after DOM updates.
@@ -90,6 +91,12 @@ export function useVaporForwardExpose(instance: VaporInstanceLike) {
   // only write reactive state: reading `currentRef` here would make that
   // effect depend on what it writes and re-run itself forever.
   const forwardRef = (ref: any) => {
+    // In Vapor mode, a template ref target may be a plain element ref object `{ $el: null }`
+    // (when unmounted or before mounting), or an object with a dynamic property getter for `$el`
+    // (e.g. `Primitive.vapor.vue` or custom components with dynamic element resolution).
+    // Static `{ $el: null }` is coerced to null so fallback to instance's root element works.
+    // Dynamic getters are preserved even if `$el` currently evaluates to null/undefined (such as
+    // during empty slot branches), ensuring subsequent DOM insertions are tracked via the getter.
     const isPlainElRef = ref && typeof ref === 'object' && '$el' in ref && !Object.getOwnPropertyDescriptor(ref, '$el')?.get && !ref.$el
     const forwarded = isPlainElRef ? null : ref
     currentRef.value = forwarded

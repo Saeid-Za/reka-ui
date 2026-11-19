@@ -21,8 +21,9 @@ export interface ScrollAreaVirtualizerProps<T = any> {
 import type { Range, VirtualItem, Virtualizer } from '@tanstack/vue-virtual'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/vue-virtual'
 import { useResizeObserver } from '@vueuse/core'
-import { cloneVNode, computed, ref, shallowRef, useSlots, watch } from 'vue'
-import { getActiveElement, renderSlotFragments, useForwardExpose } from '@/shared'
+import { computed, ref, shallowRef, watch } from 'vue'
+import { Primitive } from '@/Primitive'
+import { getActiveElement, useForwardExpose } from '@/shared'
 import { injectScrollAreaRootContext } from './ScrollAreaRoot.vue'
 
 const props = defineProps<ScrollAreaVirtualizerProps<T>>()
@@ -35,7 +36,6 @@ defineSlots<{
   }) => any
 }>()
 
-const slots = useSlots()
 const rootContext = injectScrollAreaRootContext()
 
 const isRtl = computed(() => rootContext.dir.value === 'rtl')
@@ -141,42 +141,6 @@ function handleFocusOut(event: FocusEvent) {
   if (!container?.contains(event.relatedTarget as Node | null) && !container?.contains(getActiveElement()))
     focusedIndex.value = undefined
 }
-
-// not a computed: slots aren't reactive, so a replaced slot would keep rendering the cached nodes
-function getVirtualizedItems() {
-  return virtualizer.value.getVirtualItems().flatMap((item) => {
-    const targetNode = renderSlotFragments(slots.default?.({
-      option: props.options[item.index],
-      virtualizer: virtualizer.value,
-      virtualItem: item,
-    })).find(child => typeof child.type !== 'symbol')
-
-    if (!targetNode)
-      return []
-
-    const start = item.start - scrollMargin.value
-
-    return [{
-      item,
-      is: cloneVNode(targetNode, {
-        'data-index': item.index,
-        'style': {
-          position: props.horizontal ? 'relative' : 'absolute',
-          gridArea: props.horizontal ? '1 / 1' : undefined,
-          justifySelf: props.horizontal ? 'start' : undefined,
-          top: 0,
-          ...(props.horizontal
-            ? { [isRtl.value ? 'right' : 'left']: 0 }
-            : { left: 0, right: 0 }),
-          transform: props.horizontal
-            ? `translateX(${isRtl.value ? -start : start}px)`
-            : `translateY(${start}px)`,
-          overflowAnchor: 'none',
-        },
-      }),
-    }]
-  })
-}
 </script>
 
 <template>
@@ -192,10 +156,32 @@ function getVirtualizedItems() {
     @focusin="handleFocusIn"
     @focusout="handleFocusOut"
   >
-    <component
-      :is="is"
-      v-for="{ is, item } in getVirtualizedItems()"
-      :key="item.key"
-    />
+    <template v-if="$slots.default">
+      <Primitive
+        v-for="item in virtualizer.getVirtualItems()"
+        :key="item.key"
+        as-child
+        :data-index="item.index"
+        :style="{
+          position: props.horizontal ? 'relative' : 'absolute',
+          gridArea: props.horizontal ? '1 / 1' : undefined,
+          justifySelf: props.horizontal ? 'start' : undefined,
+          top: 0,
+          ...(props.horizontal
+            ? { [isRtl ? 'right' : 'left']: 0 }
+            : { left: 0, right: 0 }),
+          transform: props.horizontal
+            ? `translateX(${isRtl ? -(item.start - scrollMargin) : (item.start - scrollMargin)}px)`
+            : `translateY(${item.start - scrollMargin}px)`,
+          overflowAnchor: 'none',
+        }"
+      >
+        <slot
+          :option="props.options[item.index]"
+          :virtualizer="virtualizer"
+          :virtual-item="item"
+        />
+      </Primitive>
+    </template>
   </div>
 </template>

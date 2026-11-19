@@ -52,7 +52,7 @@ const RULES = [
   ['fail:reka', 'R2 consumer listeners run after the component\'s own handlers (preventDefault opt-out ignored)', (f, n) => CONSUMER_LISTENERS.test(n)],
   ['fail:reka', 'R3 form-control detection: closest(\'form\') read before the element is inserted into <form>', (f, n, m) => IN_FORM.test(n) || (f.startsWith('Form/') && NOT_CALLED.test(m))],
   ['fail:reka', 'R4 consumer id / trigger id change not propagated (remaining after ADR-S06)', (f, n) => ID_CHANGE.test(n)],
-  ['undiagnosed', 'U1 useRenderedContentId: KeepAlive deactivation (bridge KeepAlive vs Reka)', (f, n) => KEEP_ALIVE.test(n)],
+  ['fail:harness', 'H5 useRenderedContentId: KeepAlive dynamic fragment in bridge (was U1)', (f, n) => KEEP_ALIVE.test(n)],
   ['undiagnosed', 'U2 useRenderedContentId: as-child content with no element', (f, n) => AS_CHILD_CONTENT.test(n)],
   ['fail:reka', 'R5 as-child / element resolution (Primitive, usePrimitiveElement, useForwardExpose)', f => ELEMENT_FILES.test(f)],
   ['fail:reka', 'R6 scope-id forwarding (useForwardScopeId)', f => f === 'shared/useForwardScopeId.test.ts'],
