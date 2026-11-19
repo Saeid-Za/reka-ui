@@ -1,8 +1,8 @@
-<script setup vapor lang="ts">
+<script setup>
 import { Presence, Primitive } from 'reka-ui'
 import { ref } from 'vue'
 
-const open = ref(true)
+const open = ref(false)
 defineExpose({ open })
 </script>
 

@@ -834,7 +834,14 @@ VDOM SFCs unchanged. Fallback (c) if C1 fails.
 
 ## ADR-S48 Presence.vapor `display:none` when `forceMount` and closed (C1)
 
-`updatePersistentHidden()` on the resolved slot root when `forceMount && !present &&
-!isPresent`. Full suite: Dialog unmountOnHide ×3 and Combobox persistent Escape green;
-one Combobox “hidden content node” test still red (subtree/state; QS14 note).
+**Superseded by ADR-S49.** `updatePersistentHidden()` on the resolved slot root when
+`forceMount && !present && !isPresent` diverged from VDOM: `Presence` never hides; callers
+apply `v-show` on `DialogContent` / `ComboboxContent`.
+
+## ADR-S49 QS14 hide via caller `v-show`, not `Presence.vapor` (G1)
+
+VDOM `Presence` always leaves force-mounted children visible; hiding is only via the child's
+`v-show` (`DialogContent.vue` / `ComboboxContent.vue`). Vapor adds `.vapor.vue` twins that
+apply the same boolean as inline `display: none` on the modal/content root; `Presence.vapor`
+must not set `display:none`. Mapped in `VUE_VAPOR_TWINS` (`rekaVapor.ts`).
 

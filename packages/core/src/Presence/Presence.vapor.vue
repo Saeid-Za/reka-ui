@@ -69,23 +69,6 @@ function syncNode() {
   node.value = resolveAsChildTarget(el)
   if (Object.keys(attrs).length)
     applyAsChildAttrs(node.value, attrs)
-  updatePersistentHidden()
-}
-
-/** `forceMount` + closed: keep the subtree but hide it like VDOM `v-show`. */
-function updatePersistentHidden() {
-  const el = node.value
-  if (!el)
-    return
-  const hide = forceMount.value && !present.value && !isPresent.value
-  if (hide) {
-    el.style.setProperty('display', 'none')
-    el.setAttribute('data-reka-presence-force-hidden', '')
-  }
-  else if (el.hasAttribute('data-reka-presence-force-hidden')) {
-    el.removeAttribute('data-reka-presence-force-hidden')
-    el.style.removeProperty('display')
-  }
 }
 
 function onRootUpdate() {
@@ -111,9 +94,6 @@ watch(() => {
 }, ([render], [wasRendering]) => {
   if (render !== wasRendering || node.value)
     syncNode()
-}, { flush: 'post' })
-watch([present, isPresent, forceMount], () => {
-  updatePersistentHidden()
 }, { flush: 'post' })
 </script>
 

@@ -11,6 +11,12 @@ const rekaSrc = fileURLToPath(new URL('../core/src', import.meta.url))
  * inspection); every other reka-ui SFC compiles to Vapor unchanged.
  * A `reka-ui/vapor` build would use the same mapping.
  */
+/** Vapor SFC twins (VDOM `.vue` unchanged; suite + vapor build resolve here). */
+export const VUE_VAPOR_TWINS: Record<string, string> = {
+  [`${rekaSrc}/Dialog/DialogContent.vue`]: `${rekaSrc}/Dialog/DialogContent.vapor.vue`,
+  [`${rekaSrc}/Combobox/ComboboxContent.vue`]: `${rekaSrc}/Combobox/ComboboxContent.vapor.vue`,
+}
+
 export const SWAPS: Record<string, string> = {
   [`${rekaSrc}/Primitive/Primitive.ts`]: `export { default as Primitive } from '${rekaSrc}/Primitive/Primitive.vapor.vue'\n`,
   [`${rekaSrc}/Primitive/Slot.ts`]: `export { default as Slot } from '${rekaSrc}/Primitive/Slot.vapor.vue'\n`,
@@ -113,9 +119,11 @@ export function rekaVaporSwap(): Plugin {
         return VUEUSE_VUE
       if (source.startsWith(PREFIX) || !importer || importer.startsWith(PREFIX) || importer === VUEUSE_VUE)
         return null
+      const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
+      if (resolved?.id && VUE_VAPOR_TWINS[resolved.id])
+        return VUE_VAPOR_TWINS[resolved.id]
       if (!SWAP_NAMES.some(name => source.includes(name)))
         return null
-      const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
       if (resolved && SWAPS[resolved.id])
         return PREFIX + resolved.id
       return null
