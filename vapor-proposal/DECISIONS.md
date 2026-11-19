@@ -739,4 +739,10 @@ Git: `e32052b3` reverts H1c; `11b225cd` reverts H1d. Suite at `7ee09911`: **3520
 35**, `useRenderedContentId` **287 / 0 / 35** (2026-11-19 gate, `--maxWorkers=4`). See QS12 for a
 correct Transition slot approach and QS13 for propsRef keys if pursued.
 
+## ADR-S33 Widen full-suite `vue` alias to `packages/core/src/test/*.ts`
+
+`testFileVue` now matches `*.test.ts` and any importer under `core/src/test/` so shared
+test helpers (`test/index.ts`, `mode.ts`, `utils.ts`, `hiddenNativeFamilies.ts`) resolve
+`vue` to `suite/vue-test.ts` with the render-function bridge.
+
 

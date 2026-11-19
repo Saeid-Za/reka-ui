@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 const coreSrc = fileURLToPath(new URL('../../core/src/', import.meta.url))
 const vueTest = fileURLToPath(new URL('./vue-test.ts', import.meta.url))
-const TEST_FILE_RE = /\.test\.ts$/
+const TEST_FILE_RE = /\.test\.ts$|\/test\/.*\.ts$/
 
 /** Test files (only) import `vue` from suite/vue-test.ts: the render-function bridge. */
 export function testFileVue(): Plugin {
