@@ -415,3 +415,47 @@ Instead, replacing `cloneVNode` with a direct template `<Primitive v-for="item i
 **Recommendation:** Combine (a) and (b): use explicit element refs where possible in Reka source, and retain the WeakMap-cached shim in `rekaVapor.ts` for any remaining VueUse internals.
 **⚑ Provisional default:** (a) with (b).
 
+### QS12. Full-suite harness and `VaporTransition` default slot `(H1c)`
+
+Commit `19007363` tried to mount the `VaporTransition` default slot child once (no
+`reactiveBlock`, unstable slot fn) so Transition/leave tests could resolve a DOM node
+for enter/leave hooks. It turned **4** failures at `7ee09911` green (compare
+`suite/out/report-k9.json` vs `report-h1c.json`):
+
+- `Presence/Presence.test.ts` — "given a Presence with an async child" (enter and
+  after-enter dispatch cases).
+- `Slider/Slider.test.ts` — "given slider on a page that leaves through an out-in
+  transition" (horizontal and vertical pointer cases).
+
+The same hunk regressed **17** tests in `shared/useRenderedContentId.test.ts` (KeepAlive +
+leave-transition scenarios ADR-S20 fixed) because the slot stopped updating when branch
+content swapped during a leave transition. **Reverted** (ADR-S32). A correct fix must keep
+the default slot reactive, use `stableSlotFns`, and still satisfy the four tests above
+without breaking reactive KeepAlive/Transition composition.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Reactive slot + stable fn, reconcile with Vapor's Transition child lifecycle | Harness-only; needs design against Vue Vapor Transition internals. |
+| (b) Test variants (`isVapor`) for the four Transition-heavy cases | Keeps harness simple; documents inherent timing/DOM differences. |
+| (c) Leave red until upstream documents Transition + KeepAlive under the render bridge | No wrong harness semantics. |
+
+**Recommendation:** (a) with a failing repro in `packages/vapor/test-native` before touching the bridge again.
+**⚑ Provisional default:** (c) until (a) is designed.
+
+### QS13. `createComponent` key getter from `propsRef` `(H1d)`
+
+Commit `56042cd3` wired `rawProps.key` to `propsRef.value.key` instead of the static
+descriptor key `c.key`. Bisect: at `801cb017` `useRenderedContentId` was **0** fail; with
+only this hunk (even after reverting H1c) the file regained **17** failures — same family
+as H1c. **Reverted** (ADR-S32). Possible need: update key only when parent `setProps`
+changes the `key` prop without breaking Vapor's keyed remount rules for Transition/KeepAlive
+fixtures.
+
+| Option | Trade-offs |
+|---|---|
+| (a) Revisit with a narrow guard (e.g. only when `propsRef.value.key !== c.key`) | Might fix setProps tests without the regression. |
+| (b) `isVapor` test variants where keyed remount timing differs | No harness guesswork. |
+| (c) Leave `rawProps.key = () => c.key` | Stable; any setProps-key test stays red until understood. |
+
+**⚑ Provisional default:** (c).
+
