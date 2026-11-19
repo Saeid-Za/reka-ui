@@ -832,3 +832,9 @@ tests in C2; draft Vue issue for expose proxy `$el`.
 Owner chose (a): apply `display: none` on a Vapor-only path (`Presence.vapor.vue` or twin);
 VDOM SFCs unchanged. Fallback (c) if C1 fails.
 
+## ADR-S48 Presence.vapor `display:none` when `forceMount` and closed (C1)
+
+`updatePersistentHidden()` on the resolved slot root when `forceMount && !present &&
+!isPresent`. Full suite: Dialog unmountOnHide ×3 and Combobox persistent Escape green;
+one Combobox “hidden content node” test still red (subtree/state; QS14 note).
+
