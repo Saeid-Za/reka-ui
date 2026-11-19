@@ -712,4 +712,31 @@ render/state in a `shallowRef` instead of throwing `VaporSuiteUnsupported`.
 `h(Suspense, …)` in test scaffolding unwraps the default slot when normalizing children
 so async fixtures render their resolved subtree.
 
+## ADR-S30 VaporTransition default slot mounts transition child directly
+
+**Superseded by ADR-S32 (reverted).** `VaporTransition` bypassed reactive slot re-wrapping so the
+outgoing/incoming element was mounted once for leave/enter hooks in render-function tests.
+
+## ADR-S31 Component key from live propsRef
+
+**Superseded by ADR-S32 (reverted).** `createComponent` key getter tracked `propsRef.value.key` so
+parent prop updates retarget the Vapor component without remounting when only the descriptor key
+was stale.
+
+## ADR-S32 Revert harness H1c and H1d (commits 19007363, 56042cd3)
+
+Reverted **`19007363` (H1c)** because mounting the `VaporTransition` default slot once (no
+`reactiveBlock`, new `makeSlotFn` on every `getSlotFn` call) broke reactive slot updates when
+`<Transition>` wraps changing content, including KeepAlive branch swaps during a leave transition.
+
+Reverted **`56042cd3` (H1d)** after bisect: with only H1c reverted, `useRenderedContentId` still
+had 17 failures; at `801cb017` (pre-H1c/H1d) the file was green; the propsRef key getter alone
+reintroduced the same 17 red tests. H1d’s commit body had copied H1c gate numbers without a
+finished full-suite run.
+
+Git: `e32052b3` reverts H1c; `11b225cd` reverts H1d. Suite at `7ee09911`: **3520 / 29 / 35**,
+`useRenderedContentId` **287 / 0 / 35**. After both reverts (HEAD with H1a/H1b kept): **3522 / 27 /
+35**, `useRenderedContentId` **287 / 0 / 35** (2026-11-19 gate, `--maxWorkers=4`). See QS12 for a
+correct Transition slot approach and QS13 for propsRef keys if pursued.
+
 
