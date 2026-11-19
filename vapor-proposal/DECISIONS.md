@@ -756,3 +756,10 @@ test helpers (`test/index.ts`, `mode.ts`, `utils.ts`, `hiddenNativeFamilies.ts`)
 server-twin duplicated. Dialog.ssr mocks it by resolved id; a twin would load a second copy and
 the mock would not apply to the server render path (FULL_SUITE S1).
 
+## ADR-S36 `useForwardScopeId` reads Vapor instance `scopeId`
+
+Supersedes the interim “Vapor stamps scope ids itself; return {}” behaviour. Vapor instances
+expose `scopeId` set by the compiler; read it instead of `vnode.scopeId`. Vapor-only assertion:
+parent scoped id appears exactly once on the control (`isVapor` in
+`useForwardScopeId.test.ts`).
+

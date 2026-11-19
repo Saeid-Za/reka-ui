@@ -18,13 +18,11 @@ import { getInstance, isVaporInstance } from './instance'
  * ```
  */
 export function useForwardScopeId(): Record<string, string> {
-  // `vnode.scopeId` is the scope id the parent set on this component's placeholder
-  // vnode for scoped-CSS fallthrough. It is populated during the parent's render,
-  // so it is already available by the time `setup()` runs.
   const instance = getInstance()
-  // Vapor stamps scope ids itself and has no placeholder vnode to read them from.
-  if (!instance || isVaporInstance(instance))
+  if (!instance)
     return {}
-  const scopeId = (instance.vnode as { scopeId?: string }).scopeId
+  const scopeId = isVaporInstance(instance)
+    ? (instance as { scopeId?: string }).scopeId
+    : (instance.vnode as { scopeId?: string }).scopeId
   return scopeId ? { [scopeId]: '' } : {}
 }

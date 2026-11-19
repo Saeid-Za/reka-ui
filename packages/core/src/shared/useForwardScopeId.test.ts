@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import NoScopeCheckbox from '@/Checkbox/story/_NoScopeCheckbox.vue'
 import ScopedCheckbox from '@/Checkbox/story/_ScopedCheckbox.vue'
 import ScopedRadioGroup from '@/RadioGroup/story/_ScopedRadioGroup.vue'
+import { isVapor } from '@/test'
 import ScopedToggleGroup from '@/ToggleGroup/story/_ScopedToggleGroup.vue'
 
 function scopeIdOf(el: Element): string | undefined {
@@ -22,6 +23,10 @@ describe('useForwardScopeId', () => {
 
     expect(parentScopeId).toBeTruthy()
     expect(button.hasAttribute(parentScopeId!)).toBe(true)
+    if (isVapor) {
+      const scopeAttrs = button.getAttributeNames().filter(name => name.startsWith('data-v-'))
+      expect(scopeAttrs).toHaveLength(1)
+    }
 
     wrapper.unmount()
   })
