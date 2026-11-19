@@ -804,15 +804,19 @@ total, ±11 ms jitter only).
 
 ## G3 (FIX_PLAN_6): scroll bench measures virtualizer progress
 
-Diagnosis (`ListboxVirtualRow.vue` + `scrollListboxDiagnose` after mount):
+Diagnosis (`ListboxVirtualRow.vue` + `scrollListboxDiagnose`, VDOM bench, 2026-11-19 H4):
 
-| | |
+| Field | Value |
 |---|---|
-| `clientHeight` | 200 px (inline on `ListboxContent`) |
+| `clientHeight` | **200** px (`ListboxContent` inline style) |
+| `scrollHeight` | **280 000** px |
 | `overflowY` | `auto` |
-| `scrollHeight` | ≫ `clientHeight` (10k-row virtual list) |
-| `scrollTop` after `+= 8000` | advances (container scrollable) |
-| `max data-index` before / after one step | increases (e.g. low hundreds → higher hundreds) |
+| `scrollTop` before one `+= 8000` step | **0** |
+| `scrollTop` after | **8000** |
+| `max data-index` before step | **19** |
+| `max data-index` after | **304** |
+| `first data-index` (before step) | **0** |
+| `timeouts` in 15 scroll samples (`step25-listbox-g3.json`) | **0** |
 
 Fix (`bench/src/state.ts`): progress = **max** `data-index` among rendered rows; step throws on
 timeout (`timeouts` must be 0). Heap for listbox-virtual: **n = 5** with median ± σ.
