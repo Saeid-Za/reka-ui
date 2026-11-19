@@ -763,3 +763,10 @@ expose `scopeId` set by the compiler; read it instead of `vnode.scopeId`. Vapor-
 parent scoped id appears exactly once on the control (`isVapor` in
 `useForwardScopeId.test.ts`).
 
+## ADR-S37 Combobox inline input focus after Vapor content mount
+
+`ComboboxContentImpl` re-checks input-in-content on mount, `nextTick`, `inputElement`
+changes, and open transitions so inline Comboboxes receive focus when the input ref resolves
+after content mount (Vapor timing). VDOM suite unchanged; remaining Combobox Vapor fails are
+QS14 / W9 / W11.
+
