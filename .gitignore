@@ -38,3 +38,6 @@ playwright-report/
 vite.config.ts.timestamp*
 */.vitepress/cache
 .eslintcache
+packages/vapor/suite/out/
+packages/vapor/report.json
+packages/vapor/triage.json
