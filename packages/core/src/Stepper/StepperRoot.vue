@@ -238,7 +238,9 @@ useMutationObserver(currentElement, updateAnnouncement, { childList: true, subtr
         margin: 0,
       }"
     >
-      {{ announcement }}
+      <template v-if="announcement">
+        {{ announcement }}
+      </template>
     </div>
   </Primitive>
 </template>
