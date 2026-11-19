@@ -403,3 +403,20 @@ What the causes are, and why each is in its bucket:
 | **total** | 116 | 32 | 19 | 170 | 106 | 443 |
 
 Components that are not listed have no failing tests.
+
+## Baseline after 0b2c515e (r9)
+
+Recorded 2026-11-19 on clean `0b2c515e` (unified virtualizers via Primitive as-child v-for; commit body was empty — numbers live here).
+
+| Run | Pass | Fail | Skip |
+|---|---:|---:|---:|
+| `pnpm test:run` (VDOM) | 3549 | 0 | 35 |
+| Pure Vapor `test:full-suite` | 3504 | 45 | 35 |
+
+Vapor package modes: `test:vdom` 51 pass; `test:interop` 116 pass + 2 expected fail; `test:vapor-only` 61 pass + 1 todo.
+
+`shared/useRenderedContentId.test.ts`: **287 pass / 0 fail / 35 skip** (ADR-S20 still good).
+
+The report at `36c0f04a` listed **3619** as “3483 + 101 + 35”; Vitest’s `numTotalTests` is **3584** (same as the VDOM suite). No test files changed between `36c0f04a` and `0b2c515e` (`git diff --stat` only touches virtualizer SFCs, twins, harness docs). The 35-gap is adding `skip` on top of pass+fail: 3483+101 already equals 3584.
+
+`useRenderedContentId` triage at r9 (from `suite/out/report.json`): down from 76 undiagnosed at handoff r8 to 0 failures here; remaining reds are elsewhere (45 total fails — see `node suite/report.mjs suite/out/report.json`).
