@@ -102,14 +102,22 @@ export function getInstanceName(instance: { type?: { name?: string, __name?: str
  * instance or array of those). Fragments are duck-typed by `nodes`, Vapor
  * component instances by `vapor` + `block`.
  */
-export function findBlockElement(block: unknown): HTMLElement | undefined {
+export function findBlockElement(
+  block: unknown,
+  seen: WeakSet<object> = new WeakSet(),
+): HTMLElement | undefined {
   if (!block)
     return undefined
+  if (typeof block === 'object') {
+    if (seen.has(block))
+      return undefined
+    seen.add(block)
+  }
   if (typeof Element !== 'undefined' && block instanceof Element)
     return block as HTMLElement
   if (Array.isArray(block)) {
     for (const child of block) {
-      const el = findBlockElement(child)
+      const el = findBlockElement(child, seen)
       if (el)
         return el
     }
@@ -126,15 +134,65 @@ export function findBlockElement(block: unknown): HTMLElement | undefined {
             return f.$el
           const fBlock = '$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined
           if (fBlock)
-            return findBlockElement(fBlock)
+            return findBlockElement(fBlock, seen)
         }
       }
-      return findBlockElement(block.block)
+      return findBlockElement(block.block, seen)
     }
     if ('$block' in block && (block as any).$block)
-      return findBlockElement((block as any).$block)
+      return findBlockElement((block as any).$block, seen)
     if ('nodes' in block)
-      return findBlockElement((block as { nodes: unknown }).nodes)
+      return findBlockElement((block as { nodes: unknown }).nodes, seen)
+  }
+  return undefined
+}
+
+export function findBlockNode(
+  block: unknown,
+  seen: WeakSet<object> = new WeakSet(),
+): Node | undefined {
+  if (!block)
+    return undefined
+  if (typeof block === 'object') {
+    if (seen.has(block))
+      return undefined
+    seen.add(block)
+  }
+  if (typeof Node !== 'undefined' && block instanceof Node)
+    return block
+  if (Array.isArray(block)) {
+    for (const child of block) {
+      const node = findBlockNode(child, seen)
+      if (node)
+        return node
+    }
+    return undefined
+  }
+  if (typeof block === 'object') {
+    if (isVaporInstance(block)) {
+      if (block.forwarded?.value) {
+        const f = block.forwarded.value
+        if (typeof Node !== 'undefined' && f instanceof Node)
+          return f
+        if (f && typeof f === 'object') {
+          if ('$el' in f && f.$el instanceof Node)
+            return f.$el
+          const fBlock = '$block' in f ? f.$block : isVaporInstance(f) ? f.block : undefined
+          if (fBlock)
+            return findBlockNode(fBlock, seen)
+        }
+      }
+      return findBlockNode(block.block, seen)
+    }
+    if ('$block' in block && (block as any).$block)
+      return findBlockNode((block as any).$block, seen)
+    if ('nodes' in block) {
+      const node = findBlockNode((block as { nodes: unknown }).nodes, seen)
+      if (node)
+        return node
+    }
+    if ('anchor' in block && (block as any).anchor instanceof Node)
+      return (block as any).anchor
   }
   return undefined
 }
@@ -165,9 +223,15 @@ export function onRootFragmentUpdate(instance: RekaInstance | null, callback: ()
     ;(fragment.u ??= []).push(callback)
   }
   // Same walk as `findBlockElement`, hooking every fragment before the first element.
+  const seen = new WeakSet<object>()
   const walk = (block: unknown): boolean => {
     if (!block)
       return false
+    if (typeof block === 'object') {
+      if (seen.has(block))
+        return false
+      seen.add(block)
+    }
     if (typeof Element !== 'undefined' && block instanceof Element)
       return true
     if (Array.isArray(block)) {
@@ -205,7 +269,7 @@ export function getInstanceRootNode(instance: RekaInstance | null): Node | null 
   if (!instance)
     return null
   if (isVaporInstance(instance))
-    return findBlockElement(instance.block) ?? null
+    return findBlockElement(instance.block) ?? findBlockNode(instance.block) ?? null
   return (instance.vnode.el as Node | null) ?? null
 }
 

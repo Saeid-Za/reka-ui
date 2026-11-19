@@ -52,25 +52,36 @@ defineExpose({
   },
 })
 
-if (renderAsChild) {
-  let mounted = false
-  const applyAsChildAttrs = createAsChildApplier()
-  const sync = () => {
-    const el = rootElement()
-    if (el)
-      applyAsChildAttrs(resolveAsChildTarget(el), attrs)
-  }
-  const onRootUpdate = () => {
+let mounted = false
+const applyAsChildAttrs = createAsChildApplier()
+function sync() {
+  const el = rootElement()
+  if (el)
+    applyAsChildAttrs(resolveAsChildTarget(el), attrs)
+}
+function onRootUpdate() {
+  if (renderAsChild)
     sync()
+  rootVersion.value++
+  onRootFragmentUpdate(instance, onRootUpdate)
+}
+onMounted(() => {
+  mounted = true
+  if (renderAsChild)
+    sync()
+  onRootFragmentUpdate(instance, onRootUpdate)
+})
+onUpdated(() => {
+  if (renderAsChild)
+    sync()
+  rootVersion.value++
+})
+watchEffect(() => {
+  void props.as
+  if (mounted)
     rootVersion.value++
-    onRootFragmentUpdate(instance, onRootUpdate)
-  }
-  onMounted(() => {
-    mounted = true
-    sync()
-    onRootFragmentUpdate(instance, onRootUpdate)
-  })
-  onUpdated(sync)
+}, { flush: 'post' })
+if (renderAsChild) {
   // attrs is reactive in Vapor: re-apply when the parent changes them.
   watchEffect(() => {
     // track every attr key and value

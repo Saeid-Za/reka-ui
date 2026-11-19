@@ -679,4 +679,12 @@ cancel button unmounts, only that sender may clear the registration; an earlier-
 non-primary cancel must not wipe the still-connected registered button (`onCancelElementChange`
 accepts an optional `sender` and `AlertDialogCancel` passes `currentElement` on teardown).
 
+## ADR-S24 Vapor root node resolution through forwarded refs and text anchors
+
+`getInstanceRootNode` for Vapor now falls back from `findBlockElement` to `findBlockNode` so refs
+resolve when the first output is a text node or comment anchor. `findBlockNode` follows the same
+`forwarded` / `$block` path as `findBlockElement`. `Primitive.vapor` bumps `rootVersion` on non-as-child
+`as` changes and always registers `onRootFragmentUpdate` so `$el` tracks forwarded subtrees.
+Cycle guards (`WeakSet`) protect `findBlockElement`, `findBlockNode`, and `onRootFragmentUpdate` walks.
+
 
