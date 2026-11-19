@@ -153,10 +153,13 @@ export function toVaporComponent(options: any): any {
       setup(props: any, ctx: any) {
         const vdomCtx = { ...ctx, attrs: ctx.attrs, emit: ctx.emit, expose: ctx.expose, slots: wrapSlots(ctx.slots) }
         const result = setup ? setup(props, vdomCtx) : undefined
-        if (result && typeof result.then === 'function')
-          throw new VaporSuiteUnsupported('async setup() in a render-function component')
         let renderFn: () => any
-        if (typeof result === 'function') {
+        if (result && typeof result.then === 'function') {
+          const res = shallowRef<any>(null)
+          result.then((r: any) => { res.value = r })
+          renderFn = () => typeof res.value === 'function' ? res.value() : res.value
+        }
+        else if (typeof result === 'function') {
           renderFn = result
         }
         else if (render) {

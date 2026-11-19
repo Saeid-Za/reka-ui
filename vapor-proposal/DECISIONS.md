@@ -702,4 +702,14 @@ way as VDOM; split into two static branches with equivalent markup.
 Test files import `vue` from `suite/vue-test.ts`; async fixtures must use Vapor's async
 helper so client mounts hydrate consistently with Vapor SSR.
 
+## ADR-S28 Render-function bridge supports async setup()
+
+`defineComponent` fixtures that return a Promise from `setup()` now stash the resolved
+render/state in a `shallowRef` instead of throwing `VaporSuiteUnsupported`.
+
+## ADR-S29 Render-function bridge unwraps Suspense descriptors
+
+`h(Suspense, …)` in test scaffolding unwraps the default slot when normalizing children
+so async fixtures render their resolved subtree.
+
 
