@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { defineComponent, h, inject, nextTick, reactive, ref, shallowRef } from 'vue'
-import { handleSubmit, sleep } from '@/test'
+import { handleSubmit, isVapor, sleep } from '@/test'
 import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxPortal, ComboboxRoot, ComboboxTrigger, ComboboxViewport, ComboboxVirtualizer } from '.'
 import Combobox from './story/_Combobox.vue'
 import ComboboxObject from './story/_ComboboxObject.vue'
@@ -1453,12 +1453,13 @@ describe('comboboxContent with popper positioning', () => {
     await wrapper.find('button').trigger('click')
     await nextTick()
 
-    expect(slotRenderCount.value).toBe(3)
+    // Vapor does not re-run the content slot on Popper position updates like VDOM.
+    expect(slotRenderCount.value).toBe(isVapor ? 1 : 3)
 
     await sleep(0)
     await nextTick()
 
-    expect(slotRenderCount.value).toBe(4)
+    expect(slotRenderCount.value).toBe(isVapor ? 1 : 4)
   })
 
   it('updates visible options when filtering while popper content is open', async () => {
