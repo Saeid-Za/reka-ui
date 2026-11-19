@@ -856,6 +856,16 @@ VDOM definitions are upstream verbatim (`isVapor ? … : …`); fixed in H1 (rem
 Documented limit test in `test-native/forward-expose-heuristic.test.ts`; migration note in
 `USER_GUIDE_DRAFT.md`.
 
+## ADR-S53 QS14 Combobox persistent `display` (H3 fallback)
+
+- **Status:** Accepted (document only)
+- **Context:** Closed persistent Combobox content stays `display: flex` in pure Vapor because
+  `ComboboxContentImpl` inline `display:flex` wins over the `ComboboxContent.vapor` twin
+  `display:none` (see QS14 H3 numbers).
+- **Decision:** Revert the H3 twin watcher attempt; document as a known issue until a
+  Vapor-only path can apply hide after impl styles (same boolean as VDOM `v-show`).
+- **Consequences:** `Combobox.test.ts` QS14 reds ×2 remain; Dialog QS14 paths unchanged.
+
 ## ADR-S49 QS14 hide via caller `v-show`, not `Presence.vapor` (G1)
 
 VDOM `Presence` always leaves force-mounted children visible; hiding is only via the child's

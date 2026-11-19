@@ -14,7 +14,7 @@ your app with Vue 3.6+ Vapor mode; use `@reka-ui/vapor-tests` patterns for parit
 | QS7 SSR first paint | As-child attrs may differ server vs client; some SSR tests stay red on purpose. |
 | QS8 listener order | Consumer listeners vs component handlers — see OPEN_QUESTIONS QS8. |
 | QS9 `$el` on forwarded refs | Children must `defineExpose({ $el })`; see migration below. |
-| QS14 `unmountOnHide` | Combobox hidden-node tests may still fail; Dialog paths fixed via content twins (ADR-S49). |
+| QS14 `unmountOnHide` | **Known issue (H3):** closed persistent Combobox content stays `display: flex` in Vapor (`ComboboxContentImpl` inline style wins over twin `:style`). Dialog paths fixed (ADR-S49). |
 | QS12 Transitions | Out-in + Suspense under the test bridge may differ from VDOM. |
 
 ## `__VUE_OPTIONS_API__: false`

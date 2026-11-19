@@ -505,6 +505,19 @@ override hidden content).
 **⚑ Provisional default:** (c). **Do not implement** without maintainer choice.
 **Decided (owner, 2026-11-19):** (a) — Vapor-only `v-show`/`display` path (C1); else (c).
 
+**H3 (2026-11-19):** Dialog paths stay green after G1. Combobox persistent hide **still red** ×2.
+Closed `unmountOnHide=false` mount (`Combobox.test.ts` L73):
+
+| Field | Value |
+|---|---|
+| `content.style.display` | **`flex`** (expected **`none`**) |
+| `getComputedStyle(content).display` | **`flex`** |
+| `data-state` | `closed` |
+| Inline winner | `ComboboxContentImpl.vue` L184 `display: (hideWhenEmpty && isEmpty) ? 'none' : 'flex'` applied after twin `display: none` |
+
+Targeted Vapor twin post-flush `display` reset **reverted**; no gate delta. See ADR-S53 and
+`USER_GUIDE_DRAFT.md` known issue.
+
 ### QS15. FocusScope stack registration timing (FIX_PLAN step 21)
 
 `FocusScope/FocusScope.test.ts` — Combobox input inside Dialog (#2749) fails in pure Vapor.
