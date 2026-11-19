@@ -213,12 +213,12 @@ different test so far had a Vapor equivalent.
 
 | Root cause | Bucket | Tests | Files |
 |---|---|---|---|
-| H1 findComponent(css selector) not implemented | fail:harness | 9 | Slider 6, DismissableLayer 3 |
-| H2 findComponent(Component) finds nothing (empty VueWrapper) | fail:harness | 9 | NavigationMenu 5, ScrollArea 3, PopperRootContext 1 |
+| H1 findComponent(css selector) not implemented | fail:harness | 0 | Fixed (ADR-S21) |
+| H2 findComponent(Component) finds nothing (empty VueWrapper) | fail:harness | 0 | Fixed (ADR-S21) |
 | H3 vm / exposed access through the shim (`vm.field`, `vm.form`, refs, proxy set) | fail:harness | 1 | RadioGroup 1 |
 | H4 real VNode reached the render-function bridge | fail:harness | 1 | HiddenNativeLabels 1 |
 | M1 html()/snapshot differs only by Vapor anchor comments (<!--slot-->, <!--if-->, <!--dynamic-component-->) and attribute order | markup-only | 1 | Presence 1 |
-| R1 virtualizer item refs ($el of undefined) — known gap ADR-017 | fail:reka | 33 | Combobox 11, Listbox 8, ScrollArea 8, Tree 6 |
+| R1 virtualizer item refs ($el of undefined) — known gap ADR-017 | fail:reka | 0 | Fixed (ADR-S21) |
 | R2 consumer listeners run after the component's own handlers (preventDefault opt-out ignored) | fail:reka | 18 | Select 7, DropdownMenu 4, Menubar 4, Tabs 3 |
 | R3 form-control detection: closest('form') read before the element is inserted into <form> | fail:reka | 2 | Checkbox 1, Toggle 1 |
 | R4 consumer id / trigger id change not propagated (remaining after fix #1) | fail:reka | 11 | useTriggerId 6, useContentId 4, Tabs 1 |

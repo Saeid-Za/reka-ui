@@ -16,10 +16,13 @@ export const SWAPS: Record<string, string> = {
   [`${rekaSrc}/Primitive/Slot.ts`]: `export { default as Slot } from '${rekaSrc}/Primitive/Slot.vapor.vue'\n`,
   [`${rekaSrc}/Presence/Presence.ts`]: `export { default } from '${rekaSrc}/Presence/Presence.vapor.vue'\n`,
   [`${rekaSrc}/Collection/Collection.ts`]: `export { useCollection } from '${rekaSrc}/Collection/Collection.vapor.ts'\n`,
+  [`${rekaSrc}/Listbox/ListboxVirtualizer.vue`]: `export { default } from '${rekaSrc}/Listbox/ListboxVirtualizer.vapor.vue'\nexport * from '${rekaSrc}/Listbox/ListboxVirtualizer.vapor.vue'\n`,
+  [`${rekaSrc}/Tree/TreeVirtualizer.vue`]: `export { default } from '${rekaSrc}/Tree/TreeVirtualizer.vapor.vue'\nexport * from '${rekaSrc}/Tree/TreeVirtualizer.vapor.vue'\n`,
+  [`${rekaSrc}/ScrollArea/ScrollAreaVirtualizer.vue`]: `export { default } from '${rekaSrc}/ScrollArea/ScrollAreaVirtualizer.vapor.vue'\nexport * from '${rekaSrc}/ScrollArea/ScrollAreaVirtualizer.vapor.vue'\n`,
 }
 
 /** File names (without extension) that may resolve to a swapped module. */
-const SWAP_NAMES = ['Primitive', 'Slot', 'Presence', 'Collection']
+const SWAP_NAMES = ['Primitive', 'Slot', 'Presence', 'Collection', 'ListboxVirtualizer', 'TreeVirtualizer', 'ScrollAreaVirtualizer']
 
 const PREFIX = '\0reka-vapor-swap:'
 
@@ -34,8 +37,40 @@ const VUEUSE_VUE = '\0reka-vapor-vueuse-vue'
 const VUEUSE_RE = /[\\/]@vueuse[\\/]/
 const VUEUSE_VUE_CODE = `export * from 'vue'
 import { currentInstance, getCurrentInstance as vdomGetCurrentInstance } from 'vue'
+function findEl(block) {
+  if (!block) return undefined
+  if (typeof Element !== 'undefined' && block instanceof Element) return block
+  if (Array.isArray(block)) {
+    for (const b of block) {
+      const el = findEl(b)
+      if (el) return el
+    }
+    return undefined
+  }
+  if (typeof block === 'object') {
+    if (block.vapor) return findEl(block.block)
+    if ('nodes' in block) return findEl(block.nodes)
+  }
+  return undefined
+}
 export function getCurrentInstance() {
-  return currentInstance && currentInstance.vapor ? currentInstance : vdomGetCurrentInstance()
+  if (currentInstance && currentInstance.vapor) {
+    if (!('proxy' in currentInstance)) {
+      Object.defineProperty(currentInstance, 'proxy', {
+        configurable: true,
+        get() {
+          const inst = this
+          return inst.exposed || {
+            get $el() {
+              return inst.exposed?.$el ?? findEl(inst.block)
+            }
+          }
+        }
+      })
+    }
+    return currentInstance
+  }
+  return vdomGetCurrentInstance()
 }
 `
 

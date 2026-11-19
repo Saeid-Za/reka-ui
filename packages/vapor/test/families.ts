@@ -305,7 +305,7 @@ export const families: FamilyCase[] = [
     expect($('#form', host).hasAttribute('novalidate')).toBe(true)
     expect($('#form-error', host)?.textContent).toContain('Taken')
   } },
-  { name: 'ListboxVirtualizer', component: ListboxVirtualizer, vaporOnlyGap: 'virtualizers clone slot vnodes (cloneVNode); Vapor port is phase 2', setup() {
+  { name: 'ListboxVirtualizer', component: ListboxVirtualizer, setup() {
     // jsdom has no layout; give the virtualizer a 200px viewport (as Listbox.test.ts does).
     const original = HTMLElement.prototype.getBoundingClientRect
     HTMLElement.prototype.getBoundingClientRect = () => ({ width: 200, height: 200, top: 0, left: 0, right: 200, bottom: 200, x: 0, y: 0, toJSON() {} }) as DOMRect

@@ -631,3 +631,41 @@ This fixes the U1 (51 tests) and U2 (25 tests) groups in FULL_SUITE.md (76 tests
    - On branch changes, `frag.update(renderFn, key)` invokes Vapor's native branch management (`prepareBranchRemoval`, `removeBranchWithLeave`, pausing effect scopes, moving elements to `storageContainer`, and triggering KeepAlive lifecycle hooks).
    - Array children in test fixtures (e.g. `[isActive ? h(...) : h(...)]`) are normalized to single descriptors and `c.key` is passed in `rawProps.key` so `createComponent` can retrieve kept-alive components from cache by key.
 
+## ADR-S21 Virtualizer Vapor twins, slot function stability, and component tree traversal
+
+This fixes the R1 group (Combobox, Listbox, ScrollArea, Tree) and H1/H2 test-utils
+harness gaps (`findComponent(css)` and `findComponent(Component)`).
+
+1. **Virtualizer Vapor twins (R1):**
+   - VDOM virtualizer SFCs (`ListboxVirtualizer`, `ScrollAreaVirtualizer`, `TreeVirtualizer`)
+     relied on VNode manipulation (`cloneVNode`, `computed(() => slots.default())`) to pass
+     virtual item context down. In Vapor mode, slots return DOM blocks rather than VNodes.
+   - Created Vapor twins:
+     - `packages/core/src/Listbox/ListboxVirtualizer.vapor.vue`: loops over
+       `virtualizer.getVirtualItems()` using `<Primitive as-child><slot ... /></Primitive>`.
+     - `packages/core/src/ScrollArea/ScrollAreaVirtualizer.vapor.vue`: preserves `virtualizer`
+       expose and forwards expose via `useForwardExpose()`.
+     - `packages/core/src/Tree/TreeVirtualizer.vapor.vue`: maps virtual items using
+       `rootContext.expandedItems.value[item.index]`.
+   - Registered twins in `packages/vapor/rekaVapor.ts` (`SWAPS` and `SWAP_NAMES`).
+   - In `packages/vapor/rekaVapor.ts`, added a `proxy` getter on the Vapor component instance
+     returning `{ get $el() { return instance.exposed?.$el ?? findEl(instance.block) } }`
+     so that `@vueuse/core` composables (`useParentElement`, `useCurrentElement`) can resolve
+     the element.
+   - Removed `ListboxVirtualizer` known gap from `packages/vapor/test/families.ts`.
+
+2. **Slot function stability and dynamic slot descriptors (`vaporH.ts`):**
+   - In `vaporH.ts`, dynamic slots are passed as a descriptor list in `rawSlots.$` so Vue
+     Vapor's `initInputs` effect can track slot additions and removals on prop updates.
+   - Slot function references in `rawSlots` are cached (`stableSlotFns`) across re-renders
+     so Vue Vapor does not treat them as newly changed branches and remount children.
+
+3. **Component tree traversal in `test-utils.ts` (H1, H2):**
+   - Connected `devtoolsHook.emit` to capture `component:added` and `component:removed` into
+     an `instancesByParent` Map.
+   - Implemented `allDescendantsOf(instance)` to walk the true component hierarchy across
+     slot boundaries and render functions.
+   - Implemented `findComponent(cssSelector)` and `findAllComponents(cssSelector)` using DOM
+     containment checks on component blocks.
+
+

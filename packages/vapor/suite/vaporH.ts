@@ -389,10 +389,10 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
   const scope = childScope(ctx)
   const propsRef = shallowRef(rest)
   const slotsRef = shallowRef(descSlots(c.children))
-  const rawSlots: Record<string, any> = {}
-  for (const name of Object.keys(slotsRef.value)) {
+
+  const makeSlotFn = (name: string) => {
     if (type === VaporKeepAlive && name === 'default') {
-      rawSlots[name] = (slotProps: any) => {
+      return (slotProps: any) => {
         const keepAliveOwner = currentInstance
         const keepAliveCtx: Ctx = { owner: keepAliveOwner, scope: childScope(ctx), setRef: ctx.setRef }
         const frag = new DynamicFragment(0, 'keepalive-slot')
@@ -416,13 +416,51 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
         return frag
       }
     }
-    else {
-      rawSlots[name] = (slotProps: any) => reactiveBlock(() => {
-        const fn = slotsRef.value[name]
-        return fn ? fn(slotProps) : null
-      })
-    }
+    return (slotProps: any) => reactiveBlock(() => {
+      const fn = slotsRef.value[name]
+      return fn ? fn(slotProps) : null
+    })
   }
+
+  const stableSlotFns: Record<string, (slotProps: any) => any> = {}
+  const getSlotFn = (name: string) => {
+    return (stableSlotFns[name] ??= makeSlotFn(name))
+  }
+
+  const rawSlots: any = new Proxy({
+    $: [() => {
+      const slots = slotsRef.value
+      return Object.keys(slots).map(name => ({
+        name,
+        fn: getSlotFn(name),
+      }))
+    }],
+  }, {
+    get(target, prop, receiver) {
+      if (prop === '$')
+        return target.$
+      if (typeof prop === 'string') {
+        if (prop in slotsRef.value)
+          return getSlotFn(prop)
+      }
+      return Reflect.get(target, prop, receiver)
+    },
+    has(target, prop) {
+      if (prop === '$')
+        return true
+      return typeof prop === 'string' && prop in slotsRef.value
+    },
+    ownKeys() {
+      return ['$', ...Object.keys(slotsRef.value)]
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop === '$')
+        return { configurable: true, enumerable: true, value: target.$, writable: true }
+      if (typeof prop === 'string' && prop in slotsRef.value)
+        return { configurable: true, enumerable: true, value: getSlotFn(prop), writable: true }
+      return undefined
+    },
+  })
   const rawProps: Record<string, any> = { $: [() => propsRef.value] }
   if (c.key != null)
     rawProps.key = () => c.key

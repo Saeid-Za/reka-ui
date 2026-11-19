@@ -46,9 +46,30 @@ type AnyInstance = any
 // Like VTU: component emits are recorded through Vue's devtools hook, which
 // Vapor's `emit` reports to as well, so `emitted()` works for any instance.
 const emittedByInstance = new WeakMap<object, Record<string, unknown[][]>>()
+const instancesByParent = new Map<AnyInstance, Set<AnyInstance>>()
+
 const devtoolsHook = {
   enabled: true,
   emit(event: string, ...args: any[]) {
+    if (event === 'component:added') {
+      const [, , , component] = args
+      if (component && component.parent) {
+        let set = instancesByParent.get(component.parent)
+        if (!set) {
+          set = new Set()
+          instancesByParent.set(component.parent, set)
+        }
+        set.add(component)
+      }
+    }
+    if (event === 'component:removed') {
+      const [, , , component] = args
+      if (component) {
+        if (component.parent)
+          instancesByParent.get(component.parent)?.delete(component)
+        instancesByParent.delete(component)
+      }
+    }
     if (event !== 'component:emit')
       return
     const [, instance, name, params] = args
@@ -83,6 +104,32 @@ function blockInstances(block: any, out: AnyInstance[] = []): AnyInstance[] {
   }
   if (isFragment(block))
     blockInstances((block as any).nodes, out)
+  return out
+}
+
+function allDescendantsOf(instance: AnyInstance): AnyInstance[] {
+  const seen = new Set<AnyInstance>()
+  const out: AnyInstance[] = []
+  function add(inst: AnyInstance) {
+    if (!inst || seen.has(inst) || inst.isUnmounted)
+      return
+    seen.add(inst)
+    out.push(inst)
+    for (const b of blockInstances(inst.block))
+      add(b)
+    const children = instancesByParent.get(inst)
+    if (children) {
+      for (const c of children)
+        add(c)
+    }
+  }
+  for (const b of blockInstances(instance.block))
+    add(b)
+  const children = instancesByParent.get(instance)
+  if (children) {
+    for (const c of children)
+      add(c)
+  }
   return out
 }
 
@@ -293,16 +340,36 @@ export class VaporWrapper extends (BaseWrapper as any) {
         return new VaporWrapper(result)
       return createWrapperError('VueWrapper')
     }
-    if (typeof selector === 'string')
-      throw new VaporSuiteUnsupported('findComponent(css selector)')
+    if (typeof selector === 'string') {
+      const all = allDescendantsOf(this.instance)
+      // First match where root element matches selector exactly
+      const exact = all.find((i) => {
+        const nodes = blockNodes(i.block)
+        return nodes.some(n => n.nodeType === 1 && (n as Element).matches(selector))
+      })
+      if (exact)
+        return new VaporWrapper(exact)
+      // Otherwise match where descendant matches selector
+      const contained = all.find((i) => {
+        const nodes = blockNodes(i.block)
+        return nodes.some(n => n.nodeType === 1 && (n as Element).querySelector(selector))
+      })
+      if (contained)
+        return new VaporWrapper(contained)
+      return createWrapperError('VueWrapper')
+    }
     const [found] = this.findAllComponents(selector)
     return found ?? createWrapperError('VueWrapper')
   }
 
   findAllComponents(selector: any): any[] {
-    if (typeof selector === 'string')
-      throw new VaporSuiteUnsupported('findAllComponents(css selector)')
-    const all = blockInstances(this.instance.block)
+    const all = allDescendantsOf(this.instance)
+    if (typeof selector === 'string') {
+      return all.filter((i) => {
+        const nodes = blockNodes(i.block)
+        return nodes.some(n => n.nodeType === 1 && ((n as Element).matches(selector) || (n as Element).querySelector(selector)))
+      }).map(i => new VaporWrapper(i))
+    }
     return all.filter(i => matchesComponent(i, selector)).map(i => new VaporWrapper(i))
   }
 
