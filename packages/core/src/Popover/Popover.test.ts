@@ -329,6 +329,9 @@ describe('given a Popover content wrapped in a Vue Transition', () => {
       releaseContent = resolve
     })
     vi.resetModules()
+    // Pure-Vapor suite: re-bind vue/VTU after resetModules so the test uses a fresh graph.
+    const { mount, flushPromises } = await import('@vue/test-utils')
+    const { defineComponent, h, ref, Transition } = await import('vue')
     vi.doMock('./PopoverContentNonModal.vue', async (importOriginal) => {
       await contentGate
       return importOriginal()
