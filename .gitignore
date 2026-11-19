@@ -39,5 +39,6 @@ vite.config.ts.timestamp*
 */.vitepress/cache
 .eslintcache
 packages/vapor/suite/out/
+packages/vapor/scratch/
 packages/vapor/report.json
 packages/vapor/triage.json
