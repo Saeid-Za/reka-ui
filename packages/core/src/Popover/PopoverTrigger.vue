@@ -28,9 +28,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <component
-    :is="rootContext.hasCustomAnchor.value ? Primitive : PopperAnchor"
-    :scope="rootContext.hasCustomAnchor.value ? undefined : 'popover'"
+  <PopperAnchor
+    v-if="!rootContext.hasCustomAnchor.value"
+    scope="popover"
     as-child
   >
     <Primitive
@@ -47,5 +47,20 @@ onMounted(() => {
     >
       <slot />
     </Primitive>
-  </component>
+  </PopperAnchor>
+  <Primitive
+    v-else
+    :id="rootContext.triggerId"
+    :ref="forwardRef"
+    :type="as === 'button' ? 'button' : undefined"
+    aria-haspopup="dialog"
+    :aria-expanded="rootContext.open.value"
+    :aria-controls="rootContext.open.value ? contentId : undefined"
+    :data-state="rootContext.open.value ? 'open' : 'closed'"
+    :as="as"
+    :as-child="props.asChild"
+    @click="rootContext.onOpenToggle"
+  >
+    <slot />
+  </Primitive>
 </template>

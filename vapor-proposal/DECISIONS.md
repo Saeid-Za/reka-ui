@@ -692,4 +692,9 @@ Cycle guards (`WeakSet`) protect `findBlockElement`, `findBlockNode`, and `onRoo
 `Presence` as-child mirrors `Primitive`: register `onRootFragmentUpdate` and call `syncNode` on mount,
 update, and fragment branch swaps so `v-show` / `v-if` slot changes re-apply attrs on the resolved node.
 
+## ADR-S26 PopoverTrigger uses v-if/v-else instead of dynamic component
+
+Vapor compilation does not handle `:is` switching between `Primitive` and `PopperAnchor` the same
+way as VDOM; split into two static branches with equivalent markup.
+
 
