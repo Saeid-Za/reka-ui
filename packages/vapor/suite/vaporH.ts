@@ -47,6 +47,7 @@ import {
   setDynamicProps,
   shallowReactive,
   shallowRef,
+  Suspense,
   Teleport,
   Transition,
   TransitionGroup,
@@ -285,6 +286,10 @@ function normalize(value: any, out: Child[] = []): Child[] {
   if (isDesc(value)) {
     if (value.type === Fragment)
       return normalize(value.children, out)
+    if (value.type === Suspense) {
+      const slots = descSlots(value.children)
+      return normalize(slots.default?.(), out)
+    }
     if (typeof value.type === 'function' && !value.type.__vapor && !isVaporComponent(value.type)) {
       // Functional component: expand inline on every render.
       return normalize(value.type(value.props ?? {}, { slots: descSlots(value.children), attrs: value.props ?? {}, emit: () => {} }), out)
