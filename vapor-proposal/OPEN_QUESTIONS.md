@@ -467,6 +467,11 @@ without breaking reactive KeepAlive/Transition composition.
 **⚑ Provisional default:** (c) until (a) is designed.
 **Decided (owner, 2026-11-19):** try (a) once in C3; if it fails, (c) — not (b).
 
+**C3 attempt (2026-11-19):** Mirroring the KeepAlive `DynamicFragment` + `renderEffect` default slot on
+`VaporTransition` still leaves **Slider ×2** red (`thumb.isConnected` false after out-in swap).
+`useRenderedContentId` regressed to **17** failures (same family as H1c). Reverted before commit.
+→ Owner fallback **(c)**: Slider out-in ×2 stay red until Transition+bridge design lands.
+
 ### QS13. `createComponent` key getter from `propsRef` `(H1d)`
 
 Commit `56042cd3` wired `rawProps.key` to `propsRef.value.key` instead of the static

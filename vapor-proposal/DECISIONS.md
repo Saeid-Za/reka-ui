@@ -838,6 +838,11 @@ VDOM SFCs unchanged. Fallback (c) if C1 fails.
 `forceMount && !present && !isPresent` diverged from VDOM: `Presence` never hides; callers
 apply `v-show` on `DialogContent` / `ComboboxContent`.
 
+## ADR-S51 QS12 Transition default slot attempt failed (C3)
+
+KeepAlive-style `DynamicFragment` on `VaporTransition` default slot regressed
+`useRenderedContentId` (17 fail) without fixing Slider out-in. Reverted; QS12 stays (c).
+
 ## ADR-S50 QS9 suite tests expose child `$el` under Vapor (C2)
 
 Vapor tests add an `isVapor` branch so child fixtures call `defineExpose({ $el })` (via
