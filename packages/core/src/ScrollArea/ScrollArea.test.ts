@@ -211,6 +211,23 @@ describe('given a virtualized ScrollArea', () => {
     expect(indexes()).toEqual([39, 40, 41, 42, 43, 44, 45, 46, 47, 48])
   })
 
+  it('mounts virtual rows when the default slot returns a conditional fragment', async () => {
+    const wrapper = mount(defineComponent({
+      setup: () => () => h(ScrollAreaRoot, null, {
+        default: () => h(ScrollAreaViewport, { style: 'width: 200px; height: 200px' }, {
+          default: () => h(ScrollAreaVirtualizer, { options, estimateSize: 25, overscan: 2 }, {
+            default: ({ option }: any) => [
+              option === 0 ? h('div', { 'data-testid': 'item' }, 'lead') : null,
+              h('div', { 'data-testid': 'item' }, h('button', option)),
+            ],
+          }),
+        }),
+      }),
+    }), { attachTo: document.body })
+    await flush()
+    expect(wrapper.find('[data-index="0"]').exists()).toBe(true)
+  })
+
   it('updates when the default slot is added or removed', async () => {
     const wrapper = mount(VirtualScrollArea, { attachTo: document.body, props: { withSlot: false } })
     await flush()

@@ -602,6 +602,25 @@ describe('given a Tree with `loop`', () => {
       return wrapper
     }
 
+    it('mounts virtual rows when the default slot returns a conditional fragment', async () => {
+      const items = Array.from({ length: 20 }, (_, i) => ({ title: `item ${i}` }))
+      const wrapper = mount(defineComponent({
+        setup() {
+          return () => h('div', { style: 'height: 200px; overflow: auto' }, h(TreeRoot as any, {
+            items,
+            getKey: (item: any) => item.title,
+          }, () => h(TreeVirtualizer as any, { textContent: (item: any) => item.value.title }, {
+            default: ({ item }: any) => [
+              item.index === 0 ? h('span', 'lead') : null,
+              h(TreeItem as any, { ...item.bind }, { default: () => item.value.title }),
+            ],
+          })))
+        },
+      }), { attachTo: document.body })
+      await nextTick()
+      expect(wrapper.find('[data-index="0"]').exists()).toBe(true)
+    })
+
     it('should wrap around the boundary items', async () => {
       const wrapper = mountVirtualTree(5)
       await nextTick()

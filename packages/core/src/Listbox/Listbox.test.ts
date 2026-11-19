@@ -272,6 +272,26 @@ describe('given a virtualized Listbox on initial mount', () => {
     expect(document.activeElement).not.toBe(items[0].element)
   })
 
+  it('mounts virtual rows when the default slot returns a conditional fragment', async () => {
+    const options = Array.from({ length: 30 }, (_, i) => ({ label: `Item ${i}`, value: i }))
+    const wrapper = mount(defineComponent({
+      setup() {
+        return () => h(ListboxRoot, {}, () => h(ListboxContent, { style: 'height: 200px; overflow: auto' }, () =>
+          h(ListboxVirtualizer, { options, textContent: (o: any) => o.label }, {
+            default: ({ option }: any) => [
+              option.value % 2 === 0
+                ? h(ListboxItem, { value: option }, () => option.label)
+                : null,
+              h(ListboxItem, { value: option, key: `row-${option.value}` }, () => option.label),
+            ],
+          })))
+      },
+    }), { attachTo: document.body })
+    await flush()
+    expect(wrapper.find('[data-index="0"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Item 0')
+  })
+
   it('should highlight a pre-selected item on mount without scrolling the page or stealing focus', async () => {
     // A selected value below the fold must not pull the page to the listbox on
     // mount. The checked item is brought into the internal scroll container
