@@ -226,6 +226,7 @@ behaviour or source used by both builds:
 
 **Recommendation:** none of these for the first release. Revisit after Vue 3.6 is stable, using
 the A/B harness (`PERF_LOG.md`).
+**Decided (owner, 2026-11-19):** none for the first release — phase F is measure-only.
 
 ### Q18. Should Reka document `__VUE_OPTIONS_API__: false` for consumers? (PERF_LOG F1)
 
@@ -247,6 +248,14 @@ No other Vue compile-time flag applies. `@vue/runtime-vapor` 3.6.0-rc.15 reads o
 `__VUE_PROD_DEVTOOLS__` and `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`, which are already `false`
 in production by default. The pure-Vapor size floor is the runtime code that no flag
 guards: hydration, interop and the built-ins (Q16). Any flag for those would have to come from Vue.
+**Decided (owner, 2026-11-19):** (B) — document safe to disable; verify with `test:no-options-api` (D1/D2).
+
+## Process (FIX_PLAN_5)
+
+**Decided (owner, 2026-11-19):** Do not change lint-staged hook config (would leak into upstream PR);
+never use `--no-verify` unless a plan step allows. If the hook stash fails, STOP. Upstream issues/PRs:
+draft files in `vapor-proposal/upstream/` only (phase E).
+
 ## Running Reka's full test suite under pure Vapor (`QS*`)
 
 From the full-suite work (`FULL_SUITE.md`). Numbered `QS1`... to stay apart from
@@ -265,6 +274,7 @@ About a fifth of the suite (754 tests, 41 files) builds its scaffolding with `h(
 **Recommendation:** (a) while Vapor is experimental, moving to (b) file by file as
 tests are touched anyway.
 **⚑ Provisional default:** (a); bridged results are reported separately.
+**Decided (owner, 2026-11-19):** (a) — keep the render-function bridge for the full-suite run.
 
 ### QS2. Should new tests be written mode-agnostic?
 
@@ -272,6 +282,7 @@ A small rule for contributors ("mount SFC fixtures, not `h()` trees; do not read
 `vm.$`/`subTree`") would make every new test run in both modes without a bridge.
 **Recommendation:** yes, in `CONTRIBUTING.md`, once Vapor support is accepted.
 **⚑ Provisional default:** not done (it is the maintainers' contributor guide).
+**Decided (owner, 2026-11-19):** provisional default — no new contributor rule in this branch yet.
 
 ### QS3. Should the full-suite Vapor run be in CI?
 
@@ -279,6 +290,7 @@ It takes about as long as the VDOM run. Options: (a) required, (b) non-blocking 
 with the pass count tracked, (c) manual only.
 **Recommendation:** (b) until the remaining failures are triaged, then (a).
 **⚑ Provisional default:** manual (`pnpm --filter @reka-ui/vapor-tests test:full-suite`).
+**Decided (owner, 2026-11-19):** (b) — manual / non-blocking until triage completes.
 
 ### QS4. Is it acceptable for as-child Primitive to hook Vapor fragment updates?
 
@@ -296,6 +308,7 @@ fragments on the path to the first element. Those arrays are internal to
 
 **Recommendation:** (a) now, with a guard test, and file (c) upstream.
 **⚑ Provisional default:** (a).
+**Decided (owner, 2026-11-19):** (a) — keep `onRootFragmentUpdate` with a guard test; file upstream when ready.
 
 ### QS5. Should the full-suite harness normalise Vapor's anchor comments in `html()`?
 
@@ -315,6 +328,7 @@ still available.
 **Update (r5):** superseded by option (d), per-test helpers (`expectMarkupSnapshot`,
 `modeMarkup`) under the QS6 convention, ADR-S13. The 19 tests pass. Reopen this if a
 reviewer prefers (a).
+**Decided (owner, 2026-11-19):** (d) via ADR-S13 helpers — keep current convention.
 
 ### QS6. Convention for tests that differ between VDOM and Vapor (provisional)
 
@@ -335,6 +349,7 @@ convention in use:
 
 **Recommendation:** (a) for assertions, (c) for new fixtures.
 **⚑ Provisional default:** (a).
+**Decided (owner, 2026-11-19):** (a) for assertion style; (c) for new fixtures.
 
 ### QS7. As-child attrs are missing from Vapor SSR markup
 
@@ -360,6 +375,7 @@ the RovingFocus chain. This has not been confirmed.
 The pure-Vapor Tabs SSR test **"ssr hydration keeps the default output when ids do not diverge"**
 stays red on purpose (R3 reverted): expected SSR markup was not rewritten to match the known
 as-child server gap.
+**Decided (owner, 2026-11-19):** (b) — known Vapor SSR first-paint difference; Tabs test stays red; draft Vue issue (phase E).
 
 ### QS8. Listener order for events bubbling from a descendant of an as-child element
 
@@ -375,6 +391,7 @@ element's own listener still runs first, which is the opposite of VDOM.
 
 **Recommendation:** (a) now, and file (c).
 **⚑ Provisional default:** (a).
+**Decided (owner, 2026-11-19):** (a) — accept listener order divergence for now.
 
 ### QS9. Forwarding a ref to a Vapor component that exposes nothing
 
@@ -391,6 +408,7 @@ In Vapor, a template ref on a component is its expose proxy. When the component
 
 **Recommendation:** (a) together with (c). Use (b) only if the user wants those tests green.
 **⚑ Provisional default:** (a). The 6 tests stay red.
+**Decided (owner, 2026-11-19):** (a) and (c) — document migration + draft Vue issue; fix tests in C2 (`isVapor` expose `$el`).
 
 ### QS10. Virtualizer implementation: unified `<Primitive as-child v-for>` vs twin SFCs
 
@@ -405,6 +423,7 @@ Instead, replacing `cloneVNode` with a direct template `<Primitive v-for="item i
 
 **Recommendation:** (a).
 **⚑ Provisional default:** (a).
+**Decided (owner, 2026-11-19):** (a) — unified Primitive v-for template (ADR-S40).
 
 ### QS11. Caching and scoping `proxy` on Vapor instances for VueUse helpers
 
@@ -418,6 +437,7 @@ Instead, replacing `cloneVNode` with a direct template `<Primitive v-for="item i
 
 **Recommendation:** Combine (a) and (b): use explicit element refs where possible in Reka source, and retain the WeakMap-cached shim in `rekaVapor.ts` for any remaining VueUse internals.
 **⚑ Provisional default:** (a) with (b).
+**Decided (owner, 2026-11-19):** (a) with (b) — keep VueUse shim and explicit refs where present.
 
 ### QS12. Full-suite harness and `VaporTransition` default slot `(H1c)`
 
@@ -445,6 +465,7 @@ without breaking reactive KeepAlive/Transition composition.
 
 **Recommendation:** (a) with a failing repro in `packages/vapor/test-native` before touching the bridge again.
 **⚑ Provisional default:** (c) until (a) is designed.
+**Decided (owner, 2026-11-19):** try (a) once in C3; if it fails, (c) — not (b).
 
 ### QS13. `createComponent` key getter from `propsRef` `(H1d)`
 
@@ -462,6 +483,7 @@ fixtures.
 | (c) Leave `rawProps.key = () => c.key` | Stable; any setProps-key test stays red until understood. |
 
 **⚑ Provisional default:** (c).
+**Decided (owner, 2026-11-19):** (c) — propsRef key stays reverted.
 
 ### QS14. Dialog/Combobox `unmountOnHide=false` and `v-show` vs inline `display` (FIX_PLAN step 20)
 
@@ -476,6 +498,7 @@ override hidden content).
 | (c) Leave tests red until Vue Vapor supports `v-show` on components | Stable. |
 
 **⚑ Provisional default:** (c). **Do not implement** without maintainer choice.
+**Decided (owner, 2026-11-19):** (a) — Vapor-only `v-show`/`display` path (C1); else (c).
 
 ### QS15. FocusScope stack registration timing (FIX_PLAN step 21)
 
@@ -489,6 +512,7 @@ Dirty-tree changed stack registration in `setup` for all VDOM users (R6); **reve
 | (c) Leave red until understood | Current. |
 
 **⚑ Provisional default:** (c).
+**Decided (owner, 2026-11-19):** re-check after C1; Vapor-only fix allowed else (c).
 
 ### QS16. Combobox `resetSearchTermOnBlur` 1 ms `setTimeout` (W9) and input sync (W11)
 
@@ -501,6 +525,7 @@ fail). Native typing test did not prove harness vs Reka. **Do not** land `syncIn
 a VDOM-safe design; investigate `suite/test-utils.ts` `setValue` / keyboard path first.
 
 **⚑ Provisional default:** leave both Combobox Vapor fails red; file QS under W9/W11 in triage.
+**Decided (owner, 2026-11-19):** keep `setTimeout`; fix harness only (C4), else leave red.
 
 ### QS17. Dialog dev `useWarning` fires twice under pure Vapor (FIX_PLAN_4 §9.1)
 
@@ -518,4 +543,5 @@ and missing-description cases; VDOM `pnpm exec vitest run src/Dialog/Dialog.test
 | (c) Leave red; investigate Vue Vapor lifecycle | Current. |
 
 **⚑ Provisional default:** (c).
+**Decided (owner, 2026-11-19):** (c) plus C5 diagnosis; **never (a)** harness warn dedupe.
 

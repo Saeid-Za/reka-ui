@@ -812,3 +812,23 @@ Step 25/32 A/B script copied from `reka-vapor-export` with `REPO_ROOT=$(git rev-
 `bench/dist/<mode>/` to `dist/vapor-base/`, so concurrent vitest and A/B runs cannot leave
 stray `.vapor.vue` twins in `packages/core/src`.
 
+## ADR-S44 Owner decisions recorded (FIX_PLAN_5 phase B, 2026-11-19)
+
+See `OPEN_QUESTIONS.md` **Decided (owner, 2026-11-19)** lines. Safest defaults: never weaken
+tests or change VDOM without proof; failed fixes → document and leave red.
+
+## ADR-S45 QS7 Vapor SSR as-child first paint (Tabs test red on purpose)
+
+Owner chose (b): accept missing as-child attrs on Vapor SSR first paint; keep the Tabs SSR
+hydration test red; draft Vue upstream issue (phase E).
+
+## ADR-S46 QS9 forward expose under Vapor
+
+Owner chose (a)+(c): document that forwarded children should `defineExpose({ $el })`; adjust
+tests in C2; draft Vue issue for expose proxy `$el`.
+
+## ADR-S47 QS14 `unmountOnHide` hidden content (C1)
+
+Owner chose (a): apply `display: none` on a Vapor-only path (`Presence.vapor.vue` or twin);
+VDOM SFCs unchanged. Fallback (c) if C1 fails.
+
