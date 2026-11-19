@@ -94,40 +94,16 @@ provideComboboxContentContext({ position })
 
 // Handle case where input position within the content
 const isInputWithinContent = ref(false)
-const hasFocusedInput = ref(false)
-
-function checkFocusInput() {
-  const input = rootContext.inputElement.value
-  const content = currentElement.value
-  if (input && content) {
-    const isWithin = content.contains(input)
-    isInputWithinContent.value = isWithin
-    if (props.present && isWithin && !hasFocusedInput.value) {
-      hasFocusedInput.value = true
-      input.focus()
+onMounted(() => {
+  if (rootContext.inputElement.value) {
+    isInputWithinContent.value = currentElement.value?.contains(rootContext.inputElement.value) ?? false
+    if (props.present && isInputWithinContent.value) {
+      rootContext.inputElement.value.focus()
     }
   }
-}
-
-onMounted(async () => {
-  checkFocusInput()
-  await nextTick()
-  checkFocusInput()
-})
-
-watch(rootContext.inputElement, () => {
-  checkFocusInput()
 })
 
 watch(() => props.present, async (isPresent, wasPresent) => {
-  if (!isPresent)
-    hasFocusedInput.value = false
-
-  if (isPresent && !wasPresent) {
-    checkFocusInput()
-    return
-  }
-
   if (isPresent || !wasPresent)
     return
 
@@ -140,7 +116,6 @@ watch(() => props.present, async (isPresent, wasPresent) => {
 })
 
 onUnmounted(() => {
-  hasFocusedInput.value = false
   rootContext.onContentUnmount(contentId)
   const activeElement = getActiveElement()
   if (isInputWithinContent.value && (!activeElement || activeElement === document.body)) {

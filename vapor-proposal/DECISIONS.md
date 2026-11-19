@@ -791,8 +791,11 @@ parent scoped id appears exactly once on the control (`isVapor` in
 
 ## ADR-S37 Combobox inline input focus after Vapor content mount
 
-`ComboboxContentImpl` re-checks input-in-content on mount, `nextTick`, `inputElement`
-changes, and open transitions so inline Comboboxes receive focus when the input ref resolves
-after content mount (Vapor timing). VDOM suite unchanged; remaining Combobox Vapor fails are
-QS14 / W9 / W11.
+**Superseded by ADR-S41.** (Historical: W12 changed `ComboboxContentImpl` focus timing.)
+
+## ADR-S41 Revert W12 Combobox focus changes
+
+W12 (`f7e5c2a4`) reverted: it changed VDOM focus behaviour (watcher on `inputElement`,
+`nextTick` re-check, `hasFocusedInput`), fixed no Vapor test (3527 → 3527), and added no VDOM
+test per FIX_PLAN step 15. Combobox Vapor failures remain QS14 / QS16 / W9 / W11.
 
