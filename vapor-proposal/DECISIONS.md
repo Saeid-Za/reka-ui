@@ -850,8 +850,9 @@ KeepAlive-style `DynamicFragment` on `VaporTransition` default slot regressed
 
 ## ADR-S50 QS9 suite tests expose child `$el` under Vapor (C2)
 
-Vapor tests add an `isVapor` branch so child fixtures call `defineExpose({ $el })` (via
-`exposeWithOptionalEl` in `useForwardExpose.test.ts`). VDOM branches stay upstream-identical.
+Vapor tests add an `isVapor` branch so child fixtures call `defineExpose({ $el })`.
+VDOM definitions are upstream verbatim (`isVapor ? … : …`); fixed in H1 (removed
+`exposeWithOptionalEl` shared render path).
 Documented limit test in `test-native/forward-expose-heuristic.test.ts`; migration note in
 `USER_GUIDE_DRAFT.md`.
 
