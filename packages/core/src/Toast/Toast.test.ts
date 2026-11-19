@@ -918,11 +918,15 @@ describe('given a ToastViewport whose element is replaced', () => {
 
     wrapper.vm.open = true
     await flush()
-    await fireEvent.pointerMove(newViewport)
+    // Vapor: template ref may lag; query the live viewport node after variant swap.
+    const viewport = isVapor
+      ? (document.querySelector('[data-viewport="b"]') as HTMLElement)
+      : newViewport
+    await fireEvent.pointerMove(viewport)
     await runDuration()
     expect(wrapper.vm.open).toBe(true)
 
-    await fireEvent.pointerLeave(newViewport)
+    await fireEvent.pointerLeave(viewport)
     await runDuration()
     expect(wrapper.vm.open).toBe(false)
   })
