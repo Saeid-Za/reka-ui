@@ -631,22 +631,28 @@ This fixes the U1 (51 tests) and U2 (25 tests) groups in FULL_SUITE.md (76 tests
    - On branch changes, `frag.update(renderFn, key)` invokes Vapor's native branch management (`prepareBranchRemoval`, `removeBranchWithLeave`, pausing effect scopes, moving elements to `storageContainer`, and triggering KeepAlive lifecycle hooks).
    - Array children in test fixtures (e.g. `[isActive ? h(...) : h(...)]`) are normalized to single descriptors and `c.key` is passed in `rawProps.key` so `createComponent` can retrieve kept-alive components from cache by key.
 
-## ADR-S21 Virtualizer consolidation without twins, slot stability, and component tree traversal
+## ADR-S21 Virtualizer Vapor twins, slot function stability, and component tree traversal
+
+(Superseded by ADR-S40 for virtualizer implementation; retained as the record of commit `36c0f04a`.)
 
 This fixes the R1 group (Combobox, Listbox, ScrollArea, Tree) and H1/H2 test-utils
 harness gaps (`findComponent(css)` and `findComponent(Component)`).
 
-1. **Virtualizer consolidation without SFC twins (R1):**
+1. **Virtualizer Vapor twins (R1):**
    - VDOM virtualizer SFCs (`ListboxVirtualizer`, `ScrollAreaVirtualizer`, `TreeVirtualizer`)
-     previously relied on VNode manipulation (`cloneVNode`, `computed(() => slots.default())`) to pass
-     virtual item positioning styles and attributes.
-   - Replaced `cloneVNode` with a direct template `<Primitive v-for="item in virtualizer.getVirtualItems()" :key="item.key" as-child :data-index="item.index" :style="{ ... }"><slot ... /></Primitive>`.
-   - In `ListboxVirtualizer.vue` and `TreeVirtualizer.vue`, added `virtualizerEl = ref<HTMLElement>()`
-     and passed it directly to `useParentElement(virtualizerEl)`, avoiding reliance on `getCurrentInstance().proxy.$el`.
-   - This works identically and 100% green in both VDOM and Vapor modes, completely avoiding the need
-     for duplicate `.vapor.vue` twins (~700 LOC saved).
-   - In `packages/vapor/rekaVapor.ts`, added a `WeakMap` cache (`proxyCache`) for the `proxy` getter on
-     Vapor instances for `@vueuse` imports, preventing redundant proxy re-allocations on property accesses.
+     relied on VNode manipulation (`cloneVNode`, `computed(() => slots.default())`) to pass
+     virtual item context down. In Vapor mode, slots return DOM blocks rather than VNodes.
+   - Created Vapor twins:
+     - `packages/core/src/Listbox/ListboxVirtualizer.vapor.vue`: loops over
+       `virtualizer.getVirtualItems()` using `<Primitive as-child><slot ... /></Primitive>`.
+     - `packages/core/src/ScrollArea/ScrollAreaVirtualizer.vapor.vue`: preserves `virtualizer`
+       expose and forwards expose via `useForwardExpose()`.
+     - `packages/core/src/Tree/TreeVirtualizer.vapor.vue`: maps virtual items using
+       `rootContext.expandedItems.value[item.index]`.
+   - Registered twins in `packages/vapor/rekaVapor.ts` (`SWAPS` and `SWAP_NAMES`).
+   - In `packages/vapor/rekaVapor.ts`, added a `proxy` getter on the Vapor component instance
+     so that `@vueuse/core` composables (`useParentElement`, `useCurrentElement`) can resolve
+     the element.
    - Removed `ListboxVirtualizer` known gap from `packages/vapor/test/families.ts`.
 
 2. **Slot function stability and dynamic slot descriptors (`vaporH.ts`):**
@@ -662,6 +668,14 @@ harness gaps (`findComponent(css)` and `findComponent(Component)`).
      slot boundaries and render functions.
    - Implemented `findComponent(cssSelector)` and `findAllComponents(cssSelector)` using DOM
      containment checks on component blocks.
+
+## ADR-S40 Unified virtualizer template (supersedes ADR-S21 item 1)
+
+Commit `0b2c515e` dropped `.vapor.vue` virtualizer twins (~700 LOC). VDOM SFCs now use
+`<Primitive v-for="item in virtualizer.getVirtualItems()" as-child>` so one template serves VDOM
+and Vapor; `virtualizerEl` refs feed `useParentElement`. Items 2–3 of ADR-S21 (harness) unchanged.
+VDOM fragment-slot coverage: step 24 tests. Perf A/B (step 25): deferred — `ab.sh` paths target
+`/workspace/reka-vapor/`; run locally after retargeting (QS10).
 
 ## ADR-S22 `useFormControl` reads `closest('form')` only after mount
 
