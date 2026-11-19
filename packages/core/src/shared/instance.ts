@@ -154,8 +154,11 @@ export function onRootFragmentUpdate(instance: RekaInstance | null, callback: ()
       return false
     if (typeof Element !== 'undefined' && block instanceof Element)
       return true
-    if (Array.isArray(block))
+    if (Array.isArray(block)) {
+      if ('u' in block)
+        hook(block as { u?: Array<() => void> })
       return block.some(walk)
+    }
     if (typeof block === 'object') {
       if (isVaporInstance(block))
         return walk(block.block)

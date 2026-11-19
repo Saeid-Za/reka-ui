@@ -207,9 +207,9 @@ different test so far had a Vapor equivalent.
 | shared/useContentId.test.ts | 4 |  |  |  |  | 4 |
 | shared/useForwardExpose.test.ts | 9 |  |  |  |  | 9 |
 | shared/useForwardScopeId.test.ts | 3 |  |  |  |  | 3 |
-| shared/useRenderedContentId.test.ts | 9 |  |  |  | 76 | 85 |
+| shared/useRenderedContentId.test.ts | 0 |  |  |  | 0 | 0 |
 | shared/useTriggerId.test.ts | 6 |  |  |  |  | 6 |
-| **total** | 98 | 22 | 1 | 0 | 111 | 232 |
+| **total** | 89 | 22 | 1 | 0 | 35 | 147 |
 
 | Root cause | Bucket | Tests | Files |
 |---|---|---|---|
@@ -221,15 +221,15 @@ different test so far had a Vapor equivalent.
 | R1 virtualizer item refs ($el of undefined) — known gap ADR-017 | fail:reka | 33 | Combobox 11, Listbox 8, ScrollArea 8, Tree 6 |
 | R2 consumer listeners run after the component's own handlers (preventDefault opt-out ignored) | fail:reka | 18 | Select 7, DropdownMenu 4, Menubar 4, Tabs 3 |
 | R3 form-control detection: closest('form') read before the element is inserted into <form> | fail:reka | 2 | Checkbox 1, Toggle 1 |
-| R4 consumer id / trigger id change not propagated (remaining after fix #1) | fail:reka | 20 | useRenderedContentId 9, useTriggerId 6, useContentId 4, Tabs 1 |
+| R4 consumer id / trigger id change not propagated (remaining after fix #1) | fail:reka | 11 | useTriggerId 6, useContentId 4, Tabs 1 |
 | R5 as-child / element resolution (Primitive, usePrimitiveElement, useForwardExpose) | fail:reka | 16 | useForwardExpose 9, Primitive 4, usePrimitiveElement 3 |
 | R6 scope-id forwarding (useForwardScopeId) | fail:reka | 3 | useForwardScopeId 3 |
 | R7 unmountOnHide=false content not hidden (v-show/display on persistent content) | fail:reka | 5 | Dialog 3, Combobox 2 |
 | S1 Vapor SSR: vi.mock() does not reach the server-compiled copy of a module (Dialog.ssr, useBodyScrollLock) | fail:harness | 1 | Dialog.ssr 1 |
 | S2 Vapor SSR: vi.resetModules() reloads the inlined vue, stack overflow (Popover.ssr, suspected) | fail:harness | 1 | Popover.ssr 1 |
 | S3 Vapor SSR: as-child attrs are applied on the client only, missing from server markup (QS7) | fail:reka | 1 | Tabs 1 |
-| U1 useRenderedContentId: KeepAlive deactivation (bridge KeepAlive vs Reka onDeactivated) | undiagnosed | 51 | useRenderedContentId 51 |
-| U2 useRenderedContentId: as-child content with no element | undiagnosed | 25 | useRenderedContentId 25 |
+| U1 useRenderedContentId: KeepAlive deactivation (bridge KeepAlive vs Reka onDeactivated) | undiagnosed | 0 | Fixed (ADR-S20) |
+| U2 useRenderedContentId: as-child content with no element | undiagnosed | 0 | Fixed (ADR-S20) |
 | U9 other (to investigate one by one) | undiagnosed | 35 | Combobox 10, StepperAnnouncement 4, Popover 3, Presence 3, Tooltip 3, Dialog 2, Slider 2, AlertDialog 1, DateField 1, DropdownMenu 1, FocusScope 1, Menubar 1, RovingFocus 1, TagGroup 1, Toast 1 |
 
 ## Triage of the 610 failures (run r1 → r2, 2026-11-18)

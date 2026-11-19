@@ -29,6 +29,7 @@ import {
   createComponent,
   createTemplateRefSetter,
   currentInstance,
+  DynamicFragment,
   effectScope,
   Fragment,
   getCurrentScope,
@@ -40,6 +41,7 @@ import {
   proxyRefs,
   reactive,
   remove,
+  renderEffect,
   restoreCurrentInstance,
   setCurrentInstance,
   setDynamicProps,
@@ -389,12 +391,42 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
   const slotsRef = shallowRef(descSlots(c.children))
   const rawSlots: Record<string, any> = {}
   for (const name of Object.keys(slotsRef.value)) {
-    rawSlots[name] = (slotProps: any) => reactiveBlock(() => {
-      const fn = slotsRef.value[name]
-      return fn ? fn(slotProps) : null
-    })
+    if (type === VaporKeepAlive && name === 'default') {
+      rawSlots[name] = (slotProps: any) => {
+        const keepAliveOwner = currentInstance
+        const keepAliveCtx: Ctx = { owner: keepAliveOwner, scope: childScope(ctx), setRef: ctx.setRef }
+        const frag = new DynamicFragment(0, 'keepalive-slot')
+        renderEffect(() => {
+          const fn = slotsRef.value[name]
+          const raw = fn?.(slotProps)
+          const norm = normalize(raw)
+          const desc = norm.length > 0 ? norm[0] : null
+          if (!desc) {
+            frag.update(undefined, null)
+            return
+          }
+          const key = (typeof desc === 'object' && 'key' in desc && desc.key != null)
+            ? desc.key
+            : (typeof desc === 'object' && 'type' in desc ? desc.type : desc)
+          frag.update(() => {
+            const m = mountChild(keepAliveCtx, desc, false)
+            return entryOf(m)
+          }, key)
+        })
+        return frag
+      }
+    }
+    else {
+      rawSlots[name] = (slotProps: any) => reactiveBlock(() => {
+        const fn = slotsRef.value[name]
+        return fn ? fn(slotProps) : null
+      })
+    }
   }
-  const inst = inOwner(ctx, scope, () => createComponent(type, { $: [() => propsRef.value] } as any, rawSlots as any))
+  const rawProps: Record<string, any> = { $: [() => propsRef.value] }
+  if (c.key != null)
+    rawProps.key = () => c.key
+  const inst = inOwner(ctx, scope, () => createComponent(type, rawProps as any, rawSlots as any))
   const m: M = { kind: 'comp', type: c.type, inst, scope, propsRef, slotsRef, ref, key: c.key }
   applyRef(ctx, inst, ref)
   return m
@@ -573,7 +605,8 @@ export function reactiveBlock(render: () => any): any[] {
   if (ctx.owner)
     ctx.setRef = createTemplateRefSetter()
   const anchor = document.createComment('')
-  const block: any[] = []
+  const block: any[] & { u?: Array<() => void> } = []
+  block.u = []
   let initial: Child[] | undefined
   let mounted: M[] = []
   const sync = () => {
@@ -593,6 +626,9 @@ export function reactiveBlock(render: () => any): any[] {
         return
       mounted = patchList(ctx, mounted, children, parent, anchor, false)
       sync()
+      if (block.u?.length) {
+        for (const fn of [...block.u]) fn()
+      }
     },
   )
   mounted = mountList(ctx, initial!, null, null, false)

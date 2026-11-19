@@ -90,7 +90,8 @@ export function useVaporForwardExpose(instance: VaporInstanceLike) {
   // only write reactive state: reading `currentRef` here would make that
   // effect depend on what it writes and re-run itself forever.
   const forwardRef = (ref: any) => {
-    const forwarded = ref && typeof ref === 'object' && '$el' in ref && !ref.$el ? null : ref
+    const isPlainElRef = ref && typeof ref === 'object' && '$el' in ref && !Object.getOwnPropertyDescriptor(ref, '$el')?.get && !ref.$el
+    const forwarded = isPlainElRef ? null : ref
     currentRef.value = forwarded
     for (const key of forwardedKeys)
       delete ret[key]

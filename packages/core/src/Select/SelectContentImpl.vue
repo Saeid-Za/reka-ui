@@ -93,6 +93,7 @@ export const [injectSelectContentContext, provideSelectContentContext]
 import { reactiveOmit, unrefElement } from '@vueuse/core'
 import {
   computed,
+  onUnmounted,
   ref,
   watch,
   watchEffect,
@@ -120,6 +121,29 @@ useBodyScrollLock(props.bodyLock)
 const { CollectionSlot, getItems } = useCollection()
 
 const content = ref<HTMLElement>()
+let popperWrapperObserver: MutationObserver | undefined
+onUnmounted(() => {
+  popperWrapperObserver?.disconnect()
+})
+function handleContentRef(vnode: Element | ComponentPublicInstance | null) {
+  forwardRef(vnode)
+  if (!vnode)
+    return
+  const el = unrefElement(vnode as ComponentPublicInstance) as HTMLElement | undefined
+  // special case for PopperContent
+  if (el?.hasAttribute('data-reka-popper-content-wrapper')) {
+    content.value = el.firstElementChild as HTMLElement
+    popperWrapperObserver?.disconnect()
+    popperWrapperObserver = new MutationObserver(() => {
+      content.value = el.firstElementChild as HTMLElement
+    })
+    popperWrapperObserver.observe(el, { childList: true })
+  }
+  else {
+    popperWrapperObserver?.disconnect()
+    content.value = el
+  }
+}
 // The item-aligned position renders a wrapper around the content. Expose the content as `$el`,
 // so that `Presence` watches the element that carries the exit animation.
 const { forwardRef } = useForwardExpose()
@@ -328,19 +352,7 @@ provideSelectContentContext({
           "
           v-bind="{ ...$attrs, ...forwardedProps }"
           :id="rootContext.contentId"
-          :ref="
-            (vnode: Element | ComponentPublicInstance | null) => {
-              forwardRef(vnode)
-              if (!vnode) return undefined
-              const el = unrefElement(vnode as ComponentPublicInstance) as HTMLElement | undefined
-              // special case for PopperContent
-              if (el?.hasAttribute('data-reka-popper-content-wrapper'))
-                content = el.firstElementChild as HTMLElement
-              else
-                content = el
-              return undefined
-            }
-          "
+          :ref="handleContentRef"
           role="listbox"
           :data-state="rootContext.open.value ? 'open' : 'closed'"
           :dir="rootContext.dir.value"

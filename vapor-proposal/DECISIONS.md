@@ -614,3 +614,20 @@ What stays open: a *template ref* on a Vapor component is that component's
 therefore gives Reka no `$el` to forward. Reka's own SFCs expose `$el`, but test or
 user components do not. That is behind the 6 remaining useForwardExpose failures;
 see QS9.
+
+## ADR-S20 Vapor KeepAlive and as-child empty slots in `useRenderedContentId`
+
+This fixes the U1 (51 tests) and U2 (25 tests) groups in FULL_SUITE.md (76 tests total in `useRenderedContentId.test.ts`).
+
+1. **U2: As-child content without an element (initial mount & slot swap):**
+   - In `packages/core/src/shared/useForwardExpose.vapor.ts`, forwarded component refs that define an `$el` getter are no longer coerced to `null` if the getter currently returns null/undefined. In Vapor, an as-child target may resolve its element asynchronously or when child slots populate.
+   - In `packages/core/src/shared/instance.ts`, `onRootFragmentUpdate` now walks array blocks that provide an update hook array `('u' in block)`. In `packages/vapor/suite/vaporH.ts`, `reactiveBlock()` registers `block.u` and fires updates when slots re-render.
+   - In `packages/core/src/Primitive/Primitive.vapor.vue`, popper wrapper elements (`data-reka-popper-content-wrapper`) now observe child DOM mutations with a `MutationObserver` to re-sync forwarded attributes (such as `id`, `aria-labelledby`, layer tags) when inner slotted content mounts or swaps.
+   - In `packages/core/src/Select/SelectContentImpl.vue`, `content.value` observes mutations on `SelectPopperPosition`'s DOM wrapper in Vapor mode so forwarded refs track dynamic element swaps.
+
+2. **U1: KeepAlive deactivation and transitions:**
+   - In Vue Vapor, `VaporKeepAlive` requires its default slot to return a `DynamicFragment` with `currentInstance` bound to the `VaporKeepAlive` instance so that `keepAliveCtx` is captured and `registerDynamicFragmentHooks` can register update and deactivation hooks.
+   - In `packages/vapor/suite/vaporH.ts`, `rawSlots['default']` for `VaporKeepAlive` now creates a `DynamicFragment` with a `renderEffect` that tracks `slotsRef.value['default']`.
+   - On branch changes, `frag.update(renderFn, key)` invokes Vapor's native branch management (`prepareBranchRemoval`, `removeBranchWithLeave`, pausing effect scopes, moving elements to `storageContainer`, and triggering KeepAlive lifecycle hooks).
+   - Array children in test fixtures (e.g. `[isActive ? h(...) : h(...)]`) are normalized to single descriptors and `c.key` is passed in `rawProps.key` so `createComponent` can retrieve kept-alive components from cache by key.
+
