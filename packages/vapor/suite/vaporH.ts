@@ -424,6 +424,20 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
         return frag
       }
     }
+    if (type === VaporTransition && name === 'default') {
+      const transitionOwner = currentInstance
+      const transitionCtx: Ctx = { owner: transitionOwner, scope: childScope(ctx), setRef: ctx.setRef }
+      return (slotProps: any) => {
+        const fn = slotsRef.value[name]
+        const raw = fn?.(slotProps)
+        const norm = normalize(raw)
+        const desc = norm.length > 0 ? norm[0] : null
+        if (!desc)
+          return null
+        const m = mountChild(transitionCtx, desc, false)
+        return entryOf(m)
+      }
+    }
     return (slotProps: any) => reactiveBlock(() => {
       const fn = slotsRef.value[name]
       return fn ? fn(slotProps) : null
@@ -432,6 +446,8 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
 
   const stableSlotFns: Record<string, (slotProps: any) => any> = {}
   const getSlotFn = (name: string) => {
+    if (type === VaporTransition)
+      return (...args: any[]) => makeSlotFn(name)(...args)
     return (stableSlotFns[name] ??= makeSlotFn(name))
   }
 

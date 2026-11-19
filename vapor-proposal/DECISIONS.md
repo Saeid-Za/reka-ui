@@ -712,4 +712,14 @@ render/state in a `shallowRef` instead of throwing `VaporSuiteUnsupported`.
 `h(Suspense, …)` in test scaffolding unwraps the default slot when normalizing children
 so async fixtures render their resolved subtree.
 
+## ADR-S30 VaporTransition default slot mounts transition child directly
+
+`VaporTransition` bypasses reactive slot re-wrapping so the outgoing/incoming element is
+mounted once for leave/enter hooks in render-function tests.
+
+## ADR-S31 Component key from live propsRef
+
+`createComponent` key getter tracks `propsRef.value.key` so parent prop updates retarget
+the Vapor component without remounting when only the descriptor key was stale.
+
 
