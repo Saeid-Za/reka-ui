@@ -805,3 +805,10 @@ Step 25/32 A/B script copied from `reka-vapor-export` with `REPO_ROOT=$(git rev-
 --show-toplevel)`, scratch under `packages/vapor/scratch/perf/`, and `BENCH_MODE` defaulting to
 `vapor` (use `BENCH_MODE=vdom` for virtualizer Listbox A/B vs `0b2c515e~1`).
 
+## ADR-S43 A/B baseline via detached git worktree
+
+`packages/vapor/scripts/ab.sh` no longer checks out `$BASE` into the main working tree
+(file backup/restore). It builds the baseline in `git worktree add --detach` and copies
+`bench/dist/<mode>/` to `dist/vapor-base/`, so concurrent vitest and A/B runs cannot leave
+stray `.vapor.vue` twins in `packages/core/src`.
+

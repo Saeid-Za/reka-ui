@@ -1,9 +1,7 @@
 #!/bin/bash
 # A/B benchmark: baseline = $BASE (default HEAD), candidate = working tree.
-# Both builds run in one browser session, interleaved per scenario.
+# Baseline is built in a detached worktree; the main working tree is never checked out.
 #   BASE=<ref> BENCH_MODE=vdom ab.sh <name> [extra run.mjs args]
-# No git stash: changed files are backed up, checked out from $BASE for the
-# baseline build, then restored.
 set -e
 name=$1; shift
 BASE=${BASE:-HEAD}
@@ -13,18 +11,22 @@ cd "$REPO_ROOT"
 V=packages/vapor
 SCRATCH="${REPO_ROOT}/packages/vapor/scratch/perf"
 mkdir -p "$SCRATCH"
-tmp=$(mktemp -d)
-paths="packages/core/src packages/core/package.json packages/vapor/rekaVapor.ts"
-changed=$(git diff --name-only $BASE -- $paths; git ls-files --others --exclude-standard -- $paths)
-added=$(git diff --name-only --diff-filter=A $BASE -- $paths; git ls-files --others --exclude-standard -- $paths)
-for f in $changed; do [ -e "$f" ] && { mkdir -p "$tmp/$(dirname $f)"; cp "$f" "$tmp/$f"; }; done
-restore() { for f in $changed; do [ -e "$tmp/$f" ] && { mkdir -p "$(dirname $f)"; cp "$tmp/$f" "$f"; }; done; }
-trap restore EXIT
-for f in $added; do rm -f "$f"; done
-for f in $changed; do git cat-file -e "$BASE:$f" 2>/dev/null && git show "$BASE:$f" > "$f"; done
-(cd $V && BENCH_MODE="$BENCH_MODE" npx vite build -c bench/vite.config.ts --logLevel error) && rm -rf $V/bench/dist/vapor-base && mv $V/bench/dist/$BENCH_MODE $V/bench/dist/vapor-base
-restore; trap - EXIT
-git diff --quiet $BASE -- $paths && [ "$BASE" != HEAD ] && echo "warning: no diff vs $BASE" >&2 || true
+BASE_WT="${TMPDIR:-/tmp}/reka-ab-base-$$"
+cleanup() {
+  if [ -d "$BASE_WT/.git" ] || git worktree list | grep -q "$BASE_WT"; then
+    git worktree remove --force "$BASE_WT" 2>/dev/null || rm -rf "$BASE_WT"
+  fi
+}
+trap cleanup EXIT
+
+git worktree add --detach "$BASE_WT" "$BASE" >/dev/null
+rm -rf "$V/bench/dist/vapor-base"
+(cd "$BASE_WT/$V" && BENCH_MODE="$BENCH_MODE" npx vite build -c bench/vite.config.ts --logLevel error)
+mkdir -p "$V/bench/dist/vapor-base"
+cp -a "$BASE_WT/$V/bench/dist/$BENCH_MODE/." "$V/bench/dist/vapor-base/"
+
+git diff --quiet "$BASE" -- packages/core/src packages/core/package.json packages/vapor/rekaVapor.ts packages/vapor/bench \
+  && [ "$BASE" != HEAD ] && echo "warning: no diff vs $BASE" >&2 || true
 (cd $V && BENCH_MODE="$BENCH_MODE" npx vite build -c bench/vite.config.ts --logLevel error)
 (cd $V && node bench/run.mjs --skip-build --modes "vapor-base,${BENCH_MODE}" --runs 15 "$@" --out "$SCRATCH/$name.json") > "$SCRATCH/$name.log" 2>&1
 node - "$name" "$SCRATCH" "$BENCH_MODE" <<'JS'
