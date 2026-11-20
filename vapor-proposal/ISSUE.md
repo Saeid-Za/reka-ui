@@ -2,7 +2,8 @@
 
 ### TL;DR
 
-Reka already **mostly works in Vapor apps through `vaporInteropPlugin`** (Vue >= 3.6.0-rc.15),
+Reka already **mostly works in Vapor apps through `vaporInteropPlugin`** (Vue >= 3.6.0-rc.15;
+prefer **>= 3.6.0-rc.16** for interop SSR of as-child/`cloneVNode` attrs — vuejs/core#16269),
 but (1) Reka composables silently break when called from `<script setup vapor>` components, and
 (2) Vapor apps must ship the whole VDOM runtime to use Reka. Only a handful of Reka modules
 actually need vnodes, so a **Vapor build from the same source** is realistic. I have a
@@ -32,7 +33,8 @@ Follows up on @zernonia's note in #2721 ("if there is demand, please open a dedi
    by design (Vue 3.6 release notes). `useForwardExpose` throws in the same situation.
 2. **Small divergence under interop:** with `as-child`, Vue applies Reka's merged attrs to Vapor
    slot content as fallthrough attrs, so the parent's attrs win over the child's own (Reka's VDOM
-   `Slot` gives the child priority). SSR of those attrs is also broken upstream (vuejs/core#16269).
+   `Slot` gives the child priority). Interop SSR of those attrs was vuejs/core#16269 (**fixed**
+   in #16340 / Vue 3.6.0-rc.16). Pure-Vapor SSR first-paint gaps (e.g. Tabs) are a separate path.
 3. **No VDOM-free option.** Compiling Reka's source as Vapor fails because of a few vnode-based
    modules (`Primitive`/`Slot`, `Presence`, `Collection`, virtualizers) and ~11 `getCurrentInstance` users.
 4. **A memory leak under interop** (pre-existing, found while benchmarking): with a Vapor app +

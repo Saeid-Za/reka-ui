@@ -2,6 +2,9 @@
 
 Gate: **3541 pass / 11 fail / 35 skip** (`packages/vapor/suite/out/report.json`,
 `--maxWorkers=4`). Rows from `node suite/triage.mjs` (**11** failures).
+Vue pin: **3.6.0-rc.15**. QS7 Tabs SSR rechecked on **rc.16** → **still red**; rc.16 full
+suite was **3538 / 14 / 35** (Checkbox ×2 + form) — pin not kept (see
+`upstream/RELATED_ISSUES.md`).
 
 ## Flaky when green (QS17)
 

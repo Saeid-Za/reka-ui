@@ -171,4 +171,5 @@ branch. Unmount, at 1.1–2.0x of VDOM, is still the largest gap.
 - **Upstream (Vue):**
   - a public generic-instance API;
   - `$el` on Vapor component refs, or slot-root fallthrough in pure Vapor;
-  - vuejs/core#16269.
+  - vuejs/core#16269 (fixed in #16340 / rc.16; pure-Vapor QS7 still separate — see
+    `vapor-proposal/upstream/RELATED_ISSUES.md`).

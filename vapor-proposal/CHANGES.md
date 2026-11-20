@@ -1,13 +1,13 @@
 # Vue Vapor support for Reka UI: research, audit, strategy, plan
 
 Local prototype: `/workspace/reka-vapor/reka-ui`, branch `feat/vapor-support`
-(base `a9873a0`, reka-ui 2.11.0). Vue checked: **3.6.0-rc.15** (newest 3.6
-prerelease on npm on 2026-11-18; source cloned at tag `v3.6.0-rc.15`).
-Nothing was pushed or posted.
+(base `a9873a0`, reka-ui 2.11.0). Vue pin: **3.6.0-rc.15**. Rechecked against
+**3.6.0-rc.16** on 2026-11-20 (includes #16340); pin restored after QS7 stayed red
+and the suite gained Checkbox failures. Nothing was pushed or posted.
 
 ---
 
-## 1. What Vapor changes for a component library (verified in Vue 3.6.0-rc.15 source)
+## 1. What Vapor changes for a component library (verified in Vue 3.6 source)
 
 | Fact | Where verified |
 |---|---|
@@ -17,7 +17,8 @@ Nothing was pushed or posted.
 | `useAttrs()` / `useSlots()` work in Vapor (the instance is its own setup context). | `runtime-core/src/apiSetupHelpers.ts` |
 | Vapor slots are functions returning blocks; there are no vnodes to inspect or clone. In **pure Vapor**, fallthrough attrs are not applied to a slot root (dev warning instead). | `runtime-vapor/src/component.ts` (`applyFallthroughAttrs`, `resolveFallthroughOwner`) |
 | In **interop**, calling `slots.default()` from a VDOM component on a Vapor slot returns one opaque `VaporSlot` vnode; since rc.15, `cloneVNode(vaporSlotVNode, extras)` makes `extras` the fallthrough attrs of the slot content's single root. This is exactly the path Reka's `Slot` (as-child) uses. | `runtime-vapor/src/vdomInterop.ts` (`vaporSlotsProxyHandler`), `runtime-core/src/vnode.ts` (`cloneVaporSlotMeta`); [vuejs/core#14771](https://github.com/vuejs/core/issues/14771) (crash, fixed), [vuejs/core#15989](https://github.com/vuejs/core/pull/15989) (fallthrough fix) |
-| Still open: SSR of cloned attrs on Vapor slot content hydrates without them (cites Reka `Slot`/Nuxt UI). | [vuejs/core#16269](https://github.com/vuejs/core/issues/16269) |
+| Interop SSR of cloned attrs on Vapor slot content (Reka `Slot`/Nuxt UI): **fixed** in [#16340](https://github.com/vuejs/core/pull/16340), closed [#16269](https://github.com/vuejs/core/issues/16269), in **rc.16**. Pure-Vapor Tabs SSR (QS7) is a **different** path and stays red on rc.16. | See `upstream/RELATED_ISSUES.md` |
+| Library APIs that need facts from `getCurrentInstance()` (null in Vapor). | [vuejs/core#16305](https://github.com/vuejs/core/issues/16305) (open FR) |
 | `v-memo` is ignored in Vapor (compiler warning). | Vapor compiler warnings while compiling `ListboxItem.vue`, `PopperContent.vue`, `ComboboxItem.vue` |
 | Reka maintainers (v3 roadmap, 2026-09-04): v3 stays a VDOM library; a Vapor-native build is out of 3.0 scope, "please open a dedicated issue". | [unovue/reka-ui#2721](https://github.com/unovue/reka-ui/issues/2721) |
 | Related Reka bug: `useId`'s `import * as vue` pulls `@vue/runtime-vapor` into every bundle on 3.6. | [unovue/reka-ui#3018](https://github.com/unovue/reka-ui/issues/3018) |

@@ -125,7 +125,7 @@ fixing again: one commit per item, gate numbers in the body, VDOM gate **3552 / 
 - **Never use `git stash`.** It is shared across worktrees. Also, the repo's lint-staged pre-commit hook
   stashes internally. Switching it to `lint-staged --no-stash` is a pending owner decision.
 - commitlint enforces conventional commits with a short title.
-- Vue is pinned to `3.6.0-rc.15` in `packages/vapor` (Q2 covers the peer range).
+- Vue is pinned to `3.6.0-rc.15` in `packages/vapor` (Q2; rc.16 tried 2026-11-20 — see RELATED_ISSUES).
 - The NTFS drive is slower than ext4 for `node_modules`. If installs or tests feel slow, a checkout on the home partition is an option.
 - `getCurrentInstance()` returns null inside Vapor components. Anything reading `instance.vnode`, `$el` or
   `instance.proxy` needs the Vapor resolver path (`setVaporInstanceResolver`).
@@ -145,8 +145,9 @@ FIX_PLAN_7 steps **H0–H7** are complete on `feat/vapor-full-suite` (tip includ
 unchanged at **3541 / 11 / 35** pure Vapor, **3552 / 35 skip** `pnpm test:run`.
 
 - **No FIX_PLAN_8** and no further perf hill-climb on this branch until the owner says otherwise.
-- **Docs to open upstream when ready:** `vapor-proposal/upstream/` (not posted).
+- **Docs to open upstream when ready:** `vapor-proposal/upstream/` (not posted). See
+  `RELATED_ISSUES.md` for the Vue/Reka map (#16269 fixed in rc.16; QS7 still red; #16305 open).
 - **Owner decision next:** QS14 Combobox persistent content visibility (`USER_GUIDE_DRAFT.md`,
   ADR-S53); then triage the remaining QS-blocked reds.
 - Proposal packaging: refresh `ISSUE.md`, `PULL_REQUEST.md`, `reka-discussion.md` at freeze
-  (this section).
+  (this section). rc.16 recheck recorded 2026-11-20 (pin stayed rc.15).

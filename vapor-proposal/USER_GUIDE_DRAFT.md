@@ -11,7 +11,7 @@ your app with Vue 3.6+ Vapor mode; use `@reka-ui/vapor-tests` patterns for parit
 
 | Topic | Notes |
 |---|---|
-| QS7 SSR first paint | As-child attrs may differ server vs client; some SSR tests stay red on purpose. |
+| QS7 SSR first paint | Pure-Vapor as-child/Collection attrs may differ server vs client; Tabs SSR stays red on purpose. Interop cloneVNode SSR was [vuejs/core#16269](https://github.com/vuejs/core/issues/16269) (**fixed** in rc.16 / #16340) — different path; QS7 still fails on rc.16. |
 | QS8 listener order | Consumer listeners vs component handlers — see OPEN_QUESTIONS QS8. |
 | QS9 `$el` on forwarded refs | Children must `defineExpose({ $el })`; see migration below. |
 | QS14 `unmountOnHide` | **Known issue (H3, freeze):** closed persistent Combobox content stays `display: flex` in Vapor (`ComboboxContentImpl` inline style wins over twin `:style`). Dialog paths fixed (ADR-S49). Owner decision before fix; 2 of 11 full-suite reds. |

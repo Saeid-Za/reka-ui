@@ -24,7 +24,10 @@ interop resolver entry is built today.
 ### Q2. The `vue` peer range
 
 Reka supports Vue 3.4+. The Vapor entry needs `>=3.6.0-rc.15`: `currentInstance`, and
-the interop fallthrough fix vuejs/core#15989.
+the interop fallthrough fix vuejs/core#15989. Prefer **`>=3.6.0-rc.16`** for interop SSR
+of cloned attrs on vapor slot content (vuejs/core#16269 / #16340). `packages/vapor` stays
+pinned to **rc.15** for the packaging-freeze gate; a 2026-11-20 rc.16 trial left QS7 red
+and added Checkbox reds (see `upstream/RELATED_ISSUES.md`).
 
 - Keep one range, plus a runtime check in `instance.vapor.ts` that warns on older Vue.
   This is cheap, but users only find out at runtime.
@@ -396,6 +399,14 @@ stays red on purpose (R3 reverted): expected SSR markup was not rewritten to mat
 as-child server gap.
 **Decided (owner, 2026-11-19):** (b) — known Vapor SSR first-paint difference; Tabs test stays red; draft Vue issue (phase E).
 
+**Upstream map (2026-11-20):** Interop SSR of `cloneVNode` attrs on vapor slot content was
+[vuejs/core#16269](https://github.com/vuejs/core/issues/16269), fixed by
+[#16340](https://github.com/vuejs/core/pull/16340) and shipped in **Vue 3.6.0-rc.16**. That is
+**not** this failure: a temporary rc.16 install still left the Tabs SSR test **red** (server
+HTML still missing tablist/trigger attrs) and worsened the full suite to **3538 / 14 / 35**.
+Pure-Vapor QS7 remains leave-red; pin stays **rc.15**. See `upstream/RELATED_ISSUES.md` and
+`upstream/vue-vapor-ssr-as-child.md`.
+
 ### QS8. Listener order for events bubbling from a descendant of an as-child element
 
 Since ADR-S17, Vapor runs a consumer's as-child listener before the element's own for
@@ -428,6 +439,8 @@ In Vapor, a template ref on a component is its expose proxy. When the component
 **Recommendation:** (a) together with (c). Use (b) only if the user wants those tests green.
 **⚑ Provisional default:** (a). The 6 tests stay red.
 **Decided (owner, 2026-11-19):** (a) and (c) — document migration + draft Vue issue; fix tests in C2 (`isVapor` expose `$el`).
+
+**Upstream map (2026-11-20):** No open Vue issue for “empty expose → no `$el`”. [#14242](https://github.com/vuejs/core/issues/14242) was interop template-ref undefined (**closed**). [#16305](https://github.com/vuejs/core/issues/16305) asks for public APIs around `getCurrentInstance()` facts (**open** FR). Draft: `upstream/vue-expose-proxy-el.md`.
 
 ### QS10. Virtualizer implementation: unified `<Primitive as-child v-for>` vs twin SFCs
 

@@ -434,3 +434,13 @@ Triage: `packages/vapor/suite/out/triage.json` from `suite/out/report.json`
 
 **Next (owner):** QS14 Combobox visibility decision; open upstream discussion drafts when ready
 (`vapor-proposal/upstream/`).
+
+### Vue rc.16 trial + upstream map (2026-11-20)
+
+- Temporary install of **3.6.0-rc.16** (includes #16340 / closes #16269 for **interop** SSR
+  `cloneVNode` attrs). Freeze pin remains **rc.15**.
+- QS7 Tabs SSR on rc.16: **still FAIL**. Full suite on rc.16: **3538 / 14 / 35** (new
+  Checkbox reds). Leave-red for QS7 stands; do not adopt rc.16 without a Checkbox plan.
+- Issue map: `vapor-proposal/upstream/RELATED_ISSUES.md`.
+- Raw report kept at `packages/vapor/suite/out/report-rc16.json` (local / gitignored if under
+  `suite/out/`).
