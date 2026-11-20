@@ -406,6 +406,15 @@ as-child server gap.
 attrs). Pure-Vapor QS7 remains leave-red; pin is **rc.16** after U1 Checkbox fix. See
 `upstream/RELATED_ISSUES.md` and `upstream/vue-vapor-ssr-as-child.md`.
 
+**Attempt (2026-11-20, no commit):** Parent-side attrs are present — `asChildSsrAttrs()` /
+`ssrRenderSlotInner` 9th `slotAttrs` carry `tabindex`, `data-reka-collection-item`, roving
+attrs — but compiled nested `_slotAttrs ? _mergeProps(...)` paths still see **`undefined`
+`_slotAttrs`** (string-buffer Vapor SSR slots). Patching Primitive codegen + nested
+`_ssrRenderSlot` → `_ssrRenderSlotInner` is not enough. Gap is **Vue pure-Vapor SSR
+slotAttrs → child propagation**, not missing Reka parent data. #16269/#16340 remain
+interop-only. Practical Reka-side alternative without Vue: SSR twins that avoid nested
+`as-child` (Collection/RovingFocus bind attrs on non-as-child Primitive for server only).
+
 ### QS8. Listener order for events bubbling from a descendant of an as-child element
 
 Since ADR-S17, Vapor runs a consumer's as-child listener before the element's own for
@@ -507,6 +516,11 @@ without breaking reactive KeepAlive/Transition composition.
 `VaporTransition` still leaves **Slider ×2** red (`thumb.isConnected` false after out-in swap).
 `useRenderedContentId` regressed to **17** failures (same family as H1c). Reverted before commit.
 → Owner fallback **(c)**: Slider out-in ×2 stay red until Transition+bridge design lands.
+
+**Fixed (2026-11-20, option a):** `811de613e` — `VaporTransition` default slot mounts once
+(stable cached slot fn; no `reactiveBlock` teardown of leaving branch) and `renderEffect`
+`patchChild`s only when the new descriptor is the same `type` + `key`. Slider out-in ×2 green;
+`useRenderedContentId` 287 passed; Presence async-child transition cases hold.
 
 ### QS13. `createComponent` key getter from `propsRef` `(H1d)`
 
