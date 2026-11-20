@@ -21,7 +21,7 @@ describe('useForwardExpose.vapor: static vs dynamic getter $el refs', () => {
     expect(forwarded.currentElement.value).toBe(host.querySelector('#root-fallback'))
   })
 
-  // QS9: Vapor does not synthesize `$el` on child instances — see vapor-proposal/OPEN_QUESTIONS.md
+  // Vapor does not synthesize `$el` on child instances.
   it('leaves parent $el undefined when the forwarded Vapor child exposes nothing', async () => {
     const Child = defineComponent({
       __vapor: true,

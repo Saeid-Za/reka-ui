@@ -204,7 +204,7 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
         // opt out of the child's handler. Here the child's listener was added first.
         // For events dispatched at the element, a capture listener runs before the
         // element's own (non-capture) ones; events from descendants keep the bubble
-        // listener, which then runs after the element's own (see ADR-S17).
+        // listener, which then runs after the element's own.
         entry.atTarget = ((event: Event) => {
           if (event.target === el)
             callHandlers(entry.value, event)

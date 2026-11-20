@@ -222,7 +222,7 @@ const hookedFragments = new WeakMap<object, Set<() => void>>()
  * now run through new fragments. Each (fragment, callback) pair is hooked once.
  *
  * Uses the fragments' update hook list (`u`), which Vue's own Transition and
- * interop code use for the same purpose; it is not public API (OPEN_QUESTIONS QS4).
+ * interop code use for the same purpose; it is not public API.
  *
  * @internal
  */

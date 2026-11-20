@@ -550,7 +550,7 @@ describe('given slider on a page that leaves through an out-in transition', () =
 })
 
 // A compiled template (no Suspense), so the Vapor suite runs the real compiled
-// `<Transition mode="out-in">` instead of the render-function bridge (QS12). Without
+// `<Transition mode="out-in">` instead of the render-function bridge. Without
 // Suspense the leaving Slider is already unmounted, so only safety and ordering are pinned.
 describe('given slider in a compiled out-in transition', () => {
   it.each(['horizontal', 'vertical'] as const)('should not throw on pointer input while it leaves (%s)', async (orientation) => {

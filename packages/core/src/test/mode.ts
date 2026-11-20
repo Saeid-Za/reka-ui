@@ -11,8 +11,7 @@ import { expect } from 'vitest'
  *
  * Use it only where VDOM and Vapor *legitimately* differ: a test either gets a Vapor
  * variant that asserts the equivalent Vapor behaviour, or, when no Vapor equivalent
- * exists, `it.skipIf(isVapor)` with a comment giving the reason. See
- * vapor-proposal/OPEN_QUESTIONS.md, QS6.
+ * exists, `it.skipIf(isVapor)` with a comment giving the reason.
  */
 export const isVapor: boolean = !!(globalThis as { __REKA_VAPOR_SUITE__?: boolean }).__REKA_VAPOR_SUITE__
 

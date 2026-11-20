@@ -819,7 +819,7 @@ describe('given a ToastTitle and ToastDescription outside a managed toast', () =
     else {
       expect(wrapper.vm.$.subTree.el).toBeInstanceOf(HTMLElement)
     }
-    // Vapor leaves `<!--slot-->` anchors in the markup (QS5).
+    // Vapor leaves `<!--slot-->` anchors in the markup.
     const html = wrapper.element.outerHTML
     expect(isVapor ? normalizeMarkup(html) : html).toBe('<div class="custom" id="custom-id">Content</div>')
     wrapper.unmount()

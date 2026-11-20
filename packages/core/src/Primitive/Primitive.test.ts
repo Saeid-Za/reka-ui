@@ -173,7 +173,7 @@ describe('test Primitive functionalities', () => {
         },
       })
 
-      // Vapor leaves its anchor comments around the dynamic component (QS5/ADR-S13).
+      // Vapor leaves its anchor comments around the dynamic component.
       expect(modeMarkup(wrapper.html())).toBe(
         modeMarkup('<button id="custom-button" class="parent-class"></button>'),
       )

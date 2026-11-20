@@ -147,7 +147,7 @@ describe('given a Combobox with unmountOnHide=false', () => {
 })
 
 describe('given a persistent Combobox content with a consumer style', () => {
-  // Pins QS14: ComboboxContentImpl drives `display` from `present`, so closed
+  // ComboboxContentImpl drives `display` from `present`, so closed
   // persistent content is hidden in both modes while consumer styles still apply.
   // `force-mount` keeps upstream semantics: the consumer owns visibility.
   const StyledCombobox = defineComponent({

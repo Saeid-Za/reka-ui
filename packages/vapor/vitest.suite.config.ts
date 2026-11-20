@@ -12,7 +12,6 @@ import { vueSuiteProxyPlugin } from './suite/vueSuiteProxyPlugin.ts'
 
 // Reka's own jsdom suite (packages/core/src/**/*.test.ts), unchanged, in pure
 // Vapor: every SFC compiled as Vapor, `createVaporApp`, no interop plugin.
-// See vapor-proposal/FULL_SUITE.md.
 const core = fileURLToPath(new URL('../core/', import.meta.url))
 const suite = fileURLToPath(new URL('./suite/', import.meta.url))
 // The real @testing-library/vue's own @testing-library/dom (pure DOM, no Vue).

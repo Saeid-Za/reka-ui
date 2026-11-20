@@ -12,7 +12,7 @@ describe('applyAsChildAttrs', () => {
   it('merges classes and styles, keeps child-owned attributes', () => {
     const el = button()
     applyAsChildAttrs(el, { 'class': ['a', { b: true, c: false }], 'style': { color: 'red' }, 'title': 'parent', 'data-state': 'open', 'aria-expanded': false })
-    // consumer classes first, as the VDOM Slot merges them (ADR-S18)
+    // consumer classes first, as the VDOM Slot merges them
     expect(el.className).toBe('a b own')
     expect(el.style.color).toBe('red')
     expect(el.getAttribute('title')).toBe('child')
@@ -40,7 +40,7 @@ describe('applyAsChildAttrs', () => {
     expect(first).not.toHaveBeenCalled()
     expect(second).toHaveBeenCalledTimes(1)
     // added once: one capture listener for events at the element (so the consumer
-    // runs before the element's own listeners) and one bubble listener (ADR-S17)
+    // runs before the element's own listeners) and one bubble listener
     expect(spy).toHaveBeenCalledTimes(2)
     applyAsChildAttrs(el, {})
     el.click()

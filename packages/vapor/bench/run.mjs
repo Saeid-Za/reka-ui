@@ -1,5 +1,5 @@
 // reka-ui VDOM vs Vapor benchmark: builds the bench app three ways and drives
-// it in real Chrome (playwright-core). See vapor-proposal/BENCHMARKS.md.
+// it in real Chrome (playwright-core).
 //
 //   node bench/run.mjs [--skip-build] [--runs 10] [--warmup 3] [--cpu 4] [--out file.json] [--only a,b] [--modes vapor]
 import { execFileSync } from 'node:child_process'
