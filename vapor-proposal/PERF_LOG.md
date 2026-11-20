@@ -842,3 +842,49 @@ Gate @ `feat/vapor-full-suite` (2026-11-19): **3541 / 11 / 35** Vapor full suite
 (`step25-listbox-g3.json`). Hill-climb: no experiments run in this pass (STOP: remaining
 C7/E work items completed as documentation only).
 
+## H7 Phase F (FIX_PLAN_7)
+
+### F0 fresh baseline (`scratch/perf/h7-f0.json`, 2026-11-19T19:16Z)
+
+Gate before F0: **3541 / 11 / 35** Vapor; **3552 / 35** `test:run`.
+
+| Bundle (gzip B) | vdom | interop | vapor |
+|---|---|---|---|
+| bench app | 70 850 | 110 359 | 85 684 |
+
+| Scenario / op (pure Vapor script median ms, ±σ) | mount | scroll (listbox only) |
+|---|---|---|
+| `plain` ×1000 | 10.3 (±1.38) | — |
+| `checkbox` ×1000 | 292.8 (±17.98) | — |
+| `listbox-virtual` | 19.1 (±1.27) | 333.4 (±57.96) |
+| `tabs` ×200 | 640.8 (±104.49) | — |
+
+| Memory (pure Vapor) | metric | median |
+|---|---|---|
+| checkbox ×1000 | bytes/instance | 31 209 (±1.19), n=3 |
+| checkbox ×1000 | residual after unmount | 471 404 B |
+| listbox-virtual ×1 | mount heap | 2 423 040 B (±1 148), n=5 |
+
+### H7-E1 Lazy `createAsChildApplier` in `Primitive.vapor` (P1)
+
+**Hypothesis:** non-`as-child` primitives should not allocate the as-child applier closure;
+P1 marked the applier negligible, but eliding it may still save mount heap on hot paths.
+
+**Change:** defer `createAsChildApplier()` until the first `sync()` when `renderAsChild`.
+
+**A/B:** `node bench/run.mjs --skip-build --runs 10 --modes vapor --only checkbox,collapsible` before/after.
+
+**H7-E1 result (reverted):** checkbox mount +14.8 %, collapsible +21.9 % (script median; noise
+and session drift). Heap bytes/instance −165 B / −491 B (below noise). Vapor gzip +4 B. **REVERTED.**
+
+### H7 summary (hill-climb)
+
+| Exp | Metric | Δ | Verdict |
+|---|---|---|---|
+| H7-E1 | checkbox vapor mount script | +14.8 % | reverted |
+| H7-E1 | collapsible vapor mount script | +21.9 % | reverted |
+| H7-E1 | bytes/instance (checkbox / collapsible) | −0.5 % / −1.0 % | noise |
+
+**END H7 pass:** **1** experiment, **0** kept, **1** reverted (H7-E1). Hill-climb did not hit
+5 consecutive misses or 20 total; gate held at **3541 / 11 / 35**.
+
