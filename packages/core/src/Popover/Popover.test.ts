@@ -2,7 +2,7 @@ import type { VueWrapper } from '@vue/test-utils'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { axe } from 'vitest-axe'
-import { defineComponent, h, nextTick, ref, Transition } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from '.'
 import Popover from './story/_Popover.vue'
 
