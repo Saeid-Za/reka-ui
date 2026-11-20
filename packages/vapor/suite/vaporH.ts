@@ -366,9 +366,6 @@ function sameType(m: M, c: Child) {
       return false
     if (m.key != null || c.key != null)
       return m.key === c.key
-    const testId = c.props?.['data-testid']
-    if (testId != null)
-      return m.propsRef.value?.['data-testid'] === testId
     return true
   }
   return false
