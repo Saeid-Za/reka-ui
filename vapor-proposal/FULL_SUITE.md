@@ -454,3 +454,13 @@ Triage: `packages/vapor/suite/out/triage.json` from `suite/out/report.json`
 - U2/U4/U5/U6 attempted and **reverted**; U7 not landed (no VDOM-safe fix).
 - Gate now: **3542 pass / 10 fail / 35 skip**; `pnpm test:run` **3552 / 35**.
 - Triage: `vapor-proposal/triage.md`. Plan: `vapor-proposal/FIX_PLAN_8.md`.
+
+## Post-audit gate (2026-11-20, Asia/Tehran)
+
+- **3550 pass / 2 fail / 35 skip** pure Vapor (`--maxWorkers=4`); `pnpm test:run` **3552 / 35**.
+- `811de613e` (QS12) and the Listbox fix landed green, but the full suite at `811de613e`
+  was **3547 / 5**: ColorSwatchPicker `data-color` ×1 and Combobox highlight scrolling ×2 were
+  regressions from the ListboxItem twin applying rawProps getters as values, not order
+  dependence. Fixed in `ae9c10ec1`.
+- Remaining: QS7 (Tabs SSR, accept + upstream), QS9 (manual expose, leave red).
+- See `MAINTAINABILITY_AUDIT.md` for Vapor branches and twins still to slim down.

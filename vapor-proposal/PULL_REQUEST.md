@@ -95,14 +95,14 @@ Closes #TBD (Vapor RFC issue).
 | `pnpm test:vapor`, VDOM baseline | 51 passed |
 | `pnpm test:vapor`, interop (both app modes) | 116 passed, 2 expected fail |
 | `pnpm test:vapor`, pure Vapor (Options API compiled out) | 60 passed, 1 expected fail (known gap), 1 todo |
-| `pnpm --filter ./packages/vapor test:full-suite` (pure Vapor, Reka's full suite) | **3542 passed, 10 failed, 35 skipped** (`--maxWorkers=4`, Vue 3.6.0-rc.16). Failures bucketed in `vapor-proposal/triage.md`. |
+| `pnpm --filter ./packages/vapor test:full-suite` (pure Vapor, Reka's full suite) | **3550 passed, 2 failed, 35 skipped** (`--maxWorkers=4`, Vue 3.6.0-rc.16). Failures bucketed in `vapor-proposal/triage.md`. |
 | `pnpm test:run` (repo VDOM gate) | **3552 passed, 35 skipped** |
 
 **Per-component pure-Vapor coverage: 47/48.** The full table is in `COVERAGE.table.md`. All
 families pass in the VDOM baseline and in both interop modes.
 
-**Full-suite status:** 11 known failures remain (owner decisions + a few harness/Vapor-only
-fixes). Do not treat this PR text as “all green” until triage is empty; see `triage.md` and
+**Full-suite status:** 2 known failures remain (QS7 pure-Vapor SSR as-child attrs, QS9 empty
+expose has no `$el`), both upstream Vue gaps. Do not treat this PR text as “all green” until triage is empty; see `triage.md` and
 `USER_GUIDE_DRAFT.md` known issues (e.g. QS14 Combobox visibility).
 
 **ListboxVirtualizer** is the only known gap, recorded as `it.fails`. The virtualizers still

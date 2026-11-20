@@ -1,7 +1,7 @@
 # Reka UI × Vue Vapor: context and task handoff
 
 Last updated: 2026-11-20 (Asia/Tehran). Read this first. It is enough to pick the work up cold.
-**Packaging freeze** after FIX_PLAN_7 — see §11 before resuming fixes or perf hill-climb.
+**Packaging freeze** after FIX_PLAN_7 — see §11. **Latest:** §12 (post-audit gate 3550 / 2 / 35; `MAINTAINABILITY_AUDIT.md`).
 
 ## 1. Goal
 
@@ -11,7 +11,7 @@ Make [Reka UI](https://github.com/unovue/reka-ui) work with Vue 3.6 **Vapor mode
 |---|---|---|
 | VDOM (today's Reka) | normal `createApp` | unchanged, all tests pass |
 | Interop | Vapor app + `vaporInteropPlugin`, or VDOM app with Vapor children | works (116 pass + 2 expected fail) |
-| **Pure Vapor** | `createVaporApp`, no interop plugin, Options API compiled out | 47/48 families; full suite **3541 / 11 / 35** (freeze) |
+| **Pure Vapor** | `createVaporApp`, no interop plugin, Options API compiled out | 47/48 families; full suite **3550 / 2 / 35** (2026-11-20 audit; reds QS7, QS9) |
 
 The upstream deliverables are an issue and a PR. Both are drafted in `vapor-proposal/ISSUE.md` and
 `vapor-proposal/PULL_REQUEST.md`. **Nothing has been pushed or opened on GitHub yet.** That is the
@@ -148,3 +148,18 @@ Current tip includes U3 (`ee148a24c`). Gate: **3542 / 10 / 35** pure Vapor, **35
   `RELATED_ISSUES.md` (#16269 fixed in rc.16; QS7 still red; #16305 open).
 - **Owner decisions for full green:** see end of `triage.md` / latest chat report (QS7, QS9,
   QS12, QS14–QS16, 9.2, 9.4, QS15).
+
+## 12. Post-audit state (2026-11-20, Asia/Tehran)
+
+- Vue **3.6.0-rc.16**. Gate: pure Vapor **3550 / 2 / 35**, `pnpm test:run` **3552 / 35**.
+- Reds: **QS7** Tabs SSR (accept + upstream; path B attempted and reverted, see
+  OPEN_QUESTIONS QS7 and `experiments/qs7-path-b-ssr-merge.patch`), **QS9** useForwardExpose
+  (manual `defineExpose({ $el })`, leave red).
+- Audit commits: `ae9c10ec1` ListboxItem twin getter fix (had re-reded ColorSwatchPicker +
+  Combobox ×2), `e6f798f89` AlertDialog product change + twin reverted (harness bug only),
+  `b879aea7a` ComboboxContent twin deleted (redundant after QS14).
+- Remaining maintainability work: `MAINTAINABILITY_AUDIT.md` (TagGroup branch → applier,
+  FocusScope full-copy twin → small swapped module, ListboxItem twin → bridge fix,
+  useTriggerId branch → swapped hook, QS16 DOM→model sync is test-driven).
+- Run the gate with `pnpm exec vitest run -c vitest.suite.config.ts --maxWorkers=4` directly;
+  `pnpm test:full-suite -- --maxWorkers=4` passes a literal `--` through.
