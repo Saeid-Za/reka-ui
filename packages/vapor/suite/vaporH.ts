@@ -429,6 +429,41 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
         return frag
       }
     }
+    if (type === VaporTransition && name === 'default') {
+      let branchMount: M | undefined
+      let branchPatchBound = false
+      const transitionOwner = currentInstance
+      const transitionCtx: Ctx = { owner: transitionOwner, scope: childScope(ctx), setRef: ctx.setRef }
+      return (slotProps: any) => {
+        const fn = slotsRef.value[name]
+        const raw = fn?.(slotProps)
+        const norm = normalize(raw)
+        const desc = norm.length > 0 ? norm[0] : null
+        if (!desc || typeof desc === 'string')
+          return null
+        if (!branchMount) {
+          branchMount = mountChild(transitionCtx, desc, false)
+          if (!branchPatchBound) {
+            branchPatchBound = true
+            renderEffect(() => {
+              const fn = slotsRef.value[name]
+              const raw = fn?.(slotProps)
+              const norm = normalize(raw)
+              const desc = norm.length > 0 ? norm[0] : null
+              if (!desc || typeof desc === 'string' || !isDesc(desc) || branchMount!.kind !== 'comp')
+                return
+              const m = branchMount as Extract<M, { kind: 'comp' }>
+              if (m.type !== desc.type)
+                return
+              if ((m.key != null || desc.key != null) && m.key !== desc.key)
+                return
+              patchChild(transitionCtx, m, desc, false)
+            })
+          }
+        }
+        return entryOf(branchMount)
+      }
+    }
     return (slotProps: any) => reactiveBlock(() => {
       const fn = slotsRef.value[name]
       return fn ? fn(slotProps) : null
