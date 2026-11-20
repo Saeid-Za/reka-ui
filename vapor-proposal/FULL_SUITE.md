@@ -421,9 +421,16 @@ The report at `36c0f04a` listed **3619** as “3483 + 101 + 35”; Vitest’s `n
 
 `useRenderedContentId` triage at r9 (from `suite/out/report.json`): down from 76 undiagnosed at handoff r8 to 0 failures here; remaining reds are elsewhere (45 total fails — see `node suite/report.mjs suite/out/report.json`).
 
-## After FIX_PLAN cleanup (step 29, HEAD)
+## Packaging freeze (post FIX_PLAN_7 H7, `96230bb55`)
 
-Pure Vapor `test:full-suite` (`--maxWorkers=4`): **3532 pass / 20 fail / 35 skip** (130 files).
-`pnpm test:run`: **3552 pass / 35 skip** (includes step 24 fragment virtualizer VDOM tests).
-Triage regenerated: `packages/vapor/suite/out/triage.json` from `suite/out/report.json`
-(`node suite/triage.mjs`). Per-file map: `vapor-proposal/triage.md`.
+FIX_PLAN_7 H0–H7 complete. Phase F ended with **0** kept / **1** reverted (H7-E1). Hill-climb
+stopped without FIX_PLAN_8; remaining reds are triaged only (no further fix drive on this branch
+unless the owner reopens work).
+
+Pure Vapor `test:full-suite` (`--maxWorkers=4`): **3541 pass / 11 fail / 35 skip** (130 files).
+`pnpm test:run`: **3552 pass / 35 skip**.
+Triage: `packages/vapor/suite/out/triage.json` from `suite/out/report.json`
+(`node suite/triage.mjs`). Bucket map: `vapor-proposal/triage.md`.
+
+**Next (owner):** QS14 Combobox visibility decision; open upstream discussion drafts when ready
+(`vapor-proposal/upstream/`).

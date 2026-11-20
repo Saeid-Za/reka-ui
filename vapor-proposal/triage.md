@@ -1,4 +1,4 @@
-# Pure-Vapor full-suite triage (after H2)
+# Pure-Vapor full-suite triage (post FIX_PLAN_7, packaging freeze)
 
 Gate: **3541 pass / 11 fail / 35 skip** (`packages/vapor/suite/out/report.json`,
 `--maxWorkers=4`). Rows from `node suite/triage.mjs` (**11** failures).

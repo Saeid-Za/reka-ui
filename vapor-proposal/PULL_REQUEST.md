@@ -95,9 +95,15 @@ Closes #TBD (Vapor RFC issue).
 | `pnpm test:vapor`, VDOM baseline | 51 passed |
 | `pnpm test:vapor`, interop (both app modes) | 116 passed, 2 expected fail |
 | `pnpm test:vapor`, pure Vapor (Options API compiled out) | 60 passed, 1 expected fail (known gap), 1 todo |
+| `pnpm --filter ./packages/vapor test:full-suite` (pure Vapor, Reka's full suite) | **3541 passed, 11 failed, 35 skipped** (`--maxWorkers=4`). Branch packaging freeze after FIX_PLAN_7; failures bucketed in `vapor-proposal/triage.md`. |
+| `pnpm test:run` (repo VDOM gate) | **3552 passed, 35 skipped** |
 
 **Per-component pure-Vapor coverage: 47/48.** The full table is in `COVERAGE.table.md`. All
 families pass in the VDOM baseline and in both interop modes.
+
+**Full-suite status:** 11 known failures remain (owner decisions + a few harness/Vapor-only
+fixes). Do not treat this PR text as “all green” until triage is empty; see `triage.md` and
+`USER_GUIDE_DRAFT.md` known issues (e.g. QS14 Combobox visibility).
 
 **ListboxVirtualizer** is the only known gap, recorded as `it.fails`. The virtualizers still
 clone slot vnodes.

@@ -70,9 +70,12 @@ compiles to Vapor unchanged. Full table in the PR description.
 
 ### Where the prototype stands
 
-- All existing tests pass (3548 passed, 35 skipped; +15 new unit tests), type-check/lint/build pass.
+- VDOM suite: **3552 passed, 35 skipped** (`pnpm test:run` on `feat/vapor-full-suite`); +15 new
+  unit tests in the Vapor workspace; type-check/lint/build pass.
 - 48 component families run in VDOM, two interop modes and **pure Vapor** (`createVaporApp`, no
   interop plugin): **48/48, 48/48, 48/48, 47/48** (only ListboxVirtualizer missing in pure Vapor).
+- Pure-Vapor **full Reka suite** (local gate): **3541 pass / 11 fail / 35 skip** — see
+  `vapor-proposal/triage.md` (packaging freeze after FIX_PLAN_7; not claiming green).
   All 414 exported components compile to Vapor. The VDOM renderer is absent from the pure-Vapor bundle.
 - Benchmark (real Chrome, 4x CPU, medians): pure Vapor **updates take 0.26-0.75x of VDOM time**,
   but mount is 0.90-1.66x and memory per instance 1.38-1.45x, so the Vapor path still has

@@ -1,6 +1,7 @@
 # Reka UI × Vue Vapor: context and task handoff
 
-Last updated: 2026-11-19 (Asia/Tehran). Read this first. It is enough to pick the work up cold.
+Last updated: 2026-11-20 (Asia/Tehran). Read this first. It is enough to pick the work up cold.
+**Packaging freeze** after FIX_PLAN_7 — see §11 before resuming fixes or perf hill-climb.
 
 ## 1. Goal
 
@@ -10,7 +11,7 @@ Make [Reka UI](https://github.com/unovue/reka-ui) work with Vue 3.6 **Vapor mode
 |---|---|---|
 | VDOM (today's Reka) | normal `createApp` | unchanged, all tests pass |
 | Interop | Vapor app + `vaporInteropPlugin`, or VDOM app with Vapor children | works (116 pass + 2 expected fail) |
-| **Pure Vapor** | `createVaporApp`, no interop plugin, Options API compiled out | 47/48 families; full suite 3365 / 184 |
+| **Pure Vapor** | `createVaporApp`, no interop plugin, Options API compiled out | 47/48 families; full suite **3541 / 11 / 35** (freeze) |
 
 The upstream deliverables are an issue and a PR. Both are drafted in `vapor-proposal/ISSUE.md` and
 `vapor-proposal/PULL_REQUEST.md`. **Nothing has been pushed or opened on GitHub yet.** That is the
@@ -75,16 +76,18 @@ Benchmark (Playwright with real Chrome, 4x CPU throttle): see `vapor-proposal/BE
 bench lives in `packages/vapor/bench`. `reka-vapor-export/scripts/ab.sh` does an interleaved A/B
 against any commit (`BASE=<sha>`). It was written for the old box layout, so fix its paths first.
 
-## 5. Verified results on this machine (2026-11-19)
+## 5. Verified results on this machine (packaging freeze, 2026-11-20)
 
 | Run | Result |
 |---|---|
 | `pnpm build` | ok |
-| `pnpm test:run` (VDOM) | **3549 pass, 35 skip**, 130/130 files |
+| `pnpm test:run` (VDOM) | **3552 pass, 35 skip**, 130/130 files |
 | vapor `test:vdom` | 51 pass |
 | vapor `test:interop` | 116 pass, 2 expected fail |
-| vapor `test:vapor-only` | 60 pass, 1 expected fail, 1 todo |
-| vapor `test:full-suite` (pure Vapor) | **3365 pass, 184 fail, 35 skip**. The progression was 2938/610 → 3105/443 → 3316/232 → 3336/212 → 3365/184 |
+| vapor `test:vapor-only` | 61 pass, 1 todo (post H5 options-api config) |
+| vapor `test:full-suite` (pure Vapor) | **3541 pass, 11 fail, 35 skip** (`--maxWorkers=4`). Historical progression in `FULL_SUITE.md`. |
+
+Current failure buckets: **`vapor-proposal/triage.md`** (11 rows).
 
 ## 6. Architecture in one paragraph
 
@@ -106,38 +109,16 @@ spreading, hand-written Vapor components, interop-only, and Vuetify0. Reference 
 - Unmount is still 1.1–2.0x slower than VDOM. Heap profiles show most of it is Vapor's own bookkeeping. The bigger levers change behaviour, so they are left in Q17.
 - Known pre-existing issue: under interop, memory grows about 22 MiB per mount/unmount cycle (Q8).
 
-## 8. What's failing now (184, pure-Vapor full suite) and the next tasks
+## 8. What's failing now (11, pure-Vapor full suite)
 
-By file: useRenderedContentId 76, Combobox 23, ScrollArea 11, Slider 8, Listbox 8, useForwardExpose 6, Tree 6,
-NavigationMenu 5, Dialog 5, StepperAnnouncement 4, Presence 4, useForwardScopeId 3, Tooltip 3, Popover 3,
-DismissableLayer 3, and one each in 16 other files.
+**Superseded for day-to-day work by `triage.md` and §11.** Eleven failures remain after
+FIX_PLAN_7; most are blocked on owner decisions (QS7, QS9, QS12, QS14–QS16). Actionable
+without decisions: AlertDialog cancel registration (9.2), TagGroup focus (9.3), Popover SSR
+hydration (9.4). Dialog `console.warn` tests are **flaky** (QS17) — green on the current gate
+but not trusted.
 
-Do these in this order. Root-cause labels match `FULL_SUITE.md`.
-
-1. **U1/U2 in `useRenderedContentId` (76).** This is the biggest bucket and isn't diagnosed. The suspects are KeepAlive
-   deactivation (the test bridge's KeepAlive vs Reka's `onDeactivated`) and as-child content with no element.
-   Check first whether it is the harness or Reka.
-2. **R1 virtualizers (~33: Combobox, Listbox, ScrollArea, Tree).** The known gap (ADR-017, Q9). Item refs read `$el`, which does not
-   exist on Vapor instances. ListboxVirtualizer is also the 1 failing family scenario.
-3. **Harness gaps (about 20).** `findComponent(cssSelector)` is not implemented (Slider, DismissableLayer), and
-   `findComponent(Component)` returns empty (NavigationMenu, ScrollArea, PopperRootContext). Fix them in
-   `packages/vapor/suite/test-utils.ts`.
-4. **R5 remainder: `useForwardExpose` (6).** Forwarding a ref to a Vapor component that exposes nothing. See QS9; the
-   provisional default leaves these red, so it needs a maintainer answer.
-5. **R7 `unmountOnHide=false` (Dialog, Combobox).** Persistent content isn't hidden.
-6. **R6 `useForwardScopeId` (3).**
-7. **SSR (3).** Dialog.ssr (the `vi.mock` doesn't reach the server-compiled module), Popover.ssr (suspected double Vue after
-   `vi.resetModules`), and Tabs as-child attrs missing from server markup (QS7).
-8. **Singles (U9).** Investigate them one by one.
-9. Once the suite is green: perf round 3 (Q17 levers only if maintainers agree), then refresh `PULL_REQUEST.md` /
-   `CHANGES.md` with the final numbers.
-
-Workflow per fix:
-- Add a failing test, or use the existing red one.
-- Fix it.
-- Re-run the full suite and `pnpm test:run`. The VDOM suite must stay at 3549 / 35.
-- Update the triage table in `FULL_SUITE.md` and add an ADR when a choice was made.
-- Make one commit per root cause, with the new counts in the message.
+Do **not** resume broad fix plans or Phase F hill-climb unless the owner reopens work. When
+fixing again: one commit per item, gate numbers in the body, VDOM gate **3552 / 35 skip**.
 
 ## 9. Gotchas
 
@@ -156,3 +137,16 @@ Workflow per fix:
 - Q17 behaviour-changing perf levers, and Q18 recommending `__VUE_OPTIONS_API__: false`.
 - Whether to keep E10b (shared Proxy handler, +58 B gzip for about 1% memory). It is commit `6dd7451`.
 - The lint-staged `--no-stash` change.
+
+## 11. Packaging freeze (post FIX_PLAN_7 H7)
+
+FIX_PLAN_7 steps **H0–H7** are complete on `feat/vapor-full-suite` (tip includes H7 docs:
+`96230bb55`). Phase F ran one experiment (**H7-E1**, lazy as-child applier): **reverted**; gate
+unchanged at **3541 / 11 / 35** pure Vapor, **3552 / 35 skip** `pnpm test:run`.
+
+- **No FIX_PLAN_8** and no further perf hill-climb on this branch until the owner says otherwise.
+- **Docs to open upstream when ready:** `vapor-proposal/upstream/` (not posted).
+- **Owner decision next:** QS14 Combobox persistent content visibility (`USER_GUIDE_DRAFT.md`,
+  ADR-S53); then triage the remaining QS-blocked reds.
+- Proposal packaging: refresh `ISSUE.md`, `PULL_REQUEST.md`, `reka-discussion.md` at freeze
+  (this section).
