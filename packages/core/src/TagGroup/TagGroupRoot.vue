@@ -4,7 +4,7 @@ import type { PrimitiveProps } from '@/Primitive'
 import type { AcceptableValue, Direction } from '@/shared/types'
 import { useVModel } from '@vueuse/core'
 import { createContext, getActiveElement, useDirection, useForwardExpose, useTypeahead } from '@/shared'
-import { getInstance, hasAssignedProp } from '@/shared/instance'
+import { getInstance, hasAssignedProp, isVaporInstance } from '@/shared/instance'
 
 export type TagGroupSelectionMode = 'none' | 'single' | 'multiple'
 
@@ -74,7 +74,7 @@ export const [injectTagGroupRootContext, provideTagGroupRootContext]
 </script>
 
 <script setup lang="ts" generic="T extends AcceptableValue = AcceptableValue">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowReactive, toRefs } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowReactive, toRefs, watch } from 'vue'
 import { injectFieldRootContext } from '@/Field'
 import { compare, valueComparator } from '@/Listbox/utils'
 import { Primitive } from '@/Primitive'
@@ -186,6 +186,18 @@ onMounted(() => {
   isMounted.value = true
 })
 const isEmpty = computed(() => isMounted.value && items.size === 0)
+
+// `RovingFocusGroup` sets `tabindex="-1"` when its focusable count hits zero via
+// as-child merge after TagGroup's `tabindex="0"` for an empty group; Vapor wins
+// the merge in the opposite order from VDOM.
+watch(isEmpty, (empty) => {
+  if (!empty || !instance || !isVaporInstance(instance))
+    return
+  nextTick(() => {
+    if (isEmpty.value && currentElement.value)
+      currentElement.value.tabIndex = 0
+  })
+}, { flush: 'post' })
 
 // When the focused tag is removed, move focus to the next remaining tag, or
 // the previous one if it was the last, or the group itself once it is empty.
