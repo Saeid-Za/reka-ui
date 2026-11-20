@@ -13,13 +13,14 @@ import { injectAlertDialogContentContext } from './AlertDialogContent.vue'
 const props = withDefaults(defineProps<AlertDialogCancelProps>(), { as: 'button' })
 const contentContext = injectAlertDialogContentContext()
 const { forwardRef, currentElement } = useForwardExpose()
+const registrationOwner = Symbol('AlertDialogCancel')
 
 onMounted(() => {
-  contentContext.onCancelElementChange(currentElement.value)
+  contentContext.onCancelElementChange(currentElement.value, registrationOwner)
 })
 // `AlertDialogContent` stays mounted while closed, so it must not keep this element.
 onUnmounted(() => {
-  contentContext.onCancelElementChange(undefined)
+  contentContext.onCancelElementChange(undefined, registrationOwner)
 })
 </script>
 

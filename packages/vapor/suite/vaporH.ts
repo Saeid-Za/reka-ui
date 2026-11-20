@@ -361,8 +361,16 @@ function sameType(m: M, c: Child) {
     return m.kind === 'block' && m.block === c.block
   if (m.kind === 'el')
     return m.type === c.type
-  if (m.kind === 'comp')
-    return m.type === c.type && m.key === c.key
+  if (m.kind === 'comp' && isDesc(c)) {
+    if (m.type !== c.type)
+      return false
+    if (m.key != null || c.key != null)
+      return m.key === c.key
+    const testId = c.props?.['data-testid']
+    if (testId != null)
+      return m.propsRef.value?.['data-testid'] === testId
+    return true
+  }
   return false
 }
 
@@ -598,9 +606,17 @@ function patchList(ctx: Ctx, old: M[], children: Child[], parent: Node, anchor: 
   else {
     children.forEach((c, i) => {
       const m = old[i]
-      if (m && sameType(m, c)) {
+      if (m && sameType(m, c) && !used.has(m)) {
         used.add(m)
         next[i] = m
+        return
+      }
+      for (const candidate of old) {
+        if (!used.has(candidate) && sameType(candidate, c)) {
+          used.add(candidate)
+          next[i] = candidate
+          break
+        }
       }
     })
   }
