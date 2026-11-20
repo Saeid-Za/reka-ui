@@ -1,7 +1,7 @@
 import type { MaybeElement } from '@vueuse/core'
 import type { ComponentPublicInstance } from 'vue'
 import { unrefElement } from '@vueuse/core'
-import { findBlockElement, isVaporInstance } from './instance'
+import { getRefTargetElement } from './instance'
 
 /**
  * Resolve the element rendered by a template ref target.
@@ -23,13 +23,9 @@ export function resolveElement(target: Element | ComponentPublicInstance | null 
     // 4: Node.DOCUMENT_POSITION_FOLLOWING
     return (vnode.anchor && next && next.compareDocumentPosition(vnode.anchor as Node) & 4 ? next : undefined) as HTMLElement
   }
-  // A ref on a Vapor component that exposes nothing is the Vapor instance itself (Reka's
-  // own components expose `$el`): its element is the first one its block renders.
-  if (isVaporInstance(target))
-    return findBlockElement((target as { block?: unknown }).block) as HTMLElement
   const el = unrefElement(target as MaybeElement)
-  // A Vapor component ref whose `$el` is `undefined` (an `as-child` Primitive whose slot
-  // renders no element) makes `unrefElement` fall back to the ref itself.
+  // Without an `$el`, `unrefElement` falls back to the ref itself (a Vapor component that
+  // exposes nothing, or an `as-child` Primitive whose slot renders no element).
   // The return type stays `HTMLElement` as before; callers already treat it as optional.
-  return (el && typeof Node !== 'undefined' && !(el instanceof Node) ? undefined : el) as HTMLElement
+  return (el && typeof Node !== 'undefined' && !(el instanceof Node) ? getRefTargetElement(el) : el) as HTMLElement
 }

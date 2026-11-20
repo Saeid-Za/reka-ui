@@ -311,3 +311,21 @@ export function exposeRootElement() {
     })
   }
 }
+
+/** The `<style scoped>` id the parent set for `instance`'s fallthrough, in either mode. */
+export function getInstanceScopeId(instance: RekaInstance | null): string | undefined {
+  if (!instance)
+    return undefined
+  return isVaporInstance(instance)
+    ? (instance as { scopeId?: string }).scopeId
+    : (instance.vnode as { scopeId?: string } | undefined)?.scopeId
+}
+
+/**
+ * The element a component ref renders when the ref is not an element or a public
+ * instance with `$el`: a Vapor component that exposes nothing is the instance itself,
+ * and its element is the first one its block renders. Anything else has none.
+ */
+export function getRefTargetElement(target: unknown): HTMLElement | undefined {
+  return isVaporInstance(target) ? findBlockElement((target as { block?: unknown }).block) : undefined
+}

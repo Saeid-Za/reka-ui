@@ -1,4 +1,4 @@
-import { getInstance, isVaporInstance } from './instance'
+import { getInstance, getInstanceScopeId } from './instance'
 
 /**
  * Returns the parent component's `<style scoped>` id (e.g. `data-v-xxxxxxx`) as a
@@ -18,11 +18,6 @@ import { getInstance, isVaporInstance } from './instance'
  * ```
  */
 export function useForwardScopeId(): Record<string, string> {
-  const instance = getInstance()
-  if (!instance)
-    return {}
-  const scopeId = isVaporInstance(instance)
-    ? (instance as { scopeId?: string }).scopeId
-    : (instance.vnode as { scopeId?: string }).scopeId
+  const scopeId = getInstanceScopeId(getInstance())
   return scopeId ? { [scopeId]: '' } : {}
 }
