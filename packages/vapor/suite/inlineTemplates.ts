@@ -58,7 +58,7 @@ export function inlineVaporTemplates(): Plugin {
               this.error(`[vapor-suite] cannot compile inline template in ${id}: ${result.errors.join('; ')}`)
             const body = result.code
               .replace(VUE_IMPORT_RE, (_, names: string) =>
-                `const {${names.replace(AS_RE, ': ')}} = ${NS};`)
+                `const {${names.replace(AS_RE, ': ')}} = suiteVue();`)
               .replace(EXPORT_RENDER_RE, 'function render')
             // the server build of the same template (Vapor SSR, see ssrTwins.ts)
             const server = compileTemplate({ source, filename: id, id: `suite-${counter++}`, vapor: true, ssr: true, ssrCssVars: [] })
@@ -87,7 +87,7 @@ export function inlineVaporTemplates(): Plugin {
       visit(ast.program)
       if (!changed)
         return null
-      s.prepend(`import * as ${NS} from 'vue'\nimport * as ${REAL_NS} from '${suiteDir}vue-real.ts'\nimport * as ${SSR_NS} from '${suiteDir}server-renderer.ts'\n`)
+      s.prepend(`import { suiteVue } from '${suiteDir}vueSuiteProxy.ts'\nimport * as ${REAL_NS} from '${suiteDir}vue-real.ts'\nimport * as ${SSR_NS} from '${suiteDir}server-renderer.ts'\n`)
       return { code: s.toString(), map: s.generateMap({ hires: true }) }
     },
   }

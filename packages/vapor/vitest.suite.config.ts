@@ -5,9 +5,11 @@ import vue from '@vitejs/plugin-vue'
 import { createConfig } from './config.shared.ts'
 import { injectExposeRoot, rekaVaporSwap, SWAPS } from './rekaVapor.ts'
 import { inlineVaporTemplates } from './suite/inlineTemplates.ts'
+import { popoverSsrHarness } from './suite/popoverSsrHarness.ts'
 import { vaporSsrTwins } from './suite/ssrTwins.ts'
 import { stubbableComponents } from './suite/stubsPlugin.ts'
 import { testFileVue } from './suite/testFileVue.ts'
+import { vueSuiteProxyPlugin } from './suite/vueSuiteProxyPlugin.ts'
 
 // Reka's own jsdom suite (packages/core/src/**/*.test.ts), unchanged, in pure
 // Vapor: every SFC compiled as Vapor, `createVaporApp`, no interop plugin.
@@ -21,9 +23,10 @@ const testingLibraryDom = coreRequire.resolve('@testing-library/dom', { paths: [
 // The real server renderer, the one `vue` itself ships with (Vapor SSR, suite/ssr.ts).
 const vueRequire = createRequire(createRequire(import.meta.url).resolve('vue/package.json'))
 const serverRenderer = join(dirname(vueRequire.resolve('@vue/server-renderer/package.json')), 'dist/server-renderer.esm-bundler.js')
+const vueRuntime = join(dirname(vueRequire.resolve('vue/package.json')), 'dist/vue.runtime.esm-bundler.js')
 
 const config = createConfig({
-  plugins: [vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } }), stubbableComponents()],
+  plugins: [vueSuiteProxyPlugin(), popoverSsrHarness(), vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } }), stubbableComponents()],
   include: [],
 })
 
@@ -35,6 +38,7 @@ config.resolve!.alias = [
   { find: /^@iconify\/vue$/, replacement: `${suite}iconify.ts` },
   { find: /^(?:@vue|vue)\/server-renderer$/, replacement: `${suite}server-renderer.ts` },
   { find: /^vapor-suite:real-server-renderer$/, replacement: serverRenderer },
+  { find: /^vapor-suite:real-vue$/, replacement: vueRuntime },
   ...(config.resolve!.alias as any[]),
 ]
 Object.assign(config.test!, {
@@ -48,6 +52,13 @@ Object.assign(config.test!, {
   snapshotOptions: { updateSnapshot: 'none' },
   environmentOptions: { jsdom: { resources: 'usable' } },
 })
-config.test!.server!.deps!.inline = [...(config.test!.server!.deps!.inline as any[]), 'vitest-canvas-mock']
+const inlineDeps = (config.test!.server!.deps!.inline as any[]).filter(
+  (dep: unknown) => !(dep instanceof RegExp && dep.source === 'vue'),
+)
+config.test!.server!.deps!.inline = [...inlineDeps, `${suite}vueSuiteProxy.ts`, 'vitest-canvas-mock']
+config.test!.server!.deps!.external = [
+  ...(config.test!.server!.deps!.external as any[] ?? []),
+  'vapor-suite:real-vue',
+]
 
 export default config
