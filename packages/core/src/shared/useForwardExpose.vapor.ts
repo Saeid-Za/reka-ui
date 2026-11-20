@@ -1,3 +1,4 @@
+// @vapor-twin-of useForwardExpose.ts 3516683eaa23
 // Vapor half of `useForwardExpose`. Registered by `instance.vapor.ts` (the
 // `reka-ui/vapor` entry), so the default build never includes it.
 import type { VaporInstanceLike } from './instance'

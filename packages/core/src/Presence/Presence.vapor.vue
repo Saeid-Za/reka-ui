@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// @vapor-twin-of Presence.ts 799f5700699b
 // Vapor implementation of `Presence`.
 //
 // The VDOM `Presence` (Presence.ts) inspects and re-renders its slot vnode to

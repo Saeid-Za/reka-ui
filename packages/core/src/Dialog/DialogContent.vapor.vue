@@ -1,4 +1,5 @@
 <script lang="ts">
+// @vapor-twin-of DialogContent.vue 0da614fd19ef
 import type {
   DialogContentImplEmits,
   DialogContentImplProps,

@@ -1,3 +1,4 @@
+// @vapor-twin-of triggerIdSync.ts 9ca9a71dd7c7
 import type { TriggerIdSync } from './triggerIdSync'
 import { nextTick, watch } from 'vue'
 

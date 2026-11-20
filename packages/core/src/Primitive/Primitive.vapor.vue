@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// @vapor-twin-of Primitive.ts ce9e0c82bae7
 // Vapor implementation of `Primitive`.
 //
 // The VDOM `Primitive` (Primitive.ts) is a render function that clones the

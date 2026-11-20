@@ -89,6 +89,7 @@
     "build-only": "tsdown && tsx scripts/postbuild.ts",
     "watch": "tsdown --watch",
     "type-check": "vue-tsc -p tsconfig.check.json --noEmit",
+    "check:vapor-twins": "node scripts/check-vapor-twins.mjs",
     "test:run": "vitest run",
     "test:no-options-api": "vitest run -c vitest.no-options-api.config.ts",
     "test": "vitest",

@@ -1,3 +1,4 @@
+// @vapor-twin-of Collection.ts b62fda701777
 import type { InjectionKey } from 'vue'
 // Vapor implementation of `useCollection`.
 //

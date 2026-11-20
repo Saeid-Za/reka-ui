@@ -1,3 +1,4 @@
+// @vapor-twin-of stackTiming.ts 6237b0985c36
 // Vapor variant of `stackTiming.ts`. Vapor mounts children and runs their mount-time
 // focus before the parent's post-`nextTick` effect, so a scope that waited would let
 // content inside it (e.g. a Combobox input in a trapped Dialog) focus while the outer

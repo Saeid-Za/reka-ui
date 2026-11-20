@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// @vapor-twin-of Collection.ts b62fda701777
 import { inject, markRaw, watchEffect } from 'vue'
 import { Primitive, usePrimitiveElement } from '@/Primitive'
 import { CURRENT_COLLECTION } from './Collection.vapor'

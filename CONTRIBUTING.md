@@ -103,6 +103,14 @@ complete example to read alongside this section.
   a wrapper). Expose template refs with `useForwardExpose()`, and forward
   props/emits with `useForwardProps`, `useEmitAsProps`, or
   `useForwardPropsEmits` from `src/shared/`.
+- **Vapor twins.** A few modules have a `*.vapor.vue` / `*.vapor.ts` twin that
+  the `reka-ui/vapor` build swaps in, because the original relies on vnodes or
+  on VDOM-only timing. Keep twins as small as possible: prefer a tiny swapped
+  helper over a copy of a whole component, and never branch on Vapor inside a
+  shared source. Each twin starts with `// @vapor-twin-of <original> <sha12>`;
+  `pnpm --filter reka-ui check:vapor-twins` fails in CI when the original
+  changes. Port the change to the twin (or confirm none is needed), then run
+  the script with `--update`.
 
 ## Testing
 
