@@ -90,6 +90,8 @@ const virtualizer = useVirtualizer(
     overscan: props.overscan ?? 12,
   },
 )
+// The slot type predates the template render; the instance is the same.
+const slotVirtualizer = computed(() => virtualizer.value as unknown as Virtualizer<Element | Window, Element>)
 
 function scrollToIndexAndFocus(index: number) {
   virtualizer.value.scrollToIndex(index, { align: 'start' })
@@ -176,7 +178,7 @@ rootContext.virtualKeydownHook.on((event) => {
   >
     <Primitive
       v-for="item in virtualizer.getVirtualItems()"
-      :key="item.key"
+      :key="item.key as PropertyKey"
       as-child
       :data-index="item.index"
       :style="{
@@ -189,7 +191,7 @@ rootContext.virtualKeydownHook.on((event) => {
     >
       <slot
         :item="rootContext.expandedItems.value[item.index]"
-        :virtualizer="virtualizer"
+        :virtualizer="slotVirtualizer"
         :virtual-item="item"
       />
     </Primitive>

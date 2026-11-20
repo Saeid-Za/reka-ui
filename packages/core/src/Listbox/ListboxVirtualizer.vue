@@ -307,7 +307,7 @@ rootContext.virtualKeydownHook.on((event) => {
   >
     <Primitive
       v-for="item in virtualizer.getVirtualItems()"
-      :key="item.key"
+      :key="item.key as PropertyKey"
       as-child
       :data-index="item.index"
       :aria-setsize="props.options.length"

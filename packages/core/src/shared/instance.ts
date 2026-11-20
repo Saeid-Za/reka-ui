@@ -144,7 +144,7 @@ export function findBlockElement(
       if (block.forwarded?.value) {
         const f = block.forwarded.value
         if (typeof Element !== 'undefined' && f instanceof Element)
-          return f
+          return f as HTMLElement
         if (f && typeof f === 'object') {
           if ('$el' in f && f.$el instanceof Element)
             return f.$el
