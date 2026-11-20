@@ -601,7 +601,28 @@ function patchList(ctx: Ctx, old: M[], children: Child[], parent: Node, anchor: 
     })
   }
   else {
+    // Prefer data-testid identity when several same-type siblings exist (AlertDialog
+    // cancel vs extra). Do not require testid equality in sameType — a single
+    // ListboxItem updating data-testid must patch in place, not remount.
     children.forEach((c, i) => {
+      if (isDesc(c)) {
+        const testId = c.props?.['data-testid']
+        if (testId != null) {
+          for (const candidate of old) {
+            if (
+              !used.has(candidate)
+              && candidate.kind === 'comp'
+              && candidate.type === c.type
+              && (candidate.key == null && c.key == null)
+              && candidate.propsRef.value?.['data-testid'] === testId
+            ) {
+              used.add(candidate)
+              next[i] = candidate
+              return
+            }
+          }
+        }
+      }
       const m = old[i]
       if (m && sameType(m, c) && !used.has(m)) {
         used.add(m)
