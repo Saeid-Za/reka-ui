@@ -146,6 +146,74 @@ describe('given a Combobox with unmountOnHide=false', () => {
   })
 })
 
+describe('given a persistent Combobox content with a consumer style', () => {
+  // Pins QS14: ComboboxContentImpl drives `display` from `present`, so closed
+  // persistent content is hidden in both modes while consumer styles still apply.
+  // `force-mount` keeps upstream semantics: the consumer owns visibility.
+  const StyledCombobox = defineComponent({
+    components: { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxPortal, ComboboxRoot, ComboboxViewport },
+    props: {
+      open: { type: Boolean, default: false },
+      forceMount: { type: Boolean, default: false },
+    },
+    template: `<ComboboxRoot :open="open" :unmount-on-hide="false">
+  <ComboboxAnchor>
+    <ComboboxInput />
+  </ComboboxAnchor>
+  <ComboboxPortal>
+    <ComboboxContent :force-mount="forceMount" data-testid="styled-content" :style="{ color: 'red' }">
+      <ComboboxViewport>
+        <ComboboxItem value="Apple">Apple</ComboboxItem>
+      </ComboboxViewport>
+    </ComboboxContent>
+  </ComboboxPortal>
+</ComboboxRoot>`,
+  })
+
+  let wrapper: VueWrapper<InstanceType<typeof StyledCombobox>>
+  const getContent = () => document.querySelector('[data-testid="styled-content"]') as HTMLElement | null
+  const mountStyled = async (props: Record<string, unknown> = {}) => {
+    wrapper = mount(StyledCombobox, { attachTo: document.body, props })
+    await flushPromises()
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  afterEach(async () => {
+    wrapper?.unmount()
+    await nextTick()
+  })
+
+  it('hides the closed content but keeps the consumer style', async () => {
+    await mountStyled()
+
+    const content = getContent()
+    expect(content).not.toBeNull()
+    expect(content!.style.display).toBe('none')
+    expect(content!.style.color).toBe('red')
+  })
+
+  it('shows the content with its flex layout once opened', async () => {
+    await mountStyled()
+    await wrapper.setProps({ open: true })
+    await flushPromises()
+
+    const content = getContent()
+    expect(content!.style.display).toBe('flex')
+    expect(content!.style.color).toBe('red')
+  })
+
+  it('leaves closed force-mounted content visible for the consumer to control', async () => {
+    await mountStyled({ forceMount: true })
+
+    const content = getContent()
+    expect(content!.style.display).toBe('flex')
+    expect(content!.style.color).toBe('red')
+  })
+})
+
 describe('given a closed Combobox whose items stay mounted', () => {
   const ControlledCombobox = defineComponent({
     components: { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxPortal, ComboboxRoot, ComboboxViewport },
