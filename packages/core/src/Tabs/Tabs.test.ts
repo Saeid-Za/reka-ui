@@ -146,7 +146,10 @@ describe('ssr hydration', () => {
     app.unmount()
   })
 
-  it('keeps the default output when ids do not diverge', async () => {
+  // QS7: pure-Vapor SSR has no API to fall as-child attrs through to a slot's root, so the
+  // server markup lacks RovingFocus/Collection attrs until hydration. Expected to fail in
+  // Vapor until Vue supports it (vapor-proposal/upstream/vue-vapor-ssr-as-child.md).
+  ;(isVapor ? it.fails : it)('keeps the default output when ids do not diverge', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     // The mount animation guard is lifted in an animation frame, which changes `style`.
