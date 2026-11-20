@@ -138,9 +138,25 @@ rootContext.onResetSearchTerm(() => {
   resetSearchTerm()
 })
 
-watch(rootContext.modelValue, async () => {
-  if (!rootContext.isUserInputted.value && rootContext.resetSearchTermOnSelect.value)
-    resetSearchTerm()
+// Keep typed filter text in the input model when closing without blur-reset.
+// Vapor re-applies v-model on close; syncing from the DOM here matches harness
+// `input.element.value` assignments that skip the `input` event.
+watch(() => rootContext.open.value, (isOpen, wasOpen) => {
+  if (wasOpen && !isOpen && !rootContext.resetSearchTermOnBlur.value) {
+    const el = currentElement.value as HTMLInputElement | undefined
+    if (el && el.value !== modelValue.value)
+      modelValue.value = el.value
+  }
+})
+
+watch(rootContext.modelValue, (newValue, oldValue) => {
+  if (!rootContext.resetSearchTermOnSelect.value)
+    return
+  if (rootContext.open.value && rootContext.isUserInputted.value)
+    return
+  if (newValue === oldValue && oldValue !== undefined)
+    return
+  resetSearchTerm()
 }, { immediate: true, deep: true })
 
 watch(rootContext.filterState, (_newValue, oldValue) => {
