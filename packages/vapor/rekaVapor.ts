@@ -13,7 +13,6 @@ const rekaSrc = fileURLToPath(new URL('../core/src', import.meta.url))
  */
 /** Vapor SFC twins (VDOM `.vue` unchanged; suite + vapor build resolve here). */
 export const VUE_VAPOR_TWINS: Record<string, string> = {
-  [`${rekaSrc}/Listbox/ListboxItem.vue`]: `${rekaSrc}/Listbox/ListboxItem.vapor.vue`,
   [`${rekaSrc}/Dialog/DialogContent.vue`]: `${rekaSrc}/Dialog/DialogContent.vapor.vue`,
   [`${rekaSrc}/FocusScope/stackTiming.ts`]: `${rekaSrc}/FocusScope/stackTiming.vapor.ts`,
 }
