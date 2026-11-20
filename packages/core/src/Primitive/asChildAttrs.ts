@@ -38,6 +38,30 @@ interface ListenerEntry {
 // undo each other's attrs.
 const defaultStates = new WeakMap<Element, AppliedState>()
 
+// Attrs a (non-as-child) Primitive binds on its own element. VDOM `mergeProps(attrs,
+// child.props)` lets every key the child binds win, also one bound only sometimes
+// (`v-bind="cond ? { tabindex: 0 } : {}"`); the DOM alone cannot tell those apart
+// from attrs an outer as-child layer wrote, so the child registers them here.
+const ownAttrsRegistry = new WeakMap<Element, () => Attrs>()
+
+/** Registers the attrs `el`'s own Primitive binds, so as-child layers above defer to them. */
+export function registerOwnAttrs(el: Element, getAttrs: () => Attrs) {
+  ownAttrsRegistry.set(el, getAttrs)
+}
+
+function boundByChild(el: Element, name: string) {
+  const getAttrs = ownAttrsRegistry.get(el)
+  if (!getAttrs)
+    return false
+  const attrs = getAttrs()
+  for (const key in attrs) {
+    const attrName = key.startsWith('aria') || key.startsWith('data') ? hyphenate(key) : key
+    if (attrName.toLowerCase() === name.toLowerCase())
+      return true
+  }
+  return false
+}
+
 const WHITESPACE_RE = /\s+/
 const EVENT_OPTION_RE = /(?:Once|Passive|Capture)$/
 
@@ -199,6 +223,11 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
     const name = key.startsWith('aria') || key.startsWith('data') ? hyphenate(key) : key
     if (state.childOwned.has(name) || state.childOwned.has(name.toLowerCase()))
       continue
+    if (!override && boundByChild(el, name)) {
+      // The child now owns it: forget it without restoring or removing the child's value.
+      state.attrs.delete(name)
+      continue
+    }
     if (shouldSetAsProp(el, camelize(name), value)) {
       seenProps.add(name)
       ;(el as any)[camelize(name)] = name === 'value' ? (value ?? '') : (value === '' ? true : !!value)

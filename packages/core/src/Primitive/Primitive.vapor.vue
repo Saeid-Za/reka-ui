@@ -9,7 +9,7 @@
 import type { PrimitiveProps } from './Primitive'
 import { onMounted, onUpdated, shallowRef, useAttrs, watchEffect } from 'vue'
 import { findBlockElement, getInstance, onRootFragmentUpdate, REKA_VAPOR_BLOCK } from '@/shared/instance'
-import { createAsChildApplier, resolveAsChildTarget } from './asChildAttrs'
+import { createAsChildApplier, registerOwnAttrs, resolveAsChildTarget } from './asChildAttrs'
 import '@/shared/instance.vapor'
 
 defineOptions({
@@ -54,6 +54,12 @@ defineExpose({
 
 let mounted = false
 const applyAsChildAttrs = createAsChildApplier()
+// A rendered element tells as-child layers above which attrs it binds itself.
+function registerOwn() {
+  const el = renderAsChild ? undefined : rootElement()
+  if (el)
+    registerOwnAttrs(el, () => attrs)
+}
 function sync() {
   const el = rootElement()
   if (el)
@@ -67,11 +73,13 @@ function onRootUpdate() {
 }
 onMounted(() => {
   mounted = true
+  registerOwn()
   if (renderAsChild)
     sync()
   onRootFragmentUpdate(instance, onRootUpdate)
 })
 onUpdated(() => {
+  registerOwn()
   if (renderAsChild)
     sync()
   rootVersion.value++
