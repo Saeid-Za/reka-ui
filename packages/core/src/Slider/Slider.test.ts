@@ -549,6 +549,59 @@ describe('given slider on a page that leaves through an out-in transition', () =
   })
 })
 
+// A compiled template (no Suspense), so the Vapor suite runs the real compiled
+// `<Transition mode="out-in">` instead of the render-function bridge (QS12). Without
+// Suspense the leaving Slider is already unmounted, so only safety and ordering are pinned.
+describe('given slider in a compiled out-in transition', () => {
+  it.each(['horizontal', 'vertical'] as const)('should not throw on pointer input while it leaves (%s)', async (orientation) => {
+    const errors: unknown[] = []
+    const page = ref<'slider' | 'next'>('slider')
+    let finishLeave = () => {}
+    const Pages = defineComponent({
+      components: { Slider },
+      setup() {
+        return {
+          page,
+          orientation,
+          onLeave: (_el: Element, done: () => void) => { finishLeave = done },
+        }
+      },
+      template: `<Transition mode="out-in" :css="false" @leave="onLeave">
+  <Slider v-if="page === 'slider'" key="slider" :orientation="orientation" />
+  <div v-else key="next" data-testid="next-page" />
+</Transition>`,
+    })
+    const wrapper = mount(Pages, {
+      attachTo: document.body,
+      global: { stubs: { transition: false }, config: { errorHandler: error => errors.push(error) } },
+    })
+    try {
+      await flushPromises()
+      const sliderImpl = wrapper.find('[data-slider-impl]').element
+      const thumb = wrapper.find('[role="slider"]').element
+      vi.spyOn(sliderImpl, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+
+      page.value = 'next'
+      await flushPromises()
+      expect(thumb.isConnected).toBe(true)
+      expect(document.querySelector('[data-testid="next-page"]')).toBeNull()
+      await fireEvent.pointerDown(sliderImpl, { clientX: 10, clientY: 90, pointerId: 1 })
+      await fireEvent.pointerMove(thumb, { clientX: 50, clientY: 50, pointerId: 1 })
+      await fireEvent.pointerUp(thumb, { clientX: 50, clientY: 50, pointerId: 1 })
+
+      finishLeave()
+      await flushPromises()
+      expect(thumb.isConnected).toBe(false)
+      expect(document.querySelector('[data-testid="next-page"]')).not.toBeNull()
+      expect(errors).toEqual([])
+    }
+    finally {
+      finishLeave()
+      wrapper.unmount()
+    }
+  })
+})
+
 function mountRangeSlider(thumbs: Ref<string[]>, value: Ref<number[]>) {
   return mount(defineComponent(() => () => h(
     SliderRoot,
