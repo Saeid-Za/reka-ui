@@ -1,7 +1,7 @@
 # Related upstream issues (packaging freeze + Vue rc.16 recheck)
 
 Updated 2026-11-20 after FIX_PLAN_8: `packages/vapor` **adopted 3.6.0-rc.16** (includes
-[vuejs/core#16340](https://github.com/vuejs/core/pull/16340)). Gate **3550 / 2 / 35** (post-audit).
+[vuejs/core#16340](https://github.com/vuejs/core/pull/16340)). Gate (final, 2026-11-20): pure Vapor **3559 passed / 1 expected fail (QS7) / 35 skipped**; VDOM **3560 / 35 skipped**.
 Do not post drafts unless the owner opens them.
 
 ## Vue (`vuejs/core`)
@@ -42,4 +42,5 @@ Do not post drafts unless the owner opens them.
 - Suite filter: Tabs SSR → **still FAIL** on rc.16 (pure-Vapor path ≠ #16269).
 - First raw rc.16 suite was **3538 / 14 / 35** (Checkbox stuck-checked via story `v-bind="props"`).
 - **U1** fixed Checkbox story; **U3** fixed TagGroup; pin **kept on rc.16**.
-- Current gate: **3550 / 2 / 35**. Keep QS7 leave-red; do **not** close pure-Vapor draft against #16269.
+- Gate after the cleanup: **3559 / 1 expected fail / 35**. QS7 is `it.fails` in Vapor only; do **not** close the pure-Vapor draft against #16269.
+- QS9 is no longer red in Reka (bridge fix `e3908a5e8`); the `$el` draft stays as a migration question to Vue.

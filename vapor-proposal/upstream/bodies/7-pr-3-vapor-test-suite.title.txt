@@ -1,0 +1,1 @@
+test: isolated Vue 3.6 Vapor test package and a pure-Vapor run of the full suite

@@ -1,0 +1,1 @@
+[Vapor] Fall through attrs to a slot's single root element, including SSR

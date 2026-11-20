@@ -1,5 +1,7 @@
 # Perf A/B (same box, 2 passes each, reversed order)
 
+> **Superseded by `PERF_RESULTS_LOCAL.md`** (owner's machine, quiet, 2026-11-20). This box run was loaded; its *now vs before* direction holds, but its *now vs rc.16-only* improvements for checkbox mount/update did not reproduce (noise locally).
+
 before = a1e9d43d2 (pre FIX_PLAN_8), rc.16 only = 6e02e7b96, now = 605cbfc59. Box load avg ~2-3.6 during runs (logged in logs/bench/summary.txt). Verdict uses pass-to-pass spread as the noise threshold. Times are script ms medians.
 
 | metric | before | rc.16 only | now | Δ now vs before | Δ now vs rc.16-only | pass-to-pass spread (max of the 3 points) | verdict |

@@ -1,0 +1,1 @@
+`useMounted`, `tryOnMounted` and `useCurrentElement` misbehave in Vue Vapor components

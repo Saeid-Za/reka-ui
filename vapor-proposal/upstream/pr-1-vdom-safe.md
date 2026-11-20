@@ -2,9 +2,25 @@
 
 **Title:** refactor: read the component instance through one seam (Vapor prep, no behaviour change)
 
+<!-- pr-template -->
+### 🔗 Linked issue
+
+RFC: #RFC (answers #2721).
+
+### ❓ Type of change
+
+- [ ] 📖 Documentation (updates to the documentation, readme or JSdoc annotations)
+- [x] 🐞 Bug fix (a non-breaking change that fixes an issue)
+- [x] 👌 Enhancement (improving an existing functionality like performance)
+- [ ] ✨ New feature (a non-breaking change that adds functionality)
+- [ ] 🧹 Chore (updates to the build process or auxiliary tools and libraries)
+- [ ] ⚠️ Breaking change (fix or feature that would cause existing functionality to change)
+
+### 📚 Description
+
 ## Summary
 
-First, VDOM-only step of Vapor support (#2721, RFC: <link to the Reka issue>). It changes
+First, VDOM-only step of Vapor support (#2721, RFC: #RFC). It changes
 nothing for current users and can be merged on its own.
 
 - `shared/instance.ts`: `getInstance()` plus small accessors (assigned props, component name,
@@ -41,7 +57,11 @@ search term, `useRenderedContentId` comment-anchor cases, virtualizer item rende
 
 ## Performance
 
-No runtime change for VDOM users. See the benchmark table in the RFC / PR 2.
+No runtime change intended for VDOM users. The benchmark harness lives in PR 3's package, so there is no
+direct upstream-`v2` comparison; across the last round of this work (Chrome 155, 4× CPU throttle, 2 passes
+in reversed order) every VDOM timing (checkbox, collapsible, tabs, virtual listbox mount / scroll / update
+/ unmount) stayed within noise and the VDOM bench bundle changed by +139 B gzip (+0.2 %). Full table in
+the RFC (#RFC).
 
 ## Known issues
 
@@ -51,3 +71,8 @@ rebasing in the stack description).
 ## Breaking changes
 
 None. `shared/instance.ts` is internal (not exported from the package entry).
+
+### 📝 Checklist
+
+- [x] I have linked an issue or discussion.
+- [ ] I have updated the documentation accordingly. (No user-facing change in this PR.)

@@ -888,3 +888,25 @@ and session drift). Heap bytes/instance −165 B / −491 B (below noise). Vapor
 **END H7 pass:** **1** experiment, **0** kept, **1** reverted (H7-E1). Hill-climb did not hit
 5 consecutive misses or 20 total; gate held at **3541 / 11 / 35**.
 
+
+## Local A/B after the cleanup round (2026-11-20, owner's machine, quiet)
+
+Full method and tables: `PERF_RESULTS_LOCAL.md` (primary). before = `a1e9d43d2` (rc.15), rc.16 only =
+`6e02e7b96`, now = `c56d53a84`; 2 passes, reversed order; raw JSON in `Contribs/local-run/logs/bench/`.
+
+| Metric (script ms / bytes) | before | rc.16 only | now | now vs before | now vs rc.16 only |
+|---|---|---|---|---|---|
+| checkbox mount (vapor) | 287.5 | 241.6 | 244.4 | −15.0 % improvement | +1.2 % noise |
+| collapsible mount (vapor) | 324.7 | 226.3 | 235.2 | −27.6 % improvement | +3.9 % noise |
+| tabs mount (vapor) | 636.9 | 531.3 | 569.7 | −10.6 % improvement | +7.2 % (spread 5.8 %) |
+| listbox-virtual mount (vapor) | 16.6 | 14.6 | 15.3 | −7.6 % improvement | +4.8 % noise |
+| checkbox update (vapor) | 325.2 | 248.7 | 252.8 | −22.3 % improvement | +1.6 % noise |
+| checkbox residual after unmount (vapor) | 471,128 B | 327,608 B | 341,146 B | −27.6 % improvement | +4.1 % |
+| plain mount (vapor) | 9.8 | 10.2 | 11.3 | +14.8 % (1.5 ms; noise vs F0) | +10.3 % noise |
+| VDOM timings (all scenarios) | | | | noise; plain mount −7.2 % | noise |
+| bundle gzip vdom / interop / vapor | 70,850 / 110,359 / 85,684 | 71,011 / 113,534 / 87,769 | 70,989 / 113,463 / 87,897 | +0.2 / +2.8 / +2.6 % | −0.0 / −0.1 / +0.1 % |
+
+**Conclusion:** the Vapor gains and the bundle growth come from Vue 3.6.0-rc.16; the cleanup round is
+performance-neutral on top of it, with small costs on tabs mount and residual heap. No VDOM regression.
+The box run's "our code alone −13.6 % / −11.1 % on checkbox mount / update" did not reproduce (+1.2 % /
++1.6 %, noise); the box was loaded (2–3.6) and that column was noise.
