@@ -24,7 +24,6 @@ type ComboboxRootContext<T> = {
   onTriggerElementChange: (el: HTMLElement) => void
   highlightedElement: Ref<HTMLElement | undefined>
   parentElement: Ref<HTMLElement | undefined>
-  resetSearchTermOnBlur: Ref<boolean>
   resetSearchTermOnSelect: Ref<boolean>
   onResetSearchTerm: EventHookOn
   allItems: Ref<Map<string, string>>
@@ -135,7 +134,7 @@ defineSlots<{
 }>()
 
 const { primitiveElement, currentElement: parentElement } = usePrimitiveElement<GenericComponentInstance<typeof ListboxRoot>>()
-const { multiple, disabled, ignoreFilter, resetSearchTermOnBlur, resetSearchTermOnSelect, openOnFocus, openOnClick, dir: propDir, resetModelValueOnClear, highlightOnHover, loop, unmountOnHide } = toRefs(props)
+const { multiple, disabled, ignoreFilter, resetSearchTermOnSelect, openOnFocus, openOnClick, dir: propDir, resetModelValueOnClear, highlightOnHover, loop, unmountOnHide } = toRefs(props)
 
 const dir = useDirection(propDir)
 
@@ -292,7 +291,6 @@ provideComboboxRootContext(defineReactiveIds({
   triggerElement,
   onTriggerElementChange: val => triggerElement.value = val,
   parentElement,
-  resetSearchTermOnBlur,
   resetSearchTermOnSelect,
   onResetSearchTerm: resetSearchTerm.on,
   allItems,

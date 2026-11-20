@@ -428,7 +428,8 @@ describe('given default Combobox', () => {
     it('should not reset searchTerm when close', async () => {
       await wrapper.setProps({ resetSearchTermOnBlur: false, key: 'key' })
       const input = wrapper.find('input')
-      input.element.value = 'Testing'
+      // Type like a user does (value + `input` event), not a bare DOM assignment.
+      await input.setValue('Testing')
       await input.trigger('keydown', { key: 'Escape' })
       expect(input.element.value).toBe('Testing')
     })
@@ -2040,6 +2041,49 @@ describe('given a ComboboxItem rendered as-child without an element', () => {
 
     await flushPromises()
     expect(wrapper.find('input').exists()).toBe(true)
+    wrapper.unmount()
+  })
+})
+
+describe('given a Combobox with an object model and displayValue', () => {
+  const people = [{ id: 1, name: 'Ada' }, { id: 2, name: 'Grace' }]
+
+  function mountObjectCombobox() {
+    const model = ref<{ id: number, name: string }>({ ...people[0] })
+    const wrapper = mount(defineComponent({
+      setup() {
+        return () => h(ComboboxRoot, {
+          'modelValue': model.value,
+          'onUpdate:modelValue': (value: any) => { model.value = value },
+          'by': 'id',
+        }, () => [
+          h(ComboboxAnchor, () => h(ComboboxInput, { displayValue: (person: any) => person?.name ?? '' })),
+        ])
+      },
+    }), { attachTo: document.body })
+    return { wrapper, model }
+  }
+
+  it('shows the new display value when the model is replaced', async () => {
+    const { wrapper, model } = mountObjectCombobox()
+    await flushPromises()
+    const input = wrapper.find('input')
+    expect(input.element.value).toBe('Ada')
+
+    model.value = { ...people[1] }
+    await flushPromises()
+    expect(input.element.value).toBe('Grace')
+    wrapper.unmount()
+  })
+
+  it('shows the new display value when the model is mutated in place', async () => {
+    const { wrapper, model } = mountObjectCombobox()
+    await flushPromises()
+    const input = wrapper.find('input')
+
+    model.value.name = 'Ada Lovelace'
+    await flushPromises()
+    expect(input.element.value).toBe('Ada Lovelace')
     wrapper.unmount()
   })
 })
