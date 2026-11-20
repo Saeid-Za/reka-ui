@@ -570,6 +570,10 @@ Dirty-tree changed stack registration in `setup` for all VDOM users (R6); **reve
 
 **C6 (post-G1):** still red (`toHaveFocus` on Combobox input). No change this pass.
 
+**Decided (owner, 2026-11-20):** **(a)** Vapor-only. **Fixed** in `129abab66`:
+`FocusScope.vapor.vue` registers on the focus-scope stack synchronously in `setup`
+(VDOM `FocusScope.vue` unchanged). Combobox-in-Dialog (#2749) green in vapor + VDOM suites.
+
 ### QS16. Combobox `resetSearchTermOnBlur` 1 ms `setTimeout` (W9) and input sync (W11)
 
 **W9:** `setTimeout(…, 1)` on close comes from upstream `05ef43bf` / #2284 (defer
