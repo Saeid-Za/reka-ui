@@ -15,7 +15,6 @@ const rekaSrc = fileURLToPath(new URL('../core/src', import.meta.url))
 export const VUE_VAPOR_TWINS: Record<string, string> = {
   [`${rekaSrc}/Listbox/ListboxItem.vue`]: `${rekaSrc}/Listbox/ListboxItem.vapor.vue`,
   [`${rekaSrc}/Dialog/DialogContent.vue`]: `${rekaSrc}/Dialog/DialogContent.vapor.vue`,
-  [`${rekaSrc}/Combobox/ComboboxContent.vue`]: `${rekaSrc}/Combobox/ComboboxContent.vapor.vue`,
   [`${rekaSrc}/FocusScope/FocusScope.vue`]: `${rekaSrc}/FocusScope/FocusScope.vapor.vue`,
 }
 
