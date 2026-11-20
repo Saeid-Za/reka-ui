@@ -6,7 +6,7 @@ import type {
 import { createContext, useEmitAsProps, useForwardExpose } from '@/shared'
 
 interface AlertDialogContentContext {
-  onCancelElementChange: (el: HTMLElement | undefined, owner?: symbol) => void
+  onCancelElementChange: (el: HTMLElement | undefined) => void
 }
 
 export const [injectAlertDialogContentContext, provideAlertDialogContentContext]
@@ -32,43 +32,11 @@ const emitsAsProps = useEmitAsProps(emits)
 useForwardExpose()
 
 const cancelElement = ref<HTMLElement | undefined>()
-const cancelByOwner = new Map<symbol, HTMLElement>()
-let activeCancelOwner: symbol | undefined
-
-function applyActiveCancelRegistration() {
-  if (activeCancelOwner) {
-    const el = cancelByOwner.get(activeCancelOwner)
-    if (el?.isConnected) {
-      cancelElement.value = el
-      return
-    }
-  }
-  for (const [owner, el] of cancelByOwner) {
-    if (el.isConnected) {
-      activeCancelOwner = owner
-      cancelElement.value = el
-      return
-    }
-  }
-  activeCancelOwner = undefined
-  cancelElement.value = undefined
-}
 
 provideAlertDialogContentContext({
-  onCancelElementChange: (el, owner) => {
-    if (owner) {
-      if (el) {
-        cancelByOwner.set(owner, el)
-        activeCancelOwner = owner
-        cancelElement.value = el
-        return
-      }
-      cancelByOwner.delete(owner)
-      if (activeCancelOwner === owner)
-        applyActiveCancelRegistration()
-      return
-    }
-    // Fallback when no owner is passed: only release once the node has left the document.
+  onCancelElementChange: (el) => {
+    // A cancel button that unmounts only releases the registered one once it has left the
+    // document, so another cancel button that is still rendered keeps its registration.
     if (!el && cancelElement.value?.isConnected)
       return
     cancelElement.value = el
