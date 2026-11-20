@@ -134,6 +134,10 @@ export default defineConfig({
             text: `Migration ${BadgeHTML('New')}`,
             link: '/docs/guides/migration',
           },
+          {
+            text: `Vue Vapor ${BadgeHTML('Alpha', true)}`,
+            link: '/docs/guides/vapor',
+          },
 
           { text: `llms.txt ${BadgeHTML('New')}`, link: '/llms.txt' },
         ],
