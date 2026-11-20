@@ -64,6 +64,20 @@ const attrs = useAttrs()
 const declaredProps = new Set(['value', 'disabled', 'as', 'asChild'])
 const syncFallthroughAttrs = createAsChildApplier({ override: true })
 let previousFallthroughKeys = new Set<string>()
+// `rawProps.$` holds `v-bind` objects (`() => obj`, plain values) and static
+// prop groups (`{ key: () => value }`, getters).
+function dynamicSourceEntries(sources: unknown[] | undefined): [string, unknown][] {
+  const entries: [string, unknown][] = []
+  for (const source of sources ?? []) {
+    if (typeof source === 'function') {
+      entries.push(...Object.entries((source() ?? {}) as Record<string, unknown>))
+      continue
+    }
+    for (const [key, value] of Object.entries((source ?? {}) as Record<string, unknown>))
+      entries.push([key, typeof value === 'function' ? value() : value])
+  }
+  return entries
+}
 function currentFallthroughAttrs(): Record<string, unknown> {
   const inst = getInstance()
   if (!inst || !isVaporInstance(inst))
@@ -71,16 +85,15 @@ function currentFallthroughAttrs(): Record<string, unknown> {
   const merged: Record<string, unknown> = {}
   const raw = inst.rawProps
   for (const key in raw) {
-    if (key === '$' || declaredProps.has(key))
+    if (key === '$' || key === 'key' || declaredProps.has(key))
       continue
-    merged[key] = (raw as Record<string, unknown>)[key]
+    // Compiled Vapor rawProps are getters (`() => _ctx.value`).
+    const value = (raw as Record<string, unknown>)[key]
+    merged[key] = typeof value === 'function' ? value() : value
   }
-  for (const source of raw.$ ?? []) {
-    const resolved = typeof source === 'function' ? source() : source
-    for (const [key, value] of Object.entries(resolved ?? {})) {
-      if (!declaredProps.has(key))
-        merged[key] = value
-    }
+  for (const [key, value] of dynamicSourceEntries(raw.$)) {
+    if (!declaredProps.has(key))
+      merged[key] = value
   }
   return merged
 }
@@ -106,17 +119,16 @@ function parentFallthroughSignature() {
   const parts: unknown[] = []
   const raw = inst.rawProps
   for (const key in raw) {
-    if (key === '$')
+    if (key === '$' || key === 'key')
       continue
-    if (!declaredProps.has(key))
-      parts.push(key, (raw as Record<string, unknown>)[key])
-  }
-  for (const source of raw.$ ?? []) {
-    const resolved = typeof source === 'function' ? source() : source
-    for (const [key, value] of Object.entries(resolved ?? {})) {
-      if (!declaredProps.has(key))
-        parts.push(key, value)
+    if (!declaredProps.has(key)) {
+      const value = (raw as Record<string, unknown>)[key]
+      parts.push(key, typeof value === 'function' ? value() : value)
     }
+  }
+  for (const [key, value] of dynamicSourceEntries(raw.$)) {
+    if (!declaredProps.has(key))
+      parts.push(key, value)
   }
   return parts
 }
