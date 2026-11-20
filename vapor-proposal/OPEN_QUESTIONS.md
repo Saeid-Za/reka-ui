@@ -611,7 +611,9 @@ owner `Map` in `AlertDialogContent`; `AlertDialogCancel.vapor.vue` re-registers 
 
 **9.3 TagGroup:** fixed in U3 (`ee148a24c`) — post-flush `tabIndex` reset when empty under Vapor.
 
-**9.4 Popover.ssr:** still red (U4: post-`resetModules` dynamic `vue`/`@vue/test-utils` re-import did not stop stack overflow on hydrate).
+**9.4 Popover.ssr:** **Fixed** in `c83598fc2` (owner A): suite `vueSuiteProxy` keeps one Vue
+runtime after `vi.resetModules`; inline SSR fixtures use `suiteVue()`; Vapor-only skip of
+`resetModules` in Popover.ssr harness so hydrate does not mix two runtimes.
 
 ### QS17. Dialog dev `useWarning` fires twice under pure Vapor (FIX_PLAN_4 §9.1)
 
