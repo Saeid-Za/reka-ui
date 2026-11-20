@@ -125,7 +125,8 @@ function handleContentRef(vnode: Element | ComponentPublicInstance | null) {
   if (!vnode)
     return
   const raw = unrefElement(vnode as ComponentPublicInstance)
-  const el = (raw && typeof Node !== 'undefined' && raw instanceof Node ? raw : undefined) as HTMLElement | undefined
+  // An as-child content that renders no element resolves to its comment anchor.
+  const el = (raw && typeof Element !== 'undefined' && raw instanceof Element ? raw : undefined) as HTMLElement | undefined
   // special case for PopperContent
   if (el?.hasAttribute('data-reka-popper-content-wrapper'))
     content.value = el.firstElementChild as HTMLElement
