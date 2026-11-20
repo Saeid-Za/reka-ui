@@ -441,6 +441,11 @@ In Vapor, a template ref on a component is its expose proxy. When the component
 
 **Upstream map (2026-11-20):** No open Vue issue for “empty expose → no `$el`”. [#14242](https://github.com/vuejs/core/issues/14242) was interop template-ref undefined (**closed**). [#16305](https://github.com/vuejs/core/issues/16305) asks for public APIs around `getCurrentInstance()` facts (**open** FR). Draft: `upstream/vue-expose-proxy-el.md`.
 
+**Decided (owner, 2026-11-20):** **manual expose** — (a)+(c). Wrappers that Reka
+forwards refs onto must `defineExpose({ $el })` (VDOM never required it; Vapor does).
+Leave the remaining red test as the Vue-gap marker; do **not** weaken it with (b).
+Draft Vue ask stays in `upstream/vue-expose-proxy-el.md`.
+
 ### QS10. Virtualizer implementation: unified `<Primitive as-child v-for>` vs twin SFCs
 
 In VDOM, `ListboxVirtualizer`, `ScrollAreaVirtualizer`, and `TreeVirtualizer` previously used `useSlots()` and `cloneVNode()` in computed properties to attach virtual positioning styles and attributes. Because Vapor has no VNodes, initial approaches considered `.vapor.vue` twins (~700 LOC duplicate code).

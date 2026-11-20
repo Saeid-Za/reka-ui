@@ -34,7 +34,7 @@ below may be stale until the next full suite.
 | Question | Tests | Path to green |
 |---|---|---|
 | QS7 | Tabs SSR ×1 | A+B: accept known + draft Vue repro (`upstream/vue-vapor-ssr-as-child.md`) |
-| QS9 | `useForwardExpose` ×1 | Recommend **A+C** (document + Vue draft); **B** only for optics |
+| QS9 | `useForwardExpose` ×1 | **A+C locked:** manual `defineExpose({ $el })` + Vue draft; leave 1 red |
 | QS12 | Slider out-in ×2 | Owner A: redesign Transition bridge |
 
 ## Remaining failure buckets (expected after QS14–16 + 9.2; confirm on next full gate)
