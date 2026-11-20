@@ -578,6 +578,11 @@ function unmountChild(m: M, parent: Node | null) {
       remove(m.inst, parent ?? nodes[0]?.parentNode ?? undefined)
       m.scope.stop()
       for (const n of nodes) (n as ChildNode).remove?.()
+      // Like VDOM `setRef(null)` on unmount: release function/ref-object refs.
+      if (typeof m.ref === 'function')
+        m.ref(null)
+      else if (isRef(m.ref))
+        m.ref.value = null
       break
     }
     case 'slot': {
