@@ -40,7 +40,7 @@ config.resolve!.alias = [
 Object.assign(config.test!, {
   dir: `${core}src`,
   include: ['**/*.test.ts'],
-  exclude: ['**/node_modules/**', '**/*.browser.test.ts'],
+  exclude: ['**/node_modules/**', '**/*.browser.test.ts', '**/__probe__/**'],
   setupFiles: [`${suite}setup.ts`],
   globalSetup: `${suite}global.ts`,
   // Never write snapshots: the stored ones are the VDOM output and stay the reference.
