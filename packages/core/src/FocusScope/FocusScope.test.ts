@@ -470,3 +470,51 @@ describe('focusScope', () => {
     })
   })
 })
+
+// Stack order is mode-specific (stackTiming.ts / stackTiming.vapor.ts); nesting must
+// behave the same in both.
+describe('given nested trapped FocusScopes', () => {
+  it('traps focus in the inner scope while it is mounted, then in the outer one again', async () => {
+    const showInner = ref(false)
+    const settle = () => new Promise(resolve => setTimeout(resolve, 10))
+    const rendered = render(defineComponent({
+      components: { FocusScope },
+      setup: () => ({ showInner }),
+      template: `<div>
+        <FocusScope as-child loop trapped>
+          <div>
+            <button>outer first</button>
+            <FocusScope v-if="showInner" as-child loop trapped>
+              <div>
+                <button>inner first</button>
+                <button>inner last</button>
+              </div>
+            </FocusScope>
+            <button>outer last</button>
+          </div>
+        </FocusScope>
+      </div>`,
+    }), { attachTo: document.body })
+    await settle()
+
+    const outerLast = rendered.getByText('outer last')
+    outerLast.focus()
+    await userEvent.tab()
+    expect(rendered.getByText('outer first')).toHaveFocus()
+
+    outerLast.focus()
+    showInner.value = true
+    await settle()
+    expect(rendered.getByText('inner first')).toHaveFocus()
+    rendered.getByText('inner last').focus()
+    await userEvent.tab()
+    expect(rendered.getByText('inner first')).toHaveFocus()
+
+    showInner.value = false
+    await settle()
+    expect(outerLast).toHaveFocus()
+    await userEvent.tab()
+    expect(rendered.getByText('outer first')).toHaveFocus()
+    rendered.unmount()
+  })
+})

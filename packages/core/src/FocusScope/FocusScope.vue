@@ -51,6 +51,7 @@ import { isClient } from '@vueuse/shared'
 import { inject, nextTick, provide, reactive, ref, watch, watchEffect } from 'vue'
 import { Primitive } from '@/Primitive'
 import { createFocusScopesStack } from './stack'
+import { joinStackInSetup, joinStackOnMount } from './stackTiming'
 import {
   AUTOFOCUS_ON_MOUNT,
   AUTOFOCUS_ON_UNMOUNT,
@@ -236,6 +237,12 @@ function dispatchMountAutoFocus(container: HTMLElement, previouslyFocusedElement
   }
 }
 
+function joinStack() {
+  if (isClient && props.present !== false)
+    focusScopesStack.add(focusScope)
+}
+joinStackInSetup(joinStack)
+
 watchEffect(async (cleanupFn) => {
   const container = currentElement.value
 
@@ -246,8 +253,7 @@ watchEffect(async (cleanupFn) => {
   // `unmountOnHide: false`) must stay out of the scope stack: adding it would
   // pause the currently active scope and break its focus trap. The `present`
   // watcher below adds/removes it as it becomes visible.
-  if (props.present !== false)
-    focusScopesStack.add(focusScope)
+  joinStackOnMount(joinStack)
   const previouslyFocusedElement = getActiveElement() as HTMLElement | null
   const hasFocusedCandidate = container.contains(previouslyFocusedElement)
 
