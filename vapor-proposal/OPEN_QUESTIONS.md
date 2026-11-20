@@ -1,5 +1,11 @@
 # Open questions for the Reka maintainers
 
+> **PR-ready state.** Final gate (2026-11-20, Asia/Tehran, archive `605cbfc59`, Vue 3.6.0-rc.16):
+> pure-Vapor full suite **3559 passed / 1 expected fail / 35 skipped (3595)**, exit 0;
+> `pnpm test:run` **3560 passed / 35 skipped (3595)**, exit 0. vue-tsc, build, eslint and the
+> twin drift check pass. The one expected failure is QS7 (Tabs SSR, `it.fails` in Vapor only).
+> PR branches: see `upstream/` and `/media/saeid/projects/Contribs/PR_READY.md`.
+
 These are the decisions this proposal leaves to the Reka maintainers, or to Vue.
 Each one lists the options, their trade-offs and our recommendation. Where the
 prototype needed an answer to keep going, it uses a default marked
@@ -446,6 +452,11 @@ element's own listener still runs first, which is the opposite of VDOM.
 
 ### QS9. Forwarding a ref to a Vapor component that exposes nothing
 
+**Resolved for the suite (2026-11-20, `e3908a5e8`):** the red test was the bridge not
+releasing component refs on unmount. The runtime difference (no `$el` on an empty expose)
+remains and is documented in the guide; Vue text in `upstream/vue-expose-proxy-el.md`
+(reproduced standalone on rc.16).
+
 In Vapor, a template ref on a component is its expose proxy. When the component
 `expose()`s nothing, the ref is an empty object, so `useForwardExpose` cannot provide
 `$el` or the instance the way VDOM's public instance does. This is upstream's design:
@@ -607,6 +618,10 @@ Dirty-tree changed stack registration in `setup` for all VDOM users (R6); **reve
 (VDOM `FocusScope.vue` unchanged). Combobox-in-Dialog (#2749) green in vapor + VDOM suites.
 
 ### QS16. Combobox `resetSearchTermOnBlur` 1 ms `setTimeout` (W9) and input sync (W11)
+
+**Resolved (2026-11-20, `7b8a44cda`):** test artifact. The test set `input.element.value`
+without an input event; with `setValue` upstream code passes in both modes. Product change
+reverted.
 
 **W9:** `setTimeout(…, 1)` on close comes from upstream `05ef43bf` / #2284 (defer
 `resetSearchTerm` until after blur). Vapor test: "opening the popup should not reset searchTerm

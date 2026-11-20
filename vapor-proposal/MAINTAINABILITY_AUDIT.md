@@ -55,3 +55,27 @@ expected to reject `if (isVapor)` branches inside shared product sources.
 | ADR-001 twin strategy | Keep, with a rule | Twin only modules that use vnode APIs or truly diverge, and keep twins *small* (swap a hook or helper, not a 300-line SFC). Add a CI check that diffs each `.vapor.vue` against its source so drift is visible. |
 | VueUse shim (ADR-010) | Keep for now | VueUse #5050 (`getCurrentScope` fallback) only covers `provideLocal`/`injectLocal`. Lifecycle helpers need an instance, and `$el` needs a block. Open a VueUse issue for `useMounted`/`tryOnMounted`/`useParentElement` under Vapor and link it. |
 | Stopping Phase F perf | Keep | One reverted experiment, no profile-backed lever. Correctness and maintainability work have higher value. |
+
+
+## 5. Outcome of the approved recommendations (2026-11-20)
+
+Final gate (2026-11-20, Asia/Tehran, archive `605cbfc59`, Vue 3.6.0-rc.16):
+pure-Vapor full suite **3559 passed / 1 expected fail / 35 skipped (3595)**, exit 0;
+`pnpm test:run` **3560 passed / 35 skipped (3595)**, exit 0. vue-tsc, build, eslint and the
+twin drift check pass. The one expected failure is QS7 (Tabs SSR, `it.fails` in Vapor only).
+PR branches: see `upstream/` and `/media/saeid/projects/Contribs/PR_READY.md`.
+
+| # | Item | Archive commit(s) | Outcome |
+|---|---|---|---|
+| 1 | QS9 | `e3908a5e8` | Real cause was the test bridge not releasing component refs on unmount. Fixed in `vaporH.ts`; test passes honestly, no `it.fails`. Also fixed 4 unhandled rejections (`c68477826`, Select comment anchor). QS7 marked `it.fails` in Vapor only (`a0ff5e503`). |
+| 2 | QS16 | `7b8a44cda` | DOM→model copy dropped; product files back to upstream. Cause was the test assigning `input.element.value` without an input event (now `setValue`). Watch guard not needed (it broke in-place mutation). Object-model tests added, both modes. |
+| 3 | TagGroup | `af5bf6735` | Vapor branch removed from `TagGroupRoot.vue`; the as-child applier now lets attrs a child binds itself win (`registerOwnAttrs`). |
+| 4 | FocusScope | `a1ee4d7a1` | 371-line twin deleted; only `stackTiming(.vapor).ts` is swapped. Negative control: without the swap QS15 fails. Nested-scope test added, both modes. |
+| 5 | ListboxItem twin | `1b6617ecb` | Deleted; the bridge fix covers it. |
+| 6 | 9.4 | `cb36836a6` | Regex test rewrite and `popoverSsrHarness.ts` removed; explicit `if (!isVapor) vi.resetModules()` in the test. |
+| 7 | 9.2 | `6ea474e10` | `data-testid` matching removed; the bridge keeps positions of empty children (`HOLE`). |
+| 8 | useTriggerId etc. | `39d3dc919` | `triggerIdSync(.vapor).ts` swap; `resolveElement` / `useForwardScopeId` via `instance.ts` helpers. No `isVapor` left in shared product sources (only `isVaporInstance` dispatch in `instance.ts` / `useForwardExpose.ts`). |
+| 9 | QS14 / QS12 tests | `3618f6406`, `9444ebd37` | QS14: closed persistent content hidden + consumer style kept (VDOM passes with or without the fix; Vapor needs it); `force-mount` stays consumer-controlled (upstream semantics, so "forceMount + closed" is visible by design). QS12: template-compiled `<Transition mode="out-in">` test (real Vapor Transition); without Suspense the leaving Slider is unmounted in both modes, so the test pins safety and ordering, not input. |
+| 10 | Twin drift | `02eda1240`, `605cbfc59` | `check-vapor-twins.mjs` (annotation + sha12 of the original), CI step, CONTRIBUTING rule. It caught a real drift on its first run (instance.ts) and was refreshed. |
+| + | Type-check | `be00b149f` | Archive had 5 vue-tsc errors (virtualizer `Key` type, Tree slot type, `findBlockElement`); merge-base was clean. Fixed. |
+| + | Cleanup | `71b150573`, `ceb7f8d46`, `7873bebda` | Planning-doc references removed from code; unused import; user guide `docs/content/docs/guides/vapor.md`. |

@@ -1,5 +1,11 @@
 # Pure-Vapor full-suite triage (Vue rc.16)
 
+> **PR-ready state.** Final gate (2026-11-20, Asia/Tehran, archive `605cbfc59`, Vue 3.6.0-rc.16):
+> pure-Vapor full suite **3559 passed / 1 expected fail / 35 skipped (3595)**, exit 0;
+> `pnpm test:run` **3560 passed / 35 skipped (3595)**, exit 0. vue-tsc, build, eslint and the
+> twin drift check pass. The one expected failure is QS7 (Tabs SSR, `it.fails` in Vapor only).
+> PR branches: see `upstream/` and `/media/saeid/projects/Contribs/PR_READY.md`.
+
 Gate (2026-11-20, Asia/Tehran, post-audit): **3550 pass / 2 fail / 35 skip**
 (`pnpm exec vitest run -c vitest.suite.config.ts --maxWorkers=4` in `packages/vapor`).
 `pnpm test:run`: **3552 pass / 35 skip**. Vue **3.6.0-rc.16**.

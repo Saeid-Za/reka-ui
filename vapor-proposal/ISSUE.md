@@ -1,5 +1,12 @@
 # [RFC] Vue Vapor mode support: fix composables now, Vapor-compiled build later
 
+> **PR-ready state.** Final gate (2026-11-20, Asia/Tehran, archive `605cbfc59`, Vue 3.6.0-rc.16):
+> pure-Vapor full suite **3559 passed / 1 expected fail / 35 skipped (3595)**, exit 0;
+> `pnpm test:run` **3560 passed / 35 skipped (3595)**, exit 0. vue-tsc, build, eslint and the
+> twin drift check pass. The one expected failure is QS7 (Tabs SSR, `it.fails` in Vapor only).
+> PR branches: see `upstream/` and `/media/saeid/projects/Contribs/PR_READY.md`.
+> This draft is superseded by `upstream/reka-discussion.md` and `upstream/pr-*.md`.
+
 ### TL;DR
 
 Reka already **mostly works in Vapor apps through `vaporInteropPlugin`** (Vue >= 3.6.0-rc.15;

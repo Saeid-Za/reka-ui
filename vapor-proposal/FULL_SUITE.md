@@ -1,5 +1,11 @@
 # Reka's full test suite under pure Vapor
 
+> **PR-ready state.** Final gate (2026-11-20, Asia/Tehran, archive `605cbfc59`, Vue 3.6.0-rc.16):
+> pure-Vapor full suite **3559 passed / 1 expected fail / 35 skipped (3595)**, exit 0;
+> `pnpm test:run` **3560 passed / 35 skipped (3595)**, exit 0. vue-tsc, build, eslint and the
+> twin drift check pass. The one expected failure is QS7 (Tabs SSR, `it.fails` in Vapor only).
+> PR branches: see `upstream/` and `/media/saeid/projects/Contribs/PR_READY.md`.
+
 Status: **plan written first (this section), results appended below as they come in.**
 Branch: `feat/vapor-full-suite` (worktree `wt-suite`), based on `feat/vapor-support`.
 Decisions taken while doing this are `ADR-S*` entries in `DECISIONS.md`; questions for
