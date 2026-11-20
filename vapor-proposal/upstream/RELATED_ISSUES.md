@@ -1,8 +1,8 @@
 # Related upstream issues (packaging freeze + Vue rc.16 recheck)
 
-Checked 2026-11-20 by temporarily installing Vue **3.6.0-rc.16** (includes
-[vuejs/core#16340](https://github.com/vuejs/core/pull/16340)), then restoring the freeze pin
-**3.6.0-rc.15**. Do not post unless the owner opens them.
+Updated 2026-11-20 after FIX_PLAN_8: `packages/vapor` **adopted 3.6.0-rc.16** (includes
+[vuejs/core#16340](https://github.com/vuejs/core/pull/16340)). Gate **3542 / 10 / 35**.
+Do not post drafts unless the owner opens them.
 
 ## Vue (`vuejs/core`)
 
@@ -37,10 +37,9 @@ Checked 2026-11-20 by temporarily installing Vue **3.6.0-rc.16** (includes
 | **9.4**, **QS12** | Harness |
 | **QS17** Dialog warn flake | Needs Vue lifecycle repro before filing |
 
-## QS7 recheck (2026-11-20)
+## QS7 + rc.16 adoption (FIX_PLAN_8, 2026-11-20)
 
-- Temporarily installed Vue **rc.16** in `packages/vapor` (commit `363583d` / #16340 is in the tag).
-- Suite filter: `Tabs/Tabs.test.ts` → `ssr hydration > keeps the default output when ids do not diverge` → **still FAIL**.
-- Server HTML still lacks tablist/trigger attrs that the client has (`data-orientation`, `dir`, `tabindex`, `data-reka-collection-item`, etc.).
-- Full suite on rc.16: **3538 pass / 14 fail / 35 skip** (was **3541 / 11 / 35** on rc.15). New reds: Checkbox indicator ×2, Checkbox form submit (R3). Pin **restored to rc.15** to keep the packaging-freeze gate; rc.16 adoption needs a separate plan.
-- **Conclusion:** keep QS7 leave-red; do **not** close the pure-Vapor draft against #16269. Interop SSR consumers should prefer **≥ rc.16** when Reka is ready to absorb the Checkbox regressions.
+- Suite filter: Tabs SSR → **still FAIL** on rc.16 (pure-Vapor path ≠ #16269).
+- First raw rc.16 suite was **3538 / 14 / 35** (Checkbox stuck-checked via story `v-bind="props"`).
+- **U1** fixed Checkbox story; **U3** fixed TagGroup; pin **kept on rc.16**.
+- Current gate: **3542 / 10 / 35**. Keep QS7 leave-red; do **not** close pure-Vapor draft against #16269.

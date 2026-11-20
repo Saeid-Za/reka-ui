@@ -125,7 +125,7 @@ fixing again: one commit per item, gate numbers in the body, VDOM gate **3552 / 
 - **Never use `git stash`.** It is shared across worktrees. Also, the repo's lint-staged pre-commit hook
   stashes internally. Switching it to `lint-staged --no-stash` is a pending owner decision.
 - commitlint enforces conventional commits with a short title.
-- Vue is pinned to `3.6.0-rc.15` in `packages/vapor` (Q2; rc.16 tried 2026-11-20 — see RELATED_ISSUES).
+- Vue is pinned to `3.6.0-rc.16` in `packages/vapor` (FIX_PLAN_8 U0; see RELATED_ISSUES).
 - The NTFS drive is slower than ext4 for `node_modules`. If installs or tests feel slow, a checkout on the home partition is an option.
 - `getCurrentInstance()` returns null inside Vapor components. Anything reading `instance.vnode`, `$el` or
   `instance.proxy` needs the Vapor resolver path (`setVaporInstanceResolver`).
@@ -140,14 +140,11 @@ fixing again: one commit per item, gate numbers in the body, VDOM gate **3552 / 
 
 ## 11. Packaging freeze (post FIX_PLAN_7 H7)
 
-FIX_PLAN_7 steps **H0–H7** are complete on `feat/vapor-full-suite` (tip includes H7 docs:
-`96230bb55`). Phase F ran one experiment (**H7-E1**, lazy as-child applier): **reverted**; gate
-unchanged at **3541 / 11 / 35** pure Vapor, **3552 / 35 skip** `pnpm test:run`.
+FIX_PLAN_7 H0–H7 complete; **FIX_PLAN_8** adopted Vue **rc.16** and cleared Checkbox + TagGroup.
+Current tip includes U3 (`ee148a24c`). Gate: **3542 / 10 / 35** pure Vapor, **3552 / 35** `pnpm test:run`.
 
-- **No FIX_PLAN_8** and no further perf hill-climb on this branch until the owner says otherwise.
+- **No further perf hill-climb** until the owner says otherwise.
 - **Docs to open upstream when ready:** `vapor-proposal/upstream/` (not posted). See
-  `RELATED_ISSUES.md` for the Vue/Reka map (#16269 fixed in rc.16; QS7 still red; #16305 open).
-- **Owner decision next:** QS14 Combobox persistent content visibility (`USER_GUIDE_DRAFT.md`,
-  ADR-S53); then triage the remaining QS-blocked reds.
-- Proposal packaging: refresh `ISSUE.md`, `PULL_REQUEST.md`, `reka-discussion.md` at freeze
-  (this section). rc.16 recheck recorded 2026-11-20 (pin stayed rc.15).
+  `RELATED_ISSUES.md` (#16269 fixed in rc.16; QS7 still red; #16305 open).
+- **Owner decisions for full green:** see end of `triage.md` / latest chat report (QS7, QS9,
+  QS12, QS14–QS16, 9.2, 9.4, QS15).

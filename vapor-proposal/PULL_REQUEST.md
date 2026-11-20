@@ -65,7 +65,7 @@ Closes #TBD (Vapor RFC issue).
   `CollectionSlot`/`CollectionItem` Vapor SFCs replace the `h()` parts in the Vapor build.
 - The VDOM entry never imports `*.vapor.*` files.
 
-**`packages/vapor`** (new, private, `vue@3.6.0-rc.15`)
+**`packages/vapor`** (new, private, `vue@3.6.0-rc.16`)
 - **`rekaVapor.ts`.** `rekaVaporSwap()` swaps in the four modules and also:
   - injects `exposeRootElement()`, because Vapor component refs have no `$el`;
   - rewrites `defineAsyncComponent` to `defineVaporAsyncComponent`;
@@ -95,7 +95,7 @@ Closes #TBD (Vapor RFC issue).
 | `pnpm test:vapor`, VDOM baseline | 51 passed |
 | `pnpm test:vapor`, interop (both app modes) | 116 passed, 2 expected fail |
 | `pnpm test:vapor`, pure Vapor (Options API compiled out) | 60 passed, 1 expected fail (known gap), 1 todo |
-| `pnpm --filter ./packages/vapor test:full-suite` (pure Vapor, Reka's full suite) | **3541 passed, 11 failed, 35 skipped** (`--maxWorkers=4`). Branch packaging freeze after FIX_PLAN_7; failures bucketed in `vapor-proposal/triage.md`. |
+| `pnpm --filter ./packages/vapor test:full-suite` (pure Vapor, Reka's full suite) | **3542 passed, 10 failed, 35 skipped** (`--maxWorkers=4`, Vue 3.6.0-rc.16). Failures bucketed in `vapor-proposal/triage.md`. |
 | `pnpm test:run` (repo VDOM gate) | **3552 passed, 35 skipped** |
 
 **Per-component pure-Vapor coverage: 47/48.** The full table is in `COVERAGE.table.md`. All

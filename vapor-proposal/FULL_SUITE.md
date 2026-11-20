@@ -444,3 +444,13 @@ Triage: `packages/vapor/suite/out/triage.json` from `suite/out/report.json`
 - Issue map: `vapor-proposal/upstream/RELATED_ISSUES.md`.
 - Raw report kept at `packages/vapor/suite/out/report-rc16.json` (local / gitignored if under
   `suite/out/`).
+
+## FIX_PLAN_8 (Vue rc.16 adopted, 2026-11-20)
+
+- **U0** `6e02e7b96`: pin `packages/vapor` to **3.6.0-rc.16**.
+- **U1** `374fa886a`: Checkbox story — do not `v-bind` vapor-materialized `trueValue`/`falseValue`
+  `false` (stuck checked). Suite back to **3541 / 11 / 35**.
+- **U3** `ee148a24c`: TagGroup empty-group `tabIndex` under Vapor → **3542 / 10 / 35**.
+- U2/U4/U5/U6 attempted and **reverted**; U7 not landed (no VDOM-safe fix).
+- Gate now: **3542 pass / 10 fail / 35 skip**; `pnpm test:run` **3552 / 35**.
+- Triage: `vapor-proposal/triage.md`. Plan: `vapor-proposal/FIX_PLAN_8.md`.

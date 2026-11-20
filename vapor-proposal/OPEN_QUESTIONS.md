@@ -25,9 +25,9 @@ interop resolver entry is built today.
 
 Reka supports Vue 3.4+. The Vapor entry needs `>=3.6.0-rc.15`: `currentInstance`, and
 the interop fallthrough fix vuejs/core#15989. Prefer **`>=3.6.0-rc.16`** for interop SSR
-of cloned attrs on vapor slot content (vuejs/core#16269 / #16340). `packages/vapor` stays
-pinned to **rc.15** for the packaging-freeze gate; a 2026-11-20 rc.16 trial left QS7 red
-and added Checkbox reds (see `upstream/RELATED_ISSUES.md`).
+of cloned attrs on vapor slot content (vuejs/core#16269 / #16340). `packages/vapor` is
+pinned to **rc.16** (FIX_PLAN_8 U0); Checkbox story bind fixed in U1 (see
+`upstream/RELATED_ISSUES.md`).
 
 - Keep one range, plus a runtime check in `instance.vapor.ts` that warns on older Vue.
   This is cheap, but users only find out at runtime.
@@ -402,10 +402,9 @@ as-child server gap.
 **Upstream map (2026-11-20):** Interop SSR of `cloneVNode` attrs on vapor slot content was
 [vuejs/core#16269](https://github.com/vuejs/core/issues/16269), fixed by
 [#16340](https://github.com/vuejs/core/pull/16340) and shipped in **Vue 3.6.0-rc.16**. That is
-**not** this failure: a temporary rc.16 install still left the Tabs SSR test **red** (server
-HTML still missing tablist/trigger attrs) and worsened the full suite to **3538 / 14 / 35**.
-Pure-Vapor QS7 remains leave-red; pin stays **rc.15**. See `upstream/RELATED_ISSUES.md` and
-`upstream/vue-vapor-ssr-as-child.md`.
+**not** this failure: Tabs SSR stays **red** on rc.16 (server HTML still missing tablist/trigger
+attrs). Pure-Vapor QS7 remains leave-red; pin is **rc.16** after U1 Checkbox fix. See
+`upstream/RELATED_ISSUES.md` and `upstream/vue-vapor-ssr-as-child.md`.
 
 ### QS8. Listener order for events bubbling from a descendant of an as-child element
 
@@ -587,11 +586,11 @@ with `resetSearchTermOnBlur: false`. Close sets `isUserInputted = false`, then
 
 ### QS18. Section 9 leftovers (C7, one attempt each)
 
-**9.2 AlertDialog cancel:** registered element undefined after sibling unmount — still red; harness/twin only, K1 must not return.
+**9.2 AlertDialog cancel:** registered element undefined after sibling unmount — still red (U2: vapor re-creates cancel node on sibling removal; harness `patchList` + Cancel twin `onUpdated` re-register did not green; K1 must not return).
 
-**9.3 TagGroup:** empty collection leaves `tabindex="-1"` vs `0` — Collection reactivity under Vapor; no fix this pass.
+**9.3 TagGroup:** fixed in U3 (`ee148a24c`) — post-flush `tabIndex` reset when empty under Vapor.
 
-**9.4 Popover.ssr:** `vi.resetModules` + inlined `vue` → stack overflow (S2); needs single `vue` module instance after reset.
+**9.4 Popover.ssr:** still red (U4: post-`resetModules` dynamic `vue`/`@vue/test-utils` re-import did not stop stack overflow on hydrate).
 
 ### QS17. Dialog dev `useWarning` fires twice under pure Vapor (FIX_PLAN_4 §9.1)
 
