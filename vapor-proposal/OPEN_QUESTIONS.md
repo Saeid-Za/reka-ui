@@ -593,6 +593,11 @@ with `resetSearchTermOnBlur: false`. Close sets `isUserInputted = false`, then
 `resetSearchTermOnSelect` is default true — not the 1 ms blur timer. Harness `setProps` OK.
 → Leave red (not harness-only).
 
+**Decided (owner, 2026-11-20):** **(A)** VDOM-safe redesign. **Fixed** in `456194c50`:
+guard `modelValue` watch on real changes; when `resetSearchTermOnBlur` is false, sync
+input model from the DOM on close so Vapor does not re-apply an empty `v-model`.
+Blur `setTimeout(…, 1)` kept. Vapor + VDOM Combobox suites and `pnpm test:run` green.
+
 ### QS18. Section 9 leftovers (C7, one attempt each)
 
 **9.2 AlertDialog cancel:** registered element undefined after sibling unmount — still red (U2: vapor re-creates cancel node on sibling removal; harness `patchList` + Cancel twin `onUpdated` re-register did not green; K1 must not return).
