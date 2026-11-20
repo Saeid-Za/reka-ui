@@ -600,7 +600,9 @@ Blur `setTimeout(…, 1)` kept. Vapor + VDOM Combobox suites and `pnpm test:run`
 
 ### QS18. Section 9 leftovers (C7, one attempt each)
 
-**9.2 AlertDialog cancel:** registered element undefined after sibling unmount — still red (U2: vapor re-creates cancel node on sibling removal; harness `patchList` + Cancel twin `onUpdated` re-register did not green; K1 must not return).
+**9.2 AlertDialog cancel:** **Fixed** in `f0ddd2351` (owner A): per-cancel registration
+owner `Map` in `AlertDialogContent`; `AlertDialogCancel.vapor.vue` re-registers on
+`currentElement` changes; `vaporH` matches same-type siblings by `data-testid`. Not K1.
 
 **9.3 TagGroup:** fixed in U3 (`ee148a24c`) — post-flush `tabIndex` reset when empty under Vapor.
 
