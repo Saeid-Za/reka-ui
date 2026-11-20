@@ -56,6 +56,13 @@ const isEmpty = computed(() => rootContext.ignoreFilter.value
   : rootContext.filterState.value.count === 0,
 )
 
+// Flex layout for scroll buttons. Honor `present`: VDOM ComboboxContent also uses
+// v-show (which wins over this binding); Vapor has no v-show on components, so the
+// twin's `:style="{display:'none'}"` used to lose to a hard-coded `display:'flex'`.
+const contentDisplay = computed(() =>
+  (!props.present || (props.hideWhenEmpty && isEmpty.value)) ? 'none' : 'flex',
+)
+
 const { forwardRef, currentElement } = useForwardExpose()
 useContentId(rootContext, currentElement)
 useContentMounted(rootContext, currentElement)
@@ -179,11 +186,8 @@ const popperContentEvents = {
           :data-state="rootContext.open.value ? 'open' : 'closed'"
           :data-empty="isEmpty ? '' : undefined"
           :style="{
-            // flex layout so we can place the scroll buttons properly
-            // When hideWhenEmpty is true, hide the content when no items match
-            display: (props.hideWhenEmpty && isEmpty) ? 'none' : 'flex',
+            display: contentDisplay,
             flexDirection: 'column',
-            // reset the outline by default as the content MAY get focused
             outline: 'none',
             ...(position === 'popper' ? popperStyle : {}),
           }"

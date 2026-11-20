@@ -549,6 +549,11 @@ Closed `unmountOnHide=false` mount (`Combobox.test.ts` L73):
 Targeted Vapor twin post-flush `display` reset **reverted**; no gate delta. See ADR-S53 and
 `USER_GUIDE_DRAFT.md` known issue.
 
+**Decided (owner, 2026-11-20 FIX_PLAN_8):** **(a)** keep fighting — prefer twin / honor `present`
+in ContentImpl (not shared `if (isVapor)`). Cause: VDOM `v-show` writes `el.style.display`
+*after* the child's own `display:flex`; Vapor twin `:style="{display:'none'}"` is a style
+merge that **loses** to `ComboboxContentImpl` L184 `display:'flex'`.
+
 ### QS15. FocusScope stack registration timing (FIX_PLAN step 21)
 
 `FocusScope/FocusScope.test.ts` — Combobox input inside Dialog (#2749) fails in pure Vapor.
