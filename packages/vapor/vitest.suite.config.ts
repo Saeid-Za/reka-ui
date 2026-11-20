@@ -5,7 +5,6 @@ import vue from '@vitejs/plugin-vue'
 import { createConfig } from './config.shared.ts'
 import { injectExposeRoot, rekaVaporSwap, SWAPS } from './rekaVapor.ts'
 import { inlineVaporTemplates } from './suite/inlineTemplates.ts'
-import { popoverSsrHarness } from './suite/popoverSsrHarness.ts'
 import { vaporSsrTwins } from './suite/ssrTwins.ts'
 import { stubbableComponents } from './suite/stubsPlugin.ts'
 import { testFileVue } from './suite/testFileVue.ts'
@@ -26,7 +25,7 @@ const serverRenderer = join(dirname(vueRequire.resolve('@vue/server-renderer/pac
 const vueRuntime = join(dirname(vueRequire.resolve('vue/package.json')), 'dist/vue.runtime.esm-bundler.js')
 
 const config = createConfig({
-  plugins: [vueSuiteProxyPlugin(), popoverSsrHarness(), vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } }), stubbableComponents()],
+  plugins: [vueSuiteProxyPlugin(), vaporSsrTwins(injectExposeRoot, SWAPS), testFileVue(), inlineVaporTemplates(), rekaVaporSwap(), vue({ features: { vapor: true } }), stubbableComponents()],
   include: [],
 })
 

@@ -66,7 +66,11 @@ describe('given a Popover that is open in the SSR render', () => {
     const contentGate = new Promise<void>((resolve) => {
       releaseContent = resolve
     })
-    vi.resetModules()
+    // Pure Vapor keeps one Vue runtime: a reset would load a second `vue` the compiled
+    // fixtures do not share (stack overflow on hydrate, 9.4). The client content module is
+    // not loaded yet (the server render used the SSR build), so `doMock` still applies.
+    if (!isVapor)
+      vi.resetModules()
     vi.doMock('./PopoverContentNonModal.vue', async (importOriginal) => {
       await contentGate
       return importOriginal()
