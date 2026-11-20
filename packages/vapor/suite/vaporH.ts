@@ -268,11 +268,21 @@ type M
 
 type Child = string | Desc | SlotCall | { kind: 'raw', block: any }
 
+// An empty child in a children array (`cond ? h(A) : null`) keeps its position, as the
+// Comment vnode VDOM renders for it does, so unkeyed siblings after it are not reused
+// for the wrong descriptor when it toggles. It renders nothing.
+const HOLE: Child = { kind: 'raw', block: [] }
+
 function normalize(value: any, out: Child[] = []): Child[] {
   if (value == null || typeof value === 'boolean')
     return out
   if (Array.isArray(value)) {
-    for (const v of value) normalize(v, out)
+    for (const v of value) {
+      if (v == null || typeof v === 'boolean')
+        out.push(HOLE)
+      else
+        normalize(v, out)
+    }
     return out
   }
   if (typeof value === 'string' || typeof value === 'number') {
@@ -412,7 +422,7 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
         renderEffect(() => {
           const fn = slotsRef.value[name]
           const raw = fn?.(slotProps)
-          const norm = normalize(raw)
+          const norm = normalize(raw).filter(c => c !== HOLE)
           const desc = norm.length > 0 ? norm[0] : null
           if (!desc) {
             frag.update(undefined, null)
@@ -437,7 +447,7 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
       return (slotProps: any) => {
         const fn = slotsRef.value[name]
         const raw = fn?.(slotProps)
-        const norm = normalize(raw)
+        const norm = normalize(raw).filter(c => c !== HOLE)
         const desc = norm.length > 0 ? norm[0] : null
         if (!desc || typeof desc === 'string')
           return null
@@ -448,7 +458,7 @@ function mountChild(ctx: Ctx, c: Child, svg: boolean): M {
             renderEffect(() => {
               const fn = slotsRef.value[name]
               const raw = fn?.(slotProps)
-              const norm = normalize(raw)
+              const norm = normalize(raw).filter(c => c !== HOLE)
               const desc = norm.length > 0 ? norm[0] : null
               if (!desc || typeof desc === 'string' || !isDesc(desc) || branchMount!.kind !== 'comp')
                 return
@@ -641,28 +651,7 @@ function patchList(ctx: Ctx, old: M[], children: Child[], parent: Node, anchor: 
     })
   }
   else {
-    // Prefer data-testid identity when several same-type siblings exist (AlertDialog
-    // cancel vs extra). Do not require testid equality in sameType — a single
-    // ListboxItem updating data-testid must patch in place, not remount.
     children.forEach((c, i) => {
-      if (isDesc(c)) {
-        const testId = c.props?.['data-testid']
-        if (testId != null) {
-          for (const candidate of old) {
-            if (
-              !used.has(candidate)
-              && candidate.kind === 'comp'
-              && candidate.type === c.type
-              && (candidate.key == null && c.key == null)
-              && candidate.propsRef.value?.['data-testid'] === testId
-            ) {
-              used.add(candidate)
-              next[i] = candidate
-              return
-            }
-          }
-        }
-      }
       const m = old[i]
       if (m && sameType(m, c) && !used.has(m)) {
         used.add(m)
