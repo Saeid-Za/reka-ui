@@ -1,0 +1,218 @@
+diff --git a/packages/core/src/Primitive/asChildAttrs.ts b/packages/core/src/Primitive/asChildAttrs.ts
+index c5497f252..7b44dc9ba 100644
+--- a/packages/core/src/Primitive/asChildAttrs.ts
++++ b/packages/core/src/Primitive/asChildAttrs.ts
+@@ -90,6 +90,25 @@ function shouldSetAsProp(el: Element, key: string, value: unknown) {
+   return isBooleanProp
+ }
+ 
++// After SSR hydration the element already carries the attrs the server-side
++// as-child merge wrote (asChildSsr.ts). An attribute whose value equals the one
++// this layer would apply is treated as ours, not the child's, so later updates
++// still reach it.
++function isServerMergedAttr(el: Element, name: string, attrs: Attrs) {
++  for (const key in attrs) {
++    const attrName = key.startsWith('aria') || key.startsWith('data') ? hyphenate(key) : key
++    if (attrName.toLowerCase() !== name)
++      continue
++    const value = attrs[key]
++    if (value == null || typeof value === 'object' || typeof value === 'function')
++      return false
++    const current = el.getAttribute(name)
++    return current === (value === true ? '' : String(value)) || (value === '' && current === '')
++  }
++  return false
++}
++
++
+ /**
+  * Vapor counterpart of reka-ui's VDOM `Slot` merge: apply a `Primitive`'s
+  * attrs to the element its `as-child` slot rendered.
+@@ -107,7 +126,7 @@ export function applyAsChildAttrs(el: Element, attrs: Attrs, states: WeakMap<Ele
+   if (!state) {
+     const own = Array.from(el.attributes, attr => attr.name).filter(name => name !== 'class' && name !== 'style')
+     state = {
+-      childOwned: new Set(override ? [] : own),
++      childOwned: new Set(override ? [] : own.filter(name => !isServerMergedAttr(el, name, attrs))),
+       originals: new Map(override ? own.map(name => [name, el.getAttribute(name)!]) : []),
+       classes: new Set(),
+       styles: new Set(),
+diff --git a/packages/core/src/Primitive/asChildSsr.ts b/packages/core/src/Primitive/asChildSsr.ts
+new file mode 100644
+index 000000000..04ebb98c6
+--- /dev/null
++++ b/packages/core/src/Primitive/asChildSsr.ts
+@@ -0,0 +1,156 @@
++import { normalizeClass, normalizeStyle } from 'vue'
++
++// Server half of the Vapor `as-child` Primitive (QS7). On the client,
++// `asChildAttrs.ts` applies the Primitive's attrs to the element its slot
++// rendered. Pure-Vapor SSR has no equivalent hook, so the server output of the
++// slot is buffered and the attrs are merged into its first element tag with the
++// VDOM `mergeProps(attrs, child.props)` rules: the child's own attrs win,
++// classes and styles are merged with the consumer's first. Nested as-child
++// layers compose because each one rewrites the already-merged string.
++// Vapor-only: imported by the Vapor SSR build of `Primitive.vapor.vue`.
++
++type Attrs = Record<string, unknown>
++type Item = string | Promise<unknown> | Item[]
++
++const LISTENER_RE = /^on[A-Z]/
++const SKIP = new Set(['key', 'ref', 'innerHTML', 'textContent', 'class', 'style'])
++const TAG_START_RE = /<[a-z]/gi
++const ATTR_NAME_RE = /\s([^\s"'>/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g
++
++function escapeAttr(value: string) {
++  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
++}
++
++function hyphenate(str: string) {
++  return str.replace(/\B([A-Z])/g, '-$1').toLowerCase()
++}
++
++function stringifyStyle(style: unknown): string {
++  const normalized = normalizeStyle(style)
++  if (!normalized)
++    return ''
++  if (typeof normalized === 'string')
++    return normalized
++  let out = ''
++  for (const key in normalized) {
++    const value = (normalized as Record<string, unknown>)[key]
++    if (value == null || value === '' || (typeof value !== 'string' && typeof value !== 'number'))
++      continue
++    out += `${key.startsWith('--') ? key : hyphenate(key)}:${value};`
++  }
++  return out
++}
++
++function flatten(buffer: Item[], out: string[]): boolean {
++  for (const item of buffer) {
++    if (typeof item === 'string')
++      out.push(item)
++    else if (Array.isArray(item)) {
++      if (!flatten(item, out))
++        return false
++    }
++    else {
++      return false
++    }
++  }
++  return true
++}
++
++/** Merges `attrs` into the first element tag of `html`; the tag's own attrs win. */
++export function mergeAttrsIntoFirstTag(html: string, attrs: Attrs): string {
++  TAG_START_RE.lastIndex = 0
++  let start = -1
++  for (let m = TAG_START_RE.exec(html); m; m = TAG_START_RE.exec(html)) {
++    start = m.index
++    break
++  }
++  if (start < 0)
++    return html
++  // end of the opening tag, outside quoted values
++  let end = start
++  let quote = ''
++  for (; end < html.length; end++) {
++    const ch = html[end]
++    if (quote) {
++      if (ch === quote)
++        quote = ''
++    }
++    else if (ch === '"' || ch === '\'') {
++      quote = ch
++    }
++    else if (ch === '>') {
++      break
++    }
++  }
++  if (end >= html.length)
++    return html
++  let tag = html.slice(start, end)
++  const selfClosing = tag.endsWith('/')
++  if (selfClosing)
++    tag = tag.slice(0, -1)
++  const nameEnd = tag.search(/[\s/]|$/)
++  const head = tag.slice(0, nameEnd)
++  let body = tag.slice(nameEnd)
++
++  const own = new Set<string>()
++  ATTR_NAME_RE.lastIndex = 0
++  for (let m = ATTR_NAME_RE.exec(body); m; m = ATTR_NAME_RE.exec(body))
++    own.add(m[1].toLowerCase())
++
++  let added = ''
++  const consumerClass = normalizeClass(attrs.class)
++  if (consumerClass) {
++    if (own.has('class'))
++      body = body.replace(/(\sclass=")([^"]*)"/, (_, pre, value) => `${pre}${escapeAttr(consumerClass)}${value ? ` ${value}` : ''}"`)
++    else
++      added += ` class="${escapeAttr(consumerClass)}"`
++  }
++  const consumerStyle = stringifyStyle(attrs.style)
++  if (consumerStyle) {
++    if (own.has('style'))
++      body = body.replace(/(\sstyle=")([^"]*)"/, (_, pre, value) => `${pre}${escapeAttr(consumerStyle)}${value}"`)
++    else
++      added += ` style="${escapeAttr(consumerStyle)}"`
++  }
++  for (const key in attrs) {
++    if (SKIP.has(key) || LISTENER_RE.test(key))
++      continue
++    const value = attrs[key]
++    if (value == null || (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean'))
++      continue
++    const name = key.startsWith('aria') || key.startsWith('data') ? hyphenate(key) : key
++    if (own.has(name.toLowerCase()))
++      continue
++    added += value === '' ? ` ${name}` : ` ${name}="${escapeAttr(String(value))}"`
++  }
++  if (!added && body === tag.slice(nameEnd))
++    return html
++  return `${html.slice(0, start)}${head}${added}${body}${selfClosing ? '/' : ''}${html.slice(end)}`
++}
++
++/**
++ * Wraps a server-compiled (inline `ssrRender`) Vapor `Primitive` so its as-child
++ * slot output receives the Primitive's attrs, as the client applier does after mount.
++ */
++export function withAsChildSsrAttrs(component: { setup?: (...args: any[]) => any }) {
++  const setup = component.setup
++  if (!setup)
++    return component
++  component.setup = (props: { asChild?: boolean, as?: unknown }, ctx: { attrs: Attrs }) => {
++    const render = setup(props, ctx)
++    if (typeof render !== 'function' || !(props.asChild || props.as === 'template'))
++      return render
++    return (...args: any[]) => {
++      const push = args[1] as (item: Item) => void
++      const buffer: Item[] = []
++      args[1] = (item: Item) => buffer.push(item)
++      render(...args)
++      const strings: string[] = []
++      if (flatten(buffer, strings))
++        push(mergeAttrsIntoFirstTag(strings.join(''), ctx.attrs))
++      else
++        buffer.forEach(push)
++    }
++  }
++  return component
++}
+diff --git a/packages/vapor/suite/ssrTwins.ts b/packages/vapor/suite/ssrTwins.ts
+index bc280acb9..21cc226e7 100644
+--- a/packages/vapor/suite/ssrTwins.ts
++++ b/packages/vapor/suite/ssrTwins.ts
+@@ -132,7 +132,11 @@ export function vaporSsrTwins(transformSfc: (code: string) => string, swaps: Rec
+           vapor: true,
+           templateOptions: { ssr: true, ssrCssVars: descriptor.cssVars },
+         })
+-        code = `${script.content}\n__sfc__.__file = ${JSON.stringify(file)}\nexport default __sfc__\n`
++        code = `${script.content}\n__sfc__.__file = ${JSON.stringify(file)}\n`
++        // QS7: the server as-child Primitive merges its attrs into the slot's first tag.
++        if (file === `${coreSrc}Primitive/Primitive.vapor.vue`)
++          code += `import { withAsChildSsrAttrs as __withAsChildSsrAttrs } from ${JSON.stringify(`${coreSrc}Primitive/asChildSsr.ts`)}\n__withAsChildSsrAttrs(__sfc__)\n`
++        code += 'export default __sfc__\n'
+         const lang = descriptor.scriptSetup?.lang || descriptor.script?.lang
+         if (lang === 'ts' || lang === 'tsx')
+           code = (await transformWithOxc(code, `${file}.ts`, { lang: 'ts' })).code

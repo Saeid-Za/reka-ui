@@ -50,3 +50,41 @@ non-as-child Primitive / flat Collection·RovingFocus for server only).
 - Not #16269: that was VDOM `cloneVNode` on vapor **slot** in interop; this is pure
   `createVaporSSRApp` / dual-compile SFCs with string-buffer slots.
 - Vue 3.6.0-rc.16 still reproduces.
+
+## Minimal pure-Vapor repro (no Reka)
+
+```vue
+<!-- AsChild.vue (Vapor) -->
+<script setup vapor>
+defineOptions({ inheritAttrs: false })
+</script>
+
+<template>
+  <slot />
+</template>
+```
+
+```vue
+<!-- App.vue (Vapor) -->
+<script setup vapor>
+import AsChild from './AsChild.vue'
+</script>
+
+<template>
+  <AsChild data-x="1" tabindex="-1">
+    <button>hi</button>
+  </AsChild>
+</template>
+```
+
+- VDOM: a render-function `AsChild` does `cloneVNode(slot()[0], attrs)`; SSR and client both
+  emit `<button data-x="1" tabindex="-1">`.
+- Pure Vapor: there is no public way for `AsChild` to fall `$attrs` through to the element its
+  slot renders. Libraries apply attrs to the DOM after mount (client only), so
+  `createVaporSSRApp` + `renderToString` emits a bare `<button>hi</button>` and first paint
+  lacks a11y/roving attrs.
+- Ask: a supported "fallthrough attrs to slot root" for Vapor (e.g. honour `v-bind="$attrs"` on
+  `<slot>` as fallthrough onto a single-root slot, client + SSR + hydration), with VDOM
+  `mergeProps(attrs, child.props)` precedence (child-bound keys win, even when `false`).
+- A server-side string merge was prototyped in Reka and is not viable: it cannot see
+  child-bound falsy keys and produces hydration mismatches (Rating).

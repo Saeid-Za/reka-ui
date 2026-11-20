@@ -415,6 +415,19 @@ slotAttrs → child propagation**, not missing Reka parent data. #16269/#16340 r
 interop-only. Practical Reka-side alternative without Vue: SSR twins that avoid nested
 `as-child` (Collection/RovingFocus bind attrs on non-as-child Primitive for server only).
 
+**Path B attempt (2026-11-20, reverted; patch kept at `experiments/qs7-path-b-ssr-merge.patch`):**
+Root cause restated from the code: `Primitive.vapor.vue` renders `<slot />` for as-child and
+applies attrs only on the client (`asChildAttrs.ts`, DOM applier in `onMounted`). The server
+never had a mechanism, so per-consumer SSR twins of Collection/RovingFocus would not help
+(every as-child consumer has the same gap). The attempt instead wrapped the server-compiled
+`Primitive.vapor` setup: buffer the slot's SSR output and merge `$attrs` into its first tag
+(child attrs win, class/style merged). Results: Tabs server HTML then matched exactly, and
+with an applier tweak (an attr already equal to the applied value is not child-owned) Tabs
+went green — but `Rating.ssr` regressed with hydration mismatches (`disabled="true"`,
+`checked="false"`). A string merge cannot see keys the child binds to `false`/`undefined`,
+which win in VDOM `mergeProps(attrs, child.props)`, nor which attrs the client sets as DOM
+props. Fixing that needs a real fallthrough-to-slot-root API. Verdict: accept + upstream.
+
 ### QS8. Listener order for events bubbling from a descendant of an as-child element
 
 Since ADR-S17, Vapor runs a consumer's as-child listener before the element's own for
