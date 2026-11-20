@@ -1,9 +1,8 @@
 # Vue Vapor support for Reka UI: research, audit, strategy, plan
 
 Local prototype: `/workspace/reka-vapor/reka-ui`, branch `feat/vapor-support`
-(base `a9873a0`, reka-ui 2.11.0). Vue pin: **3.6.0-rc.15**. Rechecked against
-**3.6.0-rc.16** on 2026-11-20 (includes #16340); pin restored after QS7 stayed red
-and the suite gained Checkbox failures. Nothing was pushed or posted.
+(base `a9873a0`, reka-ui 2.11.0). Vue pin: **3.6.0-rc.16** (FIX_PLAN_8 U0; Checkbox
+story U1). QS7 still red on rc.16 (#16340 is interop-only). Nothing was pushed or posted.
 
 ---
 

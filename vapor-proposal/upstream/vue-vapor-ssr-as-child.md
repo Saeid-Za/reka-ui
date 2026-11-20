@@ -21,9 +21,9 @@ lacks attrs that appear after client hydration (`data-orientation`, `dir`, `tabi
 
 ## Recheck on 3.6.0-rc.16 (2026-11-20)
 
-Temporarily installed rc.16 and re-ran the Tabs SSR test. **Still red** with the same
-class of missing server attrs. So #16340 does **not** clear QS7. Full suite on rc.16 was
-**3538 / 14 / 35** (Checkbox regressions); freeze pin restored to **rc.15**.
+Re-ran Tabs SSR on **rc.16** (now the package pin). **Still red** with the same
+class of missing server attrs. So #16340 does **not** clear QS7. Early raw suite on
+rc.16 was **3538 / 14 / 35** until Checkbox U1; current gate **3542 / 10 / 35**.
 
 File a Vue issue only with a **minimal pure-Vapor** repro (no Reka `Slot` / VDOM
 `cloneVNode`), or keep documenting as a known pure-Vapor SSR difference until Collection /
